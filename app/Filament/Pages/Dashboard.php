@@ -89,10 +89,11 @@ class Dashboard extends BaseDashboard
                         ->required(),
 
                     Select::make('role')
-                        ->label('Initial Role')
+                        ->label('Application Role')
                         ->options([
-                            'user' => 'User (Standard Member)',
-                            'admin' => 'Admin (Panel Access)',
+                            'user' => 'Standard User',
+                            'developer' => 'Developer',
+                            'member' => 'Member',
                         ])
                         ->default('user')
                         ->required(),
@@ -388,7 +389,9 @@ class Dashboard extends BaseDashboard
 
         $userQuery = $app instanceof TenantApplication
             ? $app->users($env)
-            : ($this->getActiveTenant() instanceof Tenant ? $this->getActiveTenant()->users() : User::query());
+            : ($this->getActiveTenant() instanceof Tenant
+                ? $this->getActiveTenant()->users()->whereDoesntHave('roles', fn (Builder $q) => $q->where('name', 'super_admin'))
+                : User::query()->whereDoesntHave('roles', fn (Builder $q) => $q->where('name', 'super_admin')));
 
         $totalUsers = (clone $userQuery)->count();
         $bannedUsers = (clone $userQuery)->whereNotNull('users.banned_at')->count();
@@ -428,7 +431,9 @@ class Dashboard extends BaseDashboard
 
         $query = $app instanceof TenantApplication
             ? $app->users($env)
-            : ($this->getActiveTenant() instanceof Tenant ? $this->getActiveTenant()->users() : User::query());
+            : ($this->getActiveTenant() instanceof Tenant
+                ? $this->getActiveTenant()->users()->whereDoesntHave('roles', fn (Builder $q) => $q->where('name', 'super_admin'))
+                : User::query()->whereDoesntHave('roles', fn (Builder $q) => $q->where('name', 'super_admin')));
 
         return $query
             ->when($this->search !== '', function (Builder $query): void {

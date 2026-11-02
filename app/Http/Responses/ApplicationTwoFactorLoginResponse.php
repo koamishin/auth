@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Responses;
 
+use App\Models\User;
 use App\Services\OAuth\ApplicationAuthentication;
+use Filament\Facades\Filament;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Laravel\Fortify\Fortify;
@@ -30,12 +32,23 @@ class ApplicationTwoFactorLoginResponse extends TwoFactorLoginResponse
             return response()->json('', 204);
         }
 
+        $user = $request->user();
+        $isSystemAdmin = $user instanceof User && $user->canAccessPanel(Filament::getPanel('admin'));
+
         $intended = $request->session()->get('url.intended');
-        if ($intended !== null && str_contains($intended, '/dashboard')) {
-            $request->session()->forget('url.intended');
+        if ($intended !== null) {
+            if ($isSystemAdmin && str_contains($intended, '/dashboard')) {
+                $request->session()->forget('url.intended');
+            } elseif (! $isSystemAdmin && str_contains($intended, '/admin')) {
+                $request->session()->forget('url.intended');
+            }
         }
 
-        $redirect = redirect()->intended(Fortify::redirects('login'));
+        $destination = $isSystemAdmin
+            ? Fortify::redirects('login')
+            : config('fortify.home', '/dashboard');
+
+        $redirect = redirect()->intended($destination);
 
         return $request->header('X-Inertia')
             ? Inertia::location($redirect->getTargetUrl())

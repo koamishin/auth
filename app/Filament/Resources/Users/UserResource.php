@@ -48,7 +48,11 @@ class UserResource extends Resource
 
     protected static ?int $navigationSort = 1;
 
-    protected static ?string $navigationLabel = 'Users';
+    protected static ?string $navigationLabel = 'Application Users';
+
+    protected static ?string $modelLabel = 'Application User';
+
+    protected static ?string $pluralModelLabel = 'Application Users';
 
     protected static ?string $recordTitleAttribute = 'name';
 
@@ -321,6 +325,20 @@ class UserResource extends Resource
                     ->searchable()
                     ->copyable()
                     ->sortable(),
+                TextColumn::make('user_type')
+                    ->label('Type')
+                    ->badge()
+                    ->state(fn (User $record): string => $record->isSystemAdmin() ? 'System Admin' : 'App User')
+                    ->color(fn (string $state): string => match ($state) {
+                        'System Admin' => 'danger',
+                        default => 'success',
+                    }),
+                TextColumn::make('applications.name')
+                    ->label('Application(s)')
+                    ->badge()
+                    ->separator(',')
+                    ->color('primary')
+                    ->placeholder('None (Portal)'),
                 TextColumn::make('status')
                     ->label('Status')
                     ->badge()
@@ -376,6 +394,9 @@ class UserResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                SelectFilter::make('applications')
+                    ->label('Application')
+                    ->relationship('applications', 'name'),
                 TernaryFilter::make('banned')
                     ->label('Account Status')
                     ->placeholder('All Accounts')

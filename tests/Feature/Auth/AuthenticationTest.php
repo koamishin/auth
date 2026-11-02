@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use Illuminate\Support\Facades\RateLimiter;
+use Spatie\Permission\Models\Role;
 
 test('login screen can be rendered', function (): void {
     $response = $this->get(route('login'));
@@ -18,11 +19,27 @@ test('users can authenticate using the login screen', function (): void {
     ]);
 
     $this->assertAuthenticated();
+    $response->assertRedirect(route('dashboard', absolute: false));
+});
+
+test('system admins logging in are redirected to filament admin', function (): void {
+    Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+    $user = User::factory()->create();
+    $user->assignRole('super_admin');
+
+    $response = $this->post(route('login.store'), [
+        'email' => $user->email,
+        'password' => 'password',
+    ]);
+
+    $this->assertAuthenticated();
     $response->assertRedirect('/admin');
 });
 
-test('users logging in via inertia are redirected to filament admin', function (): void {
+test('system admins logging in via inertia are redirected to filament admin', function (): void {
+    Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
     $user = User::factory()->create();
+    $user->assignRole('super_admin');
 
     $response = $this->withHeader('X-Inertia', 'true')->post(route('login.store'), [
         'email' => $user->email,
@@ -32,6 +49,15 @@ test('users logging in via inertia are redirected to filament admin', function (
     $this->assertAuthenticated();
     expect($response->status())->toBe(409);
     expect($response->headers->get('X-Inertia-Location'))->toBe(url('/admin'));
+});
+
+test('application users can not access the admin panel', function (): void {
+    Role::firstOrCreate(['name' => 'user', 'guard_name' => 'web']);
+    $user = User::factory()->create();
+    $user->assignRole('user');
+
+    $response = $this->actingAs($user)->get('/admin');
+    $response->assertForbidden();
 });
 
 test('users with legacy fortify two factor columns are challenged', function (): void {
