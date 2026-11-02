@@ -8,20 +8,54 @@
 <x-filament-panels::page>
     <div class="space-y-6 max-w-7xl mx-auto -mt-2">
         @if(session('new_app_credentials'))
-            <div role="status" class="rounded-xl border border-amber-300 bg-amber-50 p-5 text-sm text-amber-950 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">
-                <p class="font-semibold">Save these application credentials now</p>
-                <p class="mt-2">Client secrets are shown only once. Store them securely on the server and never put them in browser code.</p>
+            <div role="status" class="rounded-xl border border-amber-300 bg-amber-50 p-5 text-sm text-amber-950 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100" x-data="{ copiedEnvSecret: {} }">
+                <p class="font-semibold text-base">Save your application credentials</p>
+                <p class="mt-1 text-xs opacity-90">Client secrets are shown only once upon creation or rotation. Store them securely in your <code>.env</code> file.</p>
                 @foreach(session('new_app_credentials') as $environment => $credentials)
-                    <div class="mt-3">
-                        <p class="font-semibold">{{ ucfirst($environment) }}</p>
-                        <p class="break-all">Client ID: {{ $credentials['client_id'] }}</p>
+                    <div class="mt-3 p-3 rounded-lg bg-black/5 dark:bg-black/30 border border-amber-200 dark:border-amber-800/40">
+                        <p class="font-bold text-xs uppercase tracking-wider">{{ ucfirst($environment) }} Environment</p>
+                        <p class="font-mono text-xs mt-1 break-all">Client ID: {{ $credentials['client_id'] }}</p>
                         @if($credentials['secret'])
-                            <p class="break-all">Client secret: {{ $credentials['secret'] }}</p>
+                            <div class="flex items-center justify-between mt-1 gap-2">
+                                <p class="font-mono text-xs break-all text-emerald-800 dark:text-emerald-300">Client Secret: {{ $credentials['secret'] }}</p>
+                                <button
+                                    type="button"
+                                    @click="navigator.clipboard.writeText('{{ $credentials['secret'] }}'); copiedEnvSecret['{{ $environment }}'] = true; setTimeout(() => copiedEnvSecret['{{ $environment }}'] = false, 2000)"
+                                    class="shrink-0 px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100"
+                                >
+                                    <span x-text="copiedEnvSecret['{{ $environment }}'] ? 'Copied!' : 'Copy Secret'"></span>
+                                </button>
+                            </div>
                         @else
-                            <p>Public client: no client secret.</p>
+                            <p class="text-xs text-gray-500 mt-1">Public client: no client secret required.</p>
                         @endif
                     </div>
                 @endforeach
+            </div>
+        @endif
+
+        @php
+            $regenSecret = $this->regeneratedSecret ?? session('regenerated_secret');
+        @endphp
+        @if($regenSecret)
+            <div role="status" class="rounded-xl border border-amber-300 bg-amber-50 p-5 text-sm text-amber-950 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100 space-y-3" x-data="{ copiedRegen: false }">
+                <div class="flex items-center justify-between">
+                    <p class="font-bold flex items-center gap-2">
+                        <x-filament::icon icon="heroicon-m-key" class="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                        <span>Client Secret Rotated ({{ ucfirst($regenSecret['environment']) }})</span>
+                    </p>
+                    <button
+                        type="button"
+                        @click="navigator.clipboard.writeText('{{ $regenSecret['secret'] }}'); copiedRegen = true; setTimeout(() => copiedRegen = false, 2000)"
+                        class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100 hover:bg-amber-300 dark:hover:bg-amber-700 transition-colors"
+                    >
+                        <span x-text="copiedRegen ? 'Copied!' : 'Copy Secret'"></span>
+                    </button>
+                </div>
+                <p>New secret generated. Store it securely in your <code>.env</code> file now:</p>
+                <div class="p-3 rounded-lg bg-black/60 text-emerald-400 font-mono text-xs break-all select-all">
+                    {{ $regenSecret['secret'] }}
+                </div>
             </div>
         @endif
         <!-- Top Application Sub-Header -->
@@ -82,6 +116,15 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
                     </svg>
                     <span x-text="copied ? 'Copied ID!' : 'Copy Client ID'"></span>
+                </button>
+
+                <button
+                    type="button"
+                    wire:click="mountAction('regenerateSecret')"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30 shadow-xs transition-colors"
+                >
+                    <x-filament::icon icon="heroicon-m-key" class="w-3.5 h-3.5 text-amber-500" />
+                    <span>Rotate Secret</span>
                 </button>
 
                 @if(! $isProd)
@@ -242,7 +285,7 @@
                     <span class="text-xs font-mono text-gray-500 dark:text-gray-400">Add to your project's .env file:</span>
                     <button
                         type="button"
-                        @click="navigator.clipboard.writeText('{{ addslashes($app->getEnvSnippet()) }}'); copiedEnv = true; setTimeout(() => copiedEnv = false, 2000)"
+                        @click="navigator.clipboard.writeText('{{ addslashes($app->getEnvSnippet(null, $regenSecret['secret'] ?? null)) }}'); copiedEnv = true; setTimeout(() => copiedEnv = false, 2000)"
                         class="inline-flex items-center gap-1.5 text-xs text-primary-600 dark:text-primary-400 hover:underline font-semibold"
                     >
                         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -251,7 +294,7 @@
                         <span x-text="copiedEnv ? 'Copied!' : 'Copy .env'"></span>
                     </button>
                 </div>
-                <pre class="p-4 rounded-xl bg-gray-900 text-emerald-400 border border-gray-800 text-xs font-mono overflow-x-auto leading-relaxed shadow-inner">{{ $app->getEnvSnippet() }}</pre>
+                <pre class="p-4 rounded-xl bg-gray-900 text-emerald-400 border border-gray-800 text-xs font-mono overflow-x-auto leading-relaxed shadow-inner">{{ $app->getEnvSnippet(null, $regenSecret['secret'] ?? null) }}</pre>
             </div>
 
             <!-- Tab 2: Integration Code -->

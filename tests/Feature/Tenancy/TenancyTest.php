@@ -6,6 +6,7 @@ use App\Filament\Pages\Tenancy\RegisterTenant;
 use App\Filament\Resources\TenantApplications\Pages\CreateTenantApplication;
 use App\Filament\Resources\TenantApplications\Pages\EditTenantApplication;
 use App\Filament\Resources\TenantApplications\Pages\ListTenantApplications;
+use App\Filament\Resources\TenantApplications\Pages\ViewTenantApplication;
 use App\Models\Tenant;
 use App\Models\TenantApplication;
 use App\Models\User;
@@ -426,4 +427,39 @@ test('tenant applications are scoped strictly to the current tenant', function (
         ->test(ListTenantApplications::class)
         ->assertSee('Alpha Internal App')
         ->assertDontSee('Beta Internal App');
+});
+
+test('admin can rotate client secret on application view page', function (): void {
+    Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+    $admin = User::factory()->create();
+    $admin->assignRole('super_admin');
+    $tenant = Tenant::create(['name' => 'Rotate Org', 'slug' => 'rotate-org', 'is_active' => true]);
+
+    $app = app(ApplicationProvisioner::class)->create($tenant, [
+        'name' => 'Backend API',
+        'framework' => 'laravel',
+        'environment' => 'development',
+        'redirect_uris' => ['http://localhost:8000/callback'],
+    ]);
+
+    $client = Client::find($app->oauth_client_id);
+    $originalSecret = $client->secret;
+
+    $this->actingAs($admin);
+    Filament::setCurrentPanel('admin');
+    Filament::setTenant($tenant);
+    Filament::bootCurrentPanel();
+
+    $test = Livewire::actingAs($admin)
+        ->test(ViewTenantApplication::class, ['record' => $app->getKey()])
+        ->callAction('regenerateSecret')
+        ->assertHasNoActionErrors();
+
+    $client->refresh();
+    expect($client->secret)->not->toBe($originalSecret);
+
+    $regen = $test->get('regeneratedSecret');
+    expect($regen)->not->toBeNull();
+    expect($regen['secret'])->not->toBeEmpty();
+    expect($app->getEnvSnippet(null, $regen['secret']))->toContain($regen['secret']);
 });

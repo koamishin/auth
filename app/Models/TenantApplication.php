@@ -112,13 +112,30 @@ class TenantApplication extends Model
         return $config;
     }
 
-    public function getEnvSnippet(?string $environment = null): string
+    public function getEnvSnippet(?string $environment = null, ?string $clientSecret = null): string
     {
         $env = $environment ?? $this->environment;
-        $portalUrl = rtrim((string) config('app.url'), '/');
+        $portalUrl = request()->hasHeader('Host')
+            ? request()->getSchemeAndHttpHost()
+            : rtrim((string) config('app.url'), '/');
         $config = $this->getEnvironmentConfig($env);
         $clientId = $config->oauth_client_id ?? 'your-client-id';
         $callback = $config->redirect_uris[0] ?? 'configure-your-callback';
+
+        $secret = $clientSecret;
+        if (! $secret) {
+            $regen = session('regenerated_secret');
+            if (is_array($regen) && ($regen['environment'] ?? '') === $env && filled($regen['secret'] ?? null)) {
+                $secret = $regen['secret'];
+            }
+        }
+        if (! $secret) {
+            $newAppCreds = session('new_app_credentials');
+            if (is_array($newAppCreds) && is_array($newAppCreds[$env] ?? null) && filled($newAppCreds[$env]['secret'] ?? null)) {
+                $secret = $newAppCreds[$env]['secret'];
+            }
+        }
+        $secret ??= 'YOUR_CLIENT_SECRET_HERE';
 
         if ($this->framework === 'laravel') {
             return <<<ENV
@@ -126,7 +143,7 @@ KOAMISHIN_PORTAL_URL={$portalUrl}
 KOAMISHIN_APPLICATION_ID={$this->id}
 KOAMISHIN_ENVIRONMENT={$env}
 KOAMISHIN_CLIENT_ID={$clientId}
-KOAMISHIN_CLIENT_SECRET=YOUR_CLIENT_SECRET_HERE
+KOAMISHIN_CLIENT_SECRET={$secret}
 KOAMISHIN_REDIRECT_URI={$callback}
 ENV;
         }
@@ -205,7 +222,9 @@ ENV;
 
     public function getSetupGuideCode(): string
     {
-        $portalUrl = rtrim(config('app.url'), '/');
+        $portalUrl = request()->hasHeader('Host')
+            ? request()->getSchemeAndHttpHost()
+            : rtrim((string) config('app.url'), '/');
         $clientId = $this->oauth_client_id ?? 'your-client-id';
         $callback = $this->redirect_uris[0] ?? 'http://localhost:3000/auth/callback';
 
