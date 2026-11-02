@@ -1,5 +1,7 @@
 <?php
 
+use App\Filament\Resources\SystemUsers\SystemUserResource;
+use App\Filament\Resources\Users\UserResource;
 use App\Models\Tenant;
 use App\Models\User;
 use Filament\Facades\Filament;
@@ -55,9 +57,27 @@ test('system settings and tools are accessible via user menu items', function ()
     expect($menuItems)->toContain(
         'My profile',
         'System Settings',
+        'System Users',
         'Roles & Permissions',
         'Activity Logs',
         'Feature Flags',
         'Organizations',
     );
+});
+
+test('application users directory strictly excludes system administrators', function (): void {
+    $admin = User::factory()->create(['email' => 'sysadmin@test.com']);
+    $admin->assignRole('super_admin');
+
+    $appUser = User::factory()->create(['email' => 'enduser@test.com']);
+    $role = Role::firstOrCreate(['name' => 'user', 'guard_name' => 'web']);
+    $appUser->assignRole($role);
+
+    $appUserResults = UserResource::getEloquentQuery()->pluck('email')->all();
+    expect($appUserResults)->toContain('enduser@test.com');
+    expect($appUserResults)->not->toContain('sysadmin@test.com');
+
+    $systemUserResults = SystemUserResource::getEloquentQuery()->pluck('email')->all();
+    expect($systemUserResults)->toContain('sysadmin@test.com');
+    expect($systemUserResults)->not->toContain('enduser@test.com');
 });

@@ -35,6 +35,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -58,6 +59,13 @@ class UserResource extends Resource
     protected static ?string $recordTitleAttribute = 'name';
 
     protected static bool $isScopedToTenant = false;
+
+    #[\Override]
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->whereDoesntHave('roles', fn (Builder $q) => $q->whereIn('name', ['super_admin', 'admin']));
+    }
 
     #[\Override]
     public static function form(Schema $schema): Schema
@@ -89,7 +97,7 @@ class UserResource extends Resource
                             ->extraInputAttributes(['class' => 'font-mono'])
                             ->maxLength(60),
                         Select::make('roles')
-                            ->relationship('roles', 'name')
+                            ->relationship('roles', 'name', fn (Builder $query) => $query->whereNotIn('name', ['super_admin', 'admin']))
                             ->multiple()
                             ->preload()
                             ->searchable(),

@@ -7,6 +7,7 @@ namespace App\Filament\Clusters\Settings\Pages;
 use App\Filament\Clusters\Settings\SettingsCluster;
 use App\Filament\Resources\ActivityLogs\ActivityLogResource;
 use App\Filament\Resources\FeatureFlag\FeatureFlagResource;
+use App\Filament\Resources\SystemUsers\SystemUserResource;
 use App\Filament\Resources\Tenants\TenantResource;
 use BezhanSalleh\FilamentShield\Resources\Roles\RoleResource;
 use Filament\Facades\Filament;
@@ -41,6 +42,12 @@ class SystemAdministrationPage extends Page
         $params = $tenant ? ['tenant' => $tenant] : [];
 
         return [
+            [
+                'title' => 'System Users & Staff',
+                'description' => 'Manage system administrators, staff panel accounts, and administrative credentials.',
+                'icon' => 'heroicon-o-users',
+                'url' => SystemUserResource::getUrl('index', $params),
+            ],
             [
                 'title' => 'Roles & Permissions',
                 'description' => 'Manage user roles, granular resource policies, and permission matrix.',

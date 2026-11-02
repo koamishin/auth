@@ -10,6 +10,7 @@ use App\Filament\Pages\Tenancy\EditTenantProfile;
 use App\Filament\Pages\Tenancy\RegisterTenant;
 use App\Filament\Resources\ActivityLogs\ActivityLogResource;
 use App\Filament\Resources\FeatureFlag\FeatureFlagResource;
+use App\Filament\Resources\SystemUsers\SystemUserResource;
 use App\Filament\Resources\Tenants\TenantResource;
 use App\Models\Tenant;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
@@ -76,6 +77,16 @@ class AdminPanelProvider extends PanelProvider
 
                         return $tenant ? SettingsCluster::getUrl(['tenant' => $tenant]) : '#';
                     }),
+                'system_users' => MenuItem::make()
+                    ->label('System Users')
+                    ->icon('heroicon-o-shield-check')
+                    ->sort(15)
+                    ->url(function (): string {
+                        $tenant = Filament::getTenant() ?? Auth::user()?->tenants()->first() ?? Tenant::first();
+
+                        return $tenant ? SystemUserResource::getUrl('index', ['tenant' => $tenant]) : '#';
+                    })
+                    ->visible(fn (): bool => Auth::user()?->hasRole('super_admin') ?? false),
                 'roles' => MenuItem::make()
                     ->label('Roles & Permissions')
                     ->icon('heroicon-o-shield-check')
