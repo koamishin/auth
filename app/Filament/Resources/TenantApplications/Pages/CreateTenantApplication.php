@@ -15,6 +15,63 @@ class CreateTenantApplication extends CreateRecord
 {
     protected static string $resource = TenantApplicationResource::class;
 
+    protected string $view = 'filament.resources.tenant-applications.pages.create-application';
+
+    protected static ?string $title = 'Create Application';
+
+    /**
+     * @return array{name: string, badge: string, color: string, client_type: string, package: string}
+     */
+    public function getFrameworkInfo(): array
+    {
+        $framework = $this->data['framework'] ?? 'laravel';
+
+        return match ($framework) {
+            'nextjs' => [
+                'name' => 'Next.js',
+                'badge' => '▲ Next.js',
+                'color' => 'gray',
+                'client_type' => 'Public Client (PKCE)',
+                'package' => 'npm install @koamishin/auth-js',
+            ],
+            'vue' => [
+                'name' => 'Vue 3 / Nuxt',
+                'badge' => 'V Vue',
+                'color' => 'emerald',
+                'client_type' => 'Public Client (PKCE)',
+                'package' => 'npm install @koamishin/auth-js',
+            ],
+            'react' => [
+                'name' => 'React (Vite / SPA)',
+                'badge' => '⚛ React',
+                'color' => 'cyan',
+                'client_type' => 'Public Client (PKCE)',
+                'package' => 'npm install @koamishin/auth-js',
+            ],
+            'nodejs' => [
+                'name' => 'Node.js',
+                'badge' => 'Node',
+                'color' => 'amber',
+                'client_type' => 'Confidential Client (Secret)',
+                'package' => 'npm install @koamishin/auth-node',
+            ],
+            'vanilla' => [
+                'name' => 'Vanilla JavaScript',
+                'badge' => 'JS',
+                'color' => 'amber',
+                'client_type' => 'Public Client (PKCE)',
+                'package' => 'npm install @koamishin/auth-js',
+            ],
+            default => [
+                'name' => 'Laravel',
+                'badge' => 'Lv Laravel',
+                'color' => 'red',
+                'client_type' => 'Confidential Client (Secret)',
+                'package' => 'composer require koamishin/laravel-sdk',
+            ],
+        };
+    }
+
     #[\Override]
     protected function handleRecordCreation(array $data): Model
     {

@@ -57,7 +57,9 @@ class TenantApplicationResource extends Resource
     {
         return $schema
             ->components([
-                Section::make('Organization & Environment')
+                Section::make('Application Identity')
+                    ->description('Essential name and details for this application.')
+                    ->icon('heroicon-o-cube')
                     ->components([
                         Select::make('tenant_id')
                             ->label('Organization')
@@ -69,52 +71,57 @@ class TenantApplicationResource extends Resource
                             ->searchable()
                             ->preload(),
 
-                        ToggleButtons::make('environment')
-                            ->label('Environment')
-                            ->options([
-                                'development' => 'Development (Localhost / Sandbox)',
-                                'production' => 'Production (Live)',
-                            ])
-                            ->colors([
-                                'development' => 'warning',
-                                'production' => 'success',
-                            ])
-                            ->icons([
-                                'development' => 'heroicon-o-wrench-screwdriver',
-                                'production' => 'heroicon-o-check-badge',
-                            ])
-                            ->default('development')
-                            ->live()
-                            ->afterStateUpdated(function (?string $state, Set $set, ?TenantApplication $record): void {
-                                foreach (self::environmentFormValues($record, $state) as $name => $value) {
-                                    $set($name, $value);
-                                }
-                            })
-                            ->inline()
-                            ->required(),
-
-                        Toggle::make('allow_signups')
-                            ->label('Allow self-service signup')
-                            ->helperText('Allow new and existing Portal users to join this organization and application environment as members during signup or consent. Turn off to require administrator enrollment.')
-                            ->default(fn (Get $get): bool => $get('environment') === 'development')
-                            ->rules(['boolean']),
-
                         TextInput::make('name')
                             ->label('Application Name')
-                            ->placeholder('e.g. Acme Billing, Internal CRM')
+                            ->placeholder('e.g. Acme Billing Portal, Customer WebApp')
+                            ->prefixIcon('heroicon-o-tag')
                             ->required()
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->live(onBlur: true),
 
-                        Select::make('framework')
+                        Textarea::make('description')
+                            ->label('Description / Project Purpose')
+                            ->placeholder('Optional notes on what this application is for and who accesses it...')
+                            ->rows(2)
+                            ->maxLength(500),
+                    ]),
+
+                Section::make('Target Architecture & Framework')
+                    ->description('Choose your application framework. We will configure confidential or public PKCE clients and generate tailored SDK guides.')
+                    ->icon('heroicon-o-cpu-chip')
+                    ->components([
+                        ToggleButtons::make('framework')
                             ->label('Target Framework')
                             ->options([
-                                'laravel' => 'Laravel (PHP / Blade / Inertia)',
+                                'laravel' => 'Laravel (PHP / Inertia)',
                                 'nextjs' => 'Next.js (React / SSR)',
                                 'vue' => 'Vue 3 / Nuxt',
                                 'react' => 'React (Vite / SPA)',
-                                'nodejs' => 'Node.js (Express / Fastify)',
+                                'nodejs' => 'Node.js (Backend)',
                                 'vanilla' => 'Vanilla JavaScript',
                             ])
+                            ->icons([
+                                'laravel' => 'heroicon-o-fire',
+                                'nextjs' => 'heroicon-o-sparkles',
+                                'vue' => 'heroicon-o-code-bracket',
+                                'react' => 'heroicon-o-cube-transparent',
+                                'nodejs' => 'heroicon-o-server-stack',
+                                'vanilla' => 'heroicon-o-globe-alt',
+                            ])
+                            ->colors([
+                                'laravel' => 'danger',
+                                'nextjs' => 'gray',
+                                'vue' => 'success',
+                                'react' => 'info',
+                                'nodejs' => 'warning',
+                                'vanilla' => 'primary',
+                            ])
+                            ->columns([
+                                'default' => 2,
+                                'sm' => 3,
+                                'lg' => 3,
+                            ])
+                            ->gridDirection('row')
                             ->default('laravel')
                             ->live()
                             ->afterStateUpdated(function ($state, callable $set, callable $get): void {
@@ -130,18 +137,62 @@ class TenantApplicationResource extends Resource
                                 }
                             })
                             ->required(),
+                    ]),
+
+                Section::make('Environment & Callbacks')
+                    ->description('Configure deployment environment and whitelisted redirect callback URLs.')
+                    ->icon('heroicon-o-globe-alt')
+                    ->components([
+                        ToggleButtons::make('environment')
+                            ->label('Initial Environment')
+                            ->options([
+                                'development' => 'Development (Localhost / Sandbox)',
+                                'production' => 'Production (Live / Strict HTTPS)',
+                            ])
+                            ->colors([
+                                'development' => 'warning',
+                                'production' => 'success',
+                            ])
+                            ->icons([
+                                'development' => 'heroicon-o-wrench-screwdriver',
+                                'production' => 'heroicon-o-check-badge',
+                            ])
+                            ->default('development')
+                            ->live()
+                            ->afterStateUpdated(function (?string $state, Set $set, ?TenantApplication $record, Get $get): void {
+                                if ($record instanceof TenantApplication) {
+                                    foreach (self::environmentFormValues($record, $state) as $name => $value) {
+                                        $set($name, $value);
+                                    }
+                                } else {
+                                    $framework = $get('framework') ?? 'laravel';
+                                    if ($state === 'development') {
+                                        $defaultCallback = match ($framework) {
+                                            'laravel' => 'http://localhost:8000/koamishin/callback',
+                                            'nextjs' => 'http://localhost:3000/api/auth/callback',
+                                            'vue', 'react' => 'http://localhost:5173/auth/callback',
+                                            default => 'http://localhost:3000/callback',
+                                        };
+                                        $set('redirect_uris', [$defaultCallback]);
+                                    }
+                                }
+                            })
+                            ->inline()
+                            ->required(),
+
+                        Toggle::make('allow_signups')
+                            ->label('Allow self-service user signup')
+                            ->helperText('Allow new and existing users to join this application during signup or consent. Turn off to require administrator invitation.')
+                            ->default(fn (Get $get): bool => $get('environment') === 'development')
+                            ->rules(['boolean']),
 
                         TagsInput::make('redirect_uris')
                             ->label('Allowed Callback URLs (Redirect URIs)')
-                            ->helperText('Whitelisted URLs that the portal will redirect back to after signing in.')
+                            ->helperText('Whitelisted URLs that the portal will redirect back to after signing in. Must be HTTPS in production.')
                             ->placeholder('Add callback URL and press Enter')
                             ->default(['http://localhost:8000/koamishin/callback'])
                             ->required(),
-
-                        Textarea::make('description')
-                            ->label('Description / Notes')
-                            ->maxLength(500),
-                    ])->columns(2),
+                    ]),
                 Section::make('Hosted login appearance')
                     ->description('Customize the Portal-hosted login for the selected environment.')
                     ->visible(fn (?TenantApplication $record): bool => $record instanceof TenantApplication)
