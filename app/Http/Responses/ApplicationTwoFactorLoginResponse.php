@@ -30,6 +30,11 @@ class ApplicationTwoFactorLoginResponse extends TwoFactorLoginResponse
             return response()->json('', 204);
         }
 
+        $intended = $request->session()->get('url.intended');
+        if ($intended !== null && str_contains($intended, '/dashboard')) {
+            $request->session()->forget('url.intended');
+        }
+
         $redirect = redirect()->intended(Fortify::redirects('login'));
 
         return $request->header('X-Inertia')

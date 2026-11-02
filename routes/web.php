@@ -23,7 +23,16 @@ Route::get('/', fn () => Inertia::render('Welcome', [
     'canRegister' => Features::enabled(Features::registration()) && app(ApplicationFeaturesSettings::class)->registration_enabled,
 ]))->name('home');
 
-Route::get('dashboard', fn () => Inertia::render('Dashboard'))->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('dashboard', function (Request $request) {
+    $user = $request->user();
+    if ($user instanceof User && $user->canAccessPanel(Filament::getPanel('admin'))) {
+        return $request->header('X-Inertia')
+            ? Inertia::location(url('/admin'))
+            : redirect()->to('/admin');
+    }
+
+    return Inertia::render('Dashboard');
+})->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
