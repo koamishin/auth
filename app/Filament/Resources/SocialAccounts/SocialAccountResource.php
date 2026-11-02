@@ -27,7 +27,7 @@ class SocialAccountResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-link';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Authentication & API';
+    protected static \UnitEnum|string|null $navigationGroup = 'Directory & Access';
 
     protected static ?string $navigationLabel = 'Social Connections (SSO)';
 
@@ -35,7 +35,7 @@ class SocialAccountResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Social Connections';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 3;
 
     protected static bool $isScopedToTenant = false;
 

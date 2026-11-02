@@ -1,0 +1,307 @@
+/* ================================================================
+   Filament Drilldown Sidebar Plugin — Component Styles
+   Self-contained plain CSS (no Tailwind required).
+
+   Colors use the --primary-* and --gray-* CSS custom properties
+   injected by Filament's @filamentStyles directive, which works
+   across Filament v3, v4, and v5 regardless of Tailwind version.
+   ================================================================ */
+
+/* ---------------------------------------------------------------
+   Wrapper that mirrors .fi-sidebar-nav-groups negative margin
+   --------------------------------------------------------------- */
+.fi-dd-nav-wrapper {
+    margin-inline: -0.5rem;
+}
+
+/* ---------------------------------------------------------------
+   Labeled groups list (gap between label sections)
+   --------------------------------------------------------------- */
+.fi-dd-groups-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem; /* gap-y-7 */
+}
+
+/* ---------------------------------------------------------------
+   Drilldown group container
+   --------------------------------------------------------------- */
+.fi-dd-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem; /* gap-y-1 */
+    margin-top: 0.5rem; /* mt-2 */
+}
+
+/* ---------------------------------------------------------------
+   Group label (shown above the drilldown button)
+   --------------------------------------------------------------- */
+.fi-dd-group-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--gray-400);
+    padding-inline: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+
+:where(.dark, .dark *) .fi-dd-group-label {
+    color: var(--gray-500);
+}
+
+/* ---------------------------------------------------------------
+   Drilldown button (opens the detail panel)
+   --------------------------------------------------------------- */
+.fi-dd-group-btn {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    column-gap: 0.75rem;
+    border-radius: 0.5rem;
+    padding: 0.625rem 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition-property: color, background-color, border-color;
+    transition-duration: 75ms;
+    outline: none;
+    color: var(--gray-700);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    text-align: start;
+}
+
+:where(.dark, .dark *) .fi-dd-group-btn {
+    color: var(--gray-200);
+}
+
+.fi-dd-group-btn:hover,
+.fi-dd-group-btn:focus-visible {
+    background-color: var(--gray-100);
+}
+
+:where(.dark, .dark *) .fi-dd-group-btn:hover,
+:where(.dark, .dark *) .fi-dd-group-btn:focus-visible {
+    background-color: rgb(255 255 255 / 0.05);
+}
+
+.fi-dd-group-btn.fi-active {
+    color: var(--primary-600);
+    background-color: var(--primary-50);
+}
+
+:where(.dark, .dark *) .fi-dd-group-btn.fi-active {
+    color: var(--primary-400);
+    background-color: rgb(255 255 255 / 0.05);
+}
+
+/* Icon inside drilldown button */
+.fi-dd-group-btn .fi-dd-btn-icon {
+    flex-shrink: 0;
+    height: 1.25rem;
+    width: 1.25rem;
+    color: var(--gray-400);
+}
+
+:where(.dark, .dark *) .fi-dd-group-btn .fi-dd-btn-icon {
+    color: var(--gray-500);
+}
+
+.fi-dd-group-btn.fi-active .fi-dd-btn-icon {
+    color: var(--primary-500);
+}
+
+:where(.dark, .dark *) .fi-dd-group-btn.fi-active .fi-dd-btn-icon {
+    color: var(--primary-400);
+}
+
+/* Label text inside drilldown button */
+.fi-dd-group-btn .fi-dd-btn-label {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: start;
+}
+
+/* Chevron icon inside drilldown button */
+.fi-dd-group-btn .fi-dd-btn-chevron {
+    flex-shrink: 0;
+    height: 1rem;
+    width: 1rem;
+    color: var(--gray-400);
+}
+
+:where(.dark, .dark *) .fi-dd-group-btn .fi-dd-btn-chevron {
+    color: var(--gray-500);
+}
+
+/* ---------------------------------------------------------------
+   Back button (inside detail view)
+   --------------------------------------------------------------- */
+.fi-dd-back-btn {
+    display: flex;
+    align-items: center;
+    column-gap: 0.5rem;
+    border-radius: 0.5rem;
+    padding: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--gray-500);
+    transition-property: color, background-color;
+    transition-duration: 75ms;
+    width: 100%;
+    outline: none;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    text-align: start;
+}
+
+:where(.dark, .dark *) .fi-dd-back-btn {
+    color: var(--gray-400);
+}
+
+.fi-dd-back-btn:hover,
+.fi-dd-back-btn:focus-visible {
+    background-color: var(--gray-100);
+    color: var(--gray-700);
+}
+
+:where(.dark, .dark *) .fi-dd-back-btn:hover,
+:where(.dark, .dark *) .fi-dd-back-btn:focus-visible {
+    background-color: rgb(255 255 255 / 0.05);
+    color: var(--gray-200);
+}
+
+/* ---------------------------------------------------------------
+   Detail panel
+   --------------------------------------------------------------- */
+.fi-dd-detail-panel {
+    margin-top: 0.5rem;
+}
+
+.fi-dd-detail-header {
+    display: flex;
+    align-items: center;
+    column-gap: 0.75rem;
+    padding-inline: 0.5rem;
+    padding-bottom: 0.75rem;
+    padding-top: 0.25rem;
+}
+
+.fi-dd-detail-icon {
+    height: 1.5rem;
+    width: 1.5rem;
+    flex-shrink: 0;
+    color: var(--primary-500);
+}
+
+:where(.dark, .dark *) .fi-dd-detail-icon {
+    color: var(--primary-400);
+}
+
+.fi-dd-detail-title {
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--primary-600);
+}
+
+:where(.dark, .dark *) .fi-dd-detail-title {
+    color: var(--primary-400);
+}
+
+.fi-dd-detail-divider {
+    border-color: var(--primary-200);
+    margin-inline: 0.25rem;
+    margin-bottom: 0.5rem;
+}
+
+:where(.dark, .dark *) .fi-dd-detail-divider {
+    border-color: var(--primary-800);
+}
+
+.fi-dd-detail-items {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+/* ---------------------------------------------------------------
+   Transition classes for Alpine x-transition directives
+
+   Main view  → slides in from left  / slides out to left
+   Detail view → slides in from right / slides out to right
+   --------------------------------------------------------------- */
+
+/* Main view enter */
+.fi-dd-main-enter {
+    transition-property: opacity, transform;
+    transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
+    transition-duration: 200ms;
+}
+
+.fi-dd-main-enter-start {
+    opacity: 0;
+    transform: translateX(-1rem) scale(0.95);
+}
+
+.fi-dd-main-enter-end {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+}
+
+/* Main view leave */
+.fi-dd-main-leave {
+    transition-property: opacity, transform;
+    transition-timing-function: cubic-bezier(0.4, 0, 1, 1);
+    transition-duration: 200ms;
+}
+
+.fi-dd-main-leave-start {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+}
+
+.fi-dd-main-leave-end {
+    opacity: 0;
+    transform: translateX(-1rem) scale(0.95);
+}
+
+/* Detail view enter */
+.fi-dd-detail-enter {
+    transition-property: opacity, transform;
+    transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
+    transition-duration: 200ms;
+}
+
+.fi-dd-detail-enter-start {
+    opacity: 0;
+    transform: translateX(1rem) scale(0.95);
+}
+
+.fi-dd-detail-enter-end {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+}
+
+/* Detail view leave */
+.fi-dd-detail-leave {
+    transition-property: opacity, transform;
+    transition-timing-function: cubic-bezier(0.4, 0, 1, 1);
+    transition-duration: 200ms;
+}
+
+.fi-dd-detail-leave-start {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+}
+
+.fi-dd-detail-leave-end {
+    opacity: 0;
+    transform: translateX(1rem) scale(0.95);
+}

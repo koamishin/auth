@@ -38,7 +38,7 @@ class WebhookEndpointResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-signal';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Authentication & API';
+    protected static \UnitEnum|string|null $navigationGroup = 'Applications';
 
     protected static ?string $navigationLabel = 'Webhook Endpoints';
 

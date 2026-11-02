@@ -23,7 +23,7 @@ class SessionResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-computer-desktop';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Authentication & API';
+    protected static \UnitEnum|string|null $navigationGroup = 'Directory & Access';
 
     protected static ?string $navigationLabel = 'Active Sessions';
 
@@ -31,7 +31,7 @@ class SessionResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Active Sessions';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 2;
 
     protected static bool $isScopedToTenant = false;
 

@@ -43,6 +43,7 @@
         "laravel/tinker": "^3.0",
         "laravel/wayfinder": "^0.1.14",
         "nwidart/laravel-modules": "^13.0",
+        "osamaatef/filament-drilldown-sidebar": "^1.4",
         "robertboes/blade-selfhst-icons": "^0.3.2",
         "robertboes/filament-passkeys": "^0.1.0",
         "spatie/laravel-activitylog": "^4.10",

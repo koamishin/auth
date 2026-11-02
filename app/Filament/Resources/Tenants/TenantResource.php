@@ -40,6 +40,8 @@ class TenantResource extends Resource
 
     protected static ?int $navigationSort = 1;
 
+    protected static bool $shouldRegisterNavigation = false;
+
     protected static bool $isScopedToTenant = false;
 
     #[\Override]

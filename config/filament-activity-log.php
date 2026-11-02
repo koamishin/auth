@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 use AlizHarb\ActivityLog\Pages\UserActivitiesPage;
-use AlizHarb\ActivityLog\Resources\ActivityLogs\ActivityLogResource;
 use AlizHarb\ActivityLog\Widgets\ActivityChartWidget;
 use AlizHarb\ActivityLog\Widgets\ActivityHeatmapWidget;
 use AlizHarb\ActivityLog\Widgets\ActivityStatsWidget;
 use AlizHarb\ActivityLog\Widgets\LatestActivityWidget;
+use App\Filament\Resources\ActivityLogs\ActivityLogResource;
 
 return [
     /*
@@ -238,7 +238,7 @@ return [
     */
     'pages' => [
         'user_activities' => [
-            'enabled' => true,
+            'enabled' => false,
             'class' => UserActivitiesPage::class,
             'navigation_label' => null, // null uses translation key
             'navigation_group' => null, // null uses resource group

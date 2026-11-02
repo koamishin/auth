@@ -17,5 +17,7 @@ class SettingsCluster extends Cluster
 
     protected static ?string $navigationLabel = 'Settings';
 
+    protected static bool $shouldRegisterNavigation = false;
+
     protected static ?SubNavigationPosition $subNavigationPosition = SubNavigationPosition::Top;
 }

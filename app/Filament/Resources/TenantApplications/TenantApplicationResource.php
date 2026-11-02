@@ -40,7 +40,7 @@ class TenantApplicationResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-cube';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Tenancy & Organizations';
+    protected static \UnitEnum|string|null $navigationGroup = 'Applications';
 
     protected static ?string $navigationLabel = 'Applications';
 
@@ -48,7 +48,7 @@ class TenantApplicationResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Applications';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 1;
 
     protected static bool $isScopedToTenant = true;
 
