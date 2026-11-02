@@ -78,7 +78,7 @@ const signIn = async () => {
         const redirect = (result as { redirect?: string } | null)?.redirect;
 
         if (redirect) {
-            router.visit(redirect);
+            window.location.href = redirect;
 
             return;
         }

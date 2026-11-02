@@ -112,6 +112,6 @@ return [
     |
     */
 
-    'redirect' => '/',
+    'redirect' => '/admin',
 
 ];

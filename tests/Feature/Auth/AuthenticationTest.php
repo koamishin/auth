@@ -18,7 +18,20 @@ test('users can authenticate using the login screen', function (): void {
     ]);
 
     $this->assertAuthenticated();
-    $response->assertRedirect(route('dashboard', absolute: false));
+    $response->assertRedirect('/admin');
+});
+
+test('users logging in via inertia are redirected to filament admin', function (): void {
+    $user = User::factory()->create();
+
+    $response = $this->withHeader('X-Inertia', 'true')->post(route('login.store'), [
+        'email' => $user->email,
+        'password' => 'password',
+    ]);
+
+    $this->assertAuthenticated();
+    expect($response->status())->toBe(409);
+    expect($response->headers->get('X-Inertia-Location'))->toBe(url('/admin'));
 });
 
 test('users with legacy fortify two factor columns are challenged', function (): void {
