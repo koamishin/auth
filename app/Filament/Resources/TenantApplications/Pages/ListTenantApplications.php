@@ -47,7 +47,7 @@ class ListTenantApplications extends ListRecords
     public function getMetrics(): array
     {
         $tenant = $this->getActiveTenant();
-        if (!$tenant instanceof \App\Models\Tenant) {
+        if (! $tenant instanceof Tenant) {
             return ['total' => 0, 'production' => 0, 'development' => 0, 'users_count' => 0];
         }
 
@@ -75,7 +75,7 @@ class ListTenantApplications extends ListRecords
     public function getApplications(): LengthAwarePaginator
     {
         $tenant = $this->getActiveTenant();
-        if (!$tenant instanceof \App\Models\Tenant) {
+        if (! $tenant instanceof Tenant) {
             return new LengthAwarePaginator([], 0, 9);
         }
 
@@ -97,7 +97,7 @@ class ListTenantApplications extends ListRecords
     public function deleteApplication(int $appId): void
     {
         $tenant = $this->getActiveTenant();
-        if (!$tenant instanceof \App\Models\Tenant) {
+        if (! $tenant instanceof Tenant) {
             return;
         }
 

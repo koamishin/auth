@@ -2,7 +2,6 @@
 
 use App\Filament\Widgets\ApplicationQuickstartWidget;
 use App\Models\Tenant;
-use App\Models\TenantApplication;
 use App\Models\User;
 use App\Services\OAuth\ApplicationProvisioner;
 use Filament\Facades\Filament;
