@@ -17,6 +17,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\Textarea;
@@ -57,9 +58,9 @@ class TenantApplicationResource extends Resource
     {
         return $schema
             ->components([
-                Section::make('Application Identity')
-                    ->description('Essential name and details for this application.')
-                    ->icon('heroicon-o-cube')
+                Section::make('Select a project type')
+                    ->description('Choose the application profile and tenancy model.')
+                    ->icon('heroicon-o-squares-2x2')
                     ->components([
                         Select::make('tenant_id')
                             ->label('Organization')
@@ -71,24 +72,73 @@ class TenantApplicationResource extends Resource
                             ->searchable()
                             ->preload(),
 
+                        Radio::make('project_type')
+                            ->label('Project Type')
+                            ->options([
+                                'consumer' => 'Consumer',
+                                'b2b' => 'B2B',
+                            ])
+                            ->descriptions([
+                                'consumer' => 'Designed for individual end users.',
+                                'b2b' => 'Designed for teams with roles and permissions.',
+                            ])
+                            ->default('consumer')
+                            ->columns(2)
+                            ->live(),
+                    ]),
+
+                Section::make('Authentication')
+                    ->description('Application name and user sign-in options.')
+                    ->icon('heroicon-o-shield-check')
+                    ->components([
                         TextInput::make('name')
-                            ->label('Application Name')
-                            ->placeholder('e.g. Acme Billing Portal, Customer WebApp')
+                            ->label('Application name')
+                            ->helperText('We generated one for you. Change this now, or anytime.')
+                            ->default('My Application')
+                            ->placeholder('e.g. My Application')
                             ->prefixIcon('heroicon-o-tag')
                             ->required()
                             ->maxLength(255)
                             ->live(onBlur: true),
 
-                        Textarea::make('description')
-                            ->label('Description / Project Purpose')
-                            ->placeholder('Optional notes on what this application is for and who accesses it...')
-                            ->rows(2)
-                            ->maxLength(500),
+                        Section::make('Sign in options')
+                            ->description('You can change these anytime in the dashboard.')
+                            ->components([
+                                Toggle::make('auth_email')
+                                    ->label('Email')
+                                    ->default(true)
+                                    ->live(),
+                                Toggle::make('auth_phone')
+                                    ->label('Phone number')
+                                    ->default(false)
+                                    ->live(),
+                                Toggle::make('auth_username')
+                                    ->label('Username')
+                                    ->default(false)
+                                    ->live(),
+                                Toggle::make('auth_google')
+                                    ->label('Google')
+                                    ->default(true)
+                                    ->live(),
+                                Toggle::make('auth_github')
+                                    ->label('GitHub')
+                                    ->default(false)
+                                    ->live(),
+                                Toggle::make('auth_passkeys')
+                                    ->label('Passkeys')
+                                    ->default(true)
+                                    ->live(),
+                            ])
+                            ->columns([
+                                'default' => 2,
+                                'sm' => 3,
+                            ]),
                     ]),
 
                 Section::make('Target Architecture & Framework')
                     ->description('Choose your application framework. We will configure confidential or public PKCE clients and generate tailored SDK guides.')
                     ->icon('heroicon-o-cpu-chip')
+                    ->collapsible()
                     ->components([
                         ToggleButtons::make('framework')
                             ->label('Target Framework')
@@ -137,11 +187,18 @@ class TenantApplicationResource extends Resource
                                 }
                             })
                             ->required(),
+
+                        Textarea::make('description')
+                            ->label('Description / Project Purpose')
+                            ->placeholder('Optional notes on what this application is for and who accesses it...')
+                            ->rows(2)
+                            ->maxLength(500),
                     ]),
 
                 Section::make('Environment & Callbacks')
                     ->description('Configure deployment environment and whitelisted redirect callback URLs.')
                     ->icon('heroicon-o-globe-alt')
+                    ->collapsible()
                     ->components([
                         ToggleButtons::make('environment')
                             ->label('Initial Environment')

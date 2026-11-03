@@ -19,6 +19,48 @@ class CreateTenantApplication extends CreateRecord
 
     protected static ?string $title = 'Create Application';
 
+    public function getProjectType(): string
+    {
+        return $this->data['project_type'] ?? 'consumer';
+    }
+
+    public function getAppName(): string
+    {
+        return filled($this->data['name'] ?? null) ? (string) $this->data['name'] : 'My Application';
+    }
+
+    /**
+     * @return array{email: bool, phone: bool, username: bool, google: bool, github: bool, passkeys: bool}
+     */
+    public function getAuthOptions(): array
+    {
+        return [
+            'email' => (bool) ($this->data['auth_email'] ?? true),
+            'phone' => (bool) ($this->data['auth_phone'] ?? false),
+            'username' => (bool) ($this->data['auth_username'] ?? false),
+            'google' => (bool) ($this->data['auth_google'] ?? true),
+            'github' => (bool) ($this->data['auth_github'] ?? false),
+            'passkeys' => (bool) ($this->data['auth_passkeys'] ?? true),
+        ];
+    }
+
+    public function setProjectType(string $type): void
+    {
+        if (in_array($type, ['consumer', 'b2b'], true)) {
+            $this->data['project_type'] = $type;
+        }
+    }
+
+    public function toggleAuthOption(string $option): void
+    {
+        $key = 'auth_'.$option;
+        if (array_key_exists($key, $this->data)) {
+            $this->data[$key] = ! $this->data[$key];
+        } else {
+            $this->data[$key] = true;
+        }
+    }
+
     /**
      * @return array{name: string, badge: string, color: string, client_type: string, package: string}
      */
