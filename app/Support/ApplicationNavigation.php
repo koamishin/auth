@@ -11,14 +11,18 @@ use App\Models\TenantApplication;
 class ApplicationNavigation
 {
     /**
-     * @return array{application: ?TenantApplication, groups: list<array{label: string, items: list<array{label: string, url: string, active: bool, fragment: ?string}>}>}
+     * @return array{application: ?TenantApplication, groups: list<array{label: string, items: list<array{label: string, icon: string, url: string, active: bool, fragment: ?string}>}>}
      */
     public static function forTenant(?Tenant $tenant): array
     {
+        if (! self::isApplicationRecordRoute()) {
+            return ['application' => null, 'groups' => []];
+        }
+
         $application = self::currentApplication($tenant);
         $groups = [];
 
-        if (!$tenant instanceof \App\Models\Tenant || !$application instanceof \App\Models\TenantApplication) {
+        if (! $tenant instanceof Tenant || ! $application instanceof TenantApplication) {
             return ['application' => null, 'groups' => []];
         }
 
@@ -28,8 +32,8 @@ class ApplicationNavigation
             $groups[] = [
                 'label' => 'Application',
                 'items' => [
-                    ['label' => 'Overview', 'url' => $url, 'active' => $active, 'fragment' => null],
-                    ['label' => 'API keys', 'url' => $url, 'active' => $active, 'fragment' => 'api-keys'],
+                    ['label' => 'Overview', 'icon' => 'heroicon-o-squares-2x2', 'url' => $url, 'active' => $active, 'fragment' => null],
+                    ['label' => 'API keys', 'icon' => 'heroicon-o-key', 'url' => $url, 'active' => $active, 'fragment' => 'api-keys'],
                 ],
             ];
         }
@@ -40,11 +44,11 @@ class ApplicationNavigation
             $groups[] = [
                 'label' => 'Configuration',
                 'items' => [
-                    ['label' => 'Settings', 'url' => $url, 'active' => $active, 'fragment' => null],
-                    ['label' => 'Environment', 'url' => $url, 'active' => $active, 'fragment' => 'environment-callbacks'],
-                    ['label' => 'Appearance', 'url' => $url, 'active' => $active, 'fragment' => 'hosted-login-appearance'],
-                    ['label' => 'Authentication features', 'url' => $url, 'active' => $active, 'fragment' => 'application-authentication-features'],
-                    ['label' => 'Social connections', 'url' => $url, 'active' => $active, 'fragment' => 'social-connections'],
+                    ['label' => 'Settings', 'icon' => 'heroicon-o-cog-6-tooth', 'url' => $url, 'active' => $active, 'fragment' => null],
+                    ['label' => 'Environment', 'icon' => 'heroicon-o-globe-alt', 'url' => $url, 'active' => $active, 'fragment' => 'environment-callbacks'],
+                    ['label' => 'Appearance', 'icon' => 'heroicon-o-paint-brush', 'url' => $url, 'active' => $active, 'fragment' => 'hosted-login-appearance'],
+                    ['label' => 'Authentication features', 'icon' => 'heroicon-o-shield-check', 'url' => $url, 'active' => $active, 'fragment' => 'application-authentication-features'],
+                    ['label' => 'Social connections', 'icon' => 'heroicon-o-share', 'url' => $url, 'active' => $active, 'fragment' => 'social-connections'],
                 ],
             ];
         }
@@ -54,11 +58,11 @@ class ApplicationNavigation
 
     public static function currentApplication(?Tenant $tenant): ?TenantApplication
     {
-        if (!$tenant instanceof \App\Models\Tenant) {
+        if (! $tenant instanceof Tenant) {
             return null;
         }
 
-        if (! request()->routeIs('filament.admin.resources.tenant-applications.view', 'filament.admin.resources.tenant-applications.edit')) {
+        if (! self::isApplicationRecordRoute()) {
             return TenantApplication::current($tenant);
         }
 
@@ -76,5 +80,10 @@ class ApplicationNavigation
         }
 
         return $application;
+    }
+
+    private static function isApplicationRecordRoute(): bool
+    {
+        return request()->routeIs('filament.admin.resources.tenant-applications.view', 'filament.admin.resources.tenant-applications.edit');
     }
 }

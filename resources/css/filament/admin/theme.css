@@ -62,12 +62,11 @@
     transition: background-color 0.15s ease !important;
 }
 
-/* Application-specific navigation inside the Applications drilldown. */
+/* Contextual application navigation in the shared sidebar shell. */
 .fi-app-nav {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
-    padding: 0.25rem 0.25rem 0.75rem;
 }
 
 .fi-app-nav-context {
@@ -76,15 +75,6 @@
     gap: 0.125rem;
     min-width: 0;
     padding-inline: 0.25rem;
-}
-
-.fi-app-nav-caption,
-.fi-app-nav-workspace-label {
-    color: var(--gray-500);
-    font-size: 0.6875rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
 }
 
 .fi-app-nav-name {
@@ -96,38 +86,10 @@
     white-space: nowrap;
 }
 
-.fi-app-nav-search {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    border: 1px solid var(--gray-200);
-    border-radius: 0.5rem;
-    padding: 0.375rem 0.625rem;
-    color: var(--gray-500);
-}
-
-.fi-app-nav-search:focus-within {
-    outline: 2px solid var(--primary-500);
-    outline-offset: 2px;
-}
-
-.fi-app-nav-search svg,
 .fi-app-nav-group-button svg {
     width: 1rem;
     height: 1rem;
     flex: none;
-}
-
-.fi-app-nav-search input {
-    min-width: 0;
-    width: 100%;
-    border: 0;
-    padding: 0;
-    background: transparent;
-    color: var(--gray-950);
-    font-size: 0.8125rem;
-    outline: none;
-    box-shadow: none;
 }
 
 .fi-app-nav-groups {
@@ -176,6 +138,13 @@
     font-size: 0.8125rem;
 }
 
+.fi-app-nav-icon {
+    display: none;
+    width: 1.5rem;
+    height: 1.5rem;
+    flex: none;
+}
+
 .fi-app-nav-group-button:hover,
 .fi-app-nav-link:hover {
     background: var(--gray-100);
@@ -193,22 +162,10 @@
     outline-offset: 2px;
 }
 
-.fi-app-nav-empty {
-    padding: 0.25rem;
-    color: var(--gray-500);
-    font-size: 0.8125rem;
-}
-
-.fi-app-nav-workspace-label {
-    margin: 0.5rem 0.5rem 0.375rem;
-}
-
-.dark .fi-app-nav-name,
-.dark .fi-app-nav-search input {
+.dark .fi-app-nav-name {
     color: var(--gray-100);
 }
 
-.dark .fi-app-nav-search,
 .dark .fi-app-nav-items {
     border-color: var(--gray-700);
 }
@@ -226,4 +183,33 @@
 .dark .fi-app-nav-link-active {
     background: rgb(255 255 255 / 0.08);
     color: var(--primary-400);
+}
+
+@media (width >= 64rem) {
+    .fi-body-has-sidebar-collapsible-on-desktop
+        .fi-sidebar:not(.fi-sidebar-open) {
+        .fi-app-nav {
+            margin-inline: -0.5rem;
+        }
+
+        .fi-app-nav-context,
+        .fi-app-nav-group-button,
+        .fi-app-nav-link-label {
+            display: none;
+        }
+
+        .fi-app-nav-items {
+            margin-inline-start: 0;
+            border: 0;
+            padding-inline-start: 0;
+        }
+
+        .fi-app-nav-link {
+            width: max-content;
+        }
+
+        .fi-app-nav-icon {
+            display: block;
+        }
+    }
 }

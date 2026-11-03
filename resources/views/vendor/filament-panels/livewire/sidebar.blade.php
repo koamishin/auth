@@ -1,36 +1,33 @@
 <div>
     @php
-        $navigation = filament()->getNavigation();
+        $applicationNavigation = \App\Support\ApplicationNavigation::forTenant(filament()->getTenant());
         $isRtl = __('filament-panels::layout.direction') === 'rtl';
         $isSidebarCollapsibleOnDesktop = filament()->isSidebarCollapsibleOnDesktop();
         $isSidebarFullyCollapsibleOnDesktop = filament()->isSidebarFullyCollapsibleOnDesktop();
-        $hasNavigation = filament()->hasNavigation();
         $hasTopbar = filament()->hasTopbar();
-
-        // Groups marked as drilled via DrilldownSidebarPlugin get drill-down navigation
-        $drilledGroupLabels = filament('drilldown-sidebar')?->getDrilledGroups() ?? [];
-
-        $drilldownGroups = collect($navigation)->filter(
-            fn (\Filament\Navigation\NavigationGroup $group) =>
-                filled($group->getLabel()) && count($group->getItems()) > 0
-                && in_array($group->getLabel(), $drilledGroupLabels)
-        );
-
-        // Auto-drill to the active group on page load
-        $activeNavGroup = $drilldownGroups
-            ->first(fn (\Filament\Navigation\NavigationGroup $group): bool => $group->isActive() && filled($group->getLabel()));
-        $activeGroupLabel = $activeNavGroup?->getLabel();
+        $hasTenantMenu = filament()->hasTenancy() && filament()->hasTenantMenu();
+        $hasGlobalSearchInSidebar = filament()->isGlobalSearchEnabled() && filament()->getGlobalSearchPosition() === \Filament\Enums\GlobalSearchPosition::Sidebar;
+        $cspNonce = \Illuminate\Support\Facades\Vite::cspNonce();
     @endphp
 
     {{-- format-ignore-start --}}
-    <aside
-        x-data="{}"
+    <div
+        x-data="filamentSidebar({
+            hasTopNavigation: @js(filament()->hasTopNavigation()),
+            isSidebarCollapsibleOnDesktop: @js($isSidebarCollapsibleOnDesktop),
+            isSidebarFullyCollapsibleOnDesktop: @js($isSidebarFullyCollapsibleOnDesktop),
+        })"
         @if ($isSidebarCollapsibleOnDesktop || $isSidebarFullyCollapsibleOnDesktop)
             x-cloak
         @else
             x-cloak="-lg"
         @endif
         x-bind:class="{ 'fi-sidebar-open': $store.sidebar.isOpen }"
+        x-bind:inert="isHidden"
+        x-effect="focusInitialNavigation()"
+        x-on:keydown.tab="handleTab($event)"
+        x-on:keydown.escape.document="handleEscape($event)"
+        id="fi-main-sidebar"
         class="fi-sidebar fi-main-sidebar"
     >
         {{ \Filament\Support\Facades\FilamentView::renderHook(\Filament\View\PanelsRenderHook::SIDEBAR_START) }}
@@ -45,6 +42,8 @@
                         :label="__('filament-panels::layout.actions.sidebar.expand.label')"
                         x-cloak
                         x-data="{}"
+                        aria-controls="fi-main-sidebar"
+                        x-bind:aria-expanded="$store.sidebar.isOpen"
                         x-on:click="$store.sidebar.open()"
                         x-show="! $store.sidebar.isOpen"
                         class="fi-sidebar-open-collapse-sidebar-btn"
@@ -59,6 +58,8 @@
                         :label="__('filament-panels::layout.actions.sidebar.collapse.label')"
                         x-cloak
                         x-data="{}"
+                        aria-controls="fi-main-sidebar"
+                        x-bind:aria-expanded="$store.sidebar.isOpen"
                         x-on:click="$store.sidebar.close()"
                         x-show="$store.sidebar.isOpen"
                         class="fi-sidebar-close-collapse-sidebar-btn"
@@ -86,22 +87,49 @@
             </header>
         </div>
 
-        @if (filament()->hasTenancy() && filament()->hasTenantMenu())
-            <x-filament-panels::tenant-menu />
-        @endif
-
-        @if (filament()->isGlobalSearchEnabled() && filament()->getGlobalSearchPosition() === \Filament\Enums\GlobalSearchPosition::Sidebar)
+        @if ($hasTenantMenu || $hasGlobalSearchInSidebar)
             <div
-                @if ($isSidebarCollapsibleOnDesktop || $isSidebarFullyCollapsibleOnDesktop)
+                @if ((! $hasTenantMenu) && ($isSidebarCollapsibleOnDesktop || $isSidebarFullyCollapsibleOnDesktop))
                     x-show="$store.sidebar.isOpen"
                 @endif
+                class="fi-sidebar-header-controls"
             >
-                @livewire(Filament\Livewire\GlobalSearch::class)
+                @if ($hasTenantMenu)
+                    <x-filament-panels::tenant-menu />
+                @endif
+
+                @if ($hasGlobalSearchInSidebar)
+                    <div
+                        @if ($isSidebarCollapsibleOnDesktop || $isSidebarFullyCollapsibleOnDesktop)
+                            x-show="$store.sidebar.isOpen"
+                        @endif
+                    >
+                        @livewire(Filament\Livewire\GlobalSearch::class)
+                    </div>
+                @endif
             </div>
         @endif
 
-        <nav class="fi-sidebar-nav">
+        <nav
+            aria-label="{{ __('filament-panels::layout.navigation.label') }}"
+            class="fi-sidebar-nav"
+        >
             {{ \Filament\Support\Facades\FilamentView::renderHook(\Filament\View\PanelsRenderHook::SIDEBAR_NAV_START) }}
+
+            @if ($applicationNavigation['application'])
+                @include('filament.components.application-sidebar-navigation', [
+                    'applicationNavigation' => $applicationNavigation,
+                ])
+            @else
+                @php
+                    $navigation = filament()->getNavigation();
+                    $drilledGroupLabels = filament('drilldown-sidebar')?->getDrilledGroups() ?? [];
+                    $activeGroupLabel = collect($navigation)
+                        ->first(fn (\Filament\Navigation\NavigationGroup $group): bool =>
+                            filled($group->getLabel()) && count($group->getItems()) > 0
+                            && in_array($group->getLabel(), $drilledGroupLabels) && $group->isActive()
+                        )?->getLabel();
+                @endphp
 
             {{-- ============================================================
                  Collapsed sidebar: original group dropdowns (icon-only mode)
@@ -285,7 +313,6 @@
                                 {{-- Group title --}}
                                 @php
                                     $detailIcon = $group->getIcon() ?? collect($group->getItems())->first()?->getIcon();
-                                    $hasActiveApplicationNavigation = false;
                                 @endphp
                                 <div class="fi-dd-detail-header">
                                     @if ($detailIcon)
@@ -300,23 +327,6 @@
                                 </div>
 
                                 <hr class="fi-dd-detail-divider" />
-
-                                @if ($group->getLabel() === 'Applications')
-                                    @php
-                                        $applicationNavigation = filament()->getTenant()
-                                            ? \App\Support\ApplicationNavigation::forTenant(filament()->getTenant())
-                                            : ['application' => null, 'groups' => []];
-                                        $hasActiveApplicationNavigation = collect($applicationNavigation['groups'])
-                                            ->flatMap(fn (array $applicationGroup): array => $applicationGroup['items'])
-                                            ->contains(fn (array $applicationItem): bool => $applicationItem['active']);
-                                    @endphp
-
-                                    @include('filament.components.application-sidebar-navigation', [
-                                        'applicationNavigation' => $applicationNavigation,
-                                    ])
-
-                                    <p class="fi-app-nav-workspace-label">{{ __('Workspace') }}</p>
-                                @endif
 
                                 {{-- Items --}}
                                 <ul class="fi-dd-detail-items">
@@ -333,7 +343,7 @@
                                             }
                                         @endphp
                                         <x-filament-panels::sidebar.item
-                                            :active="$item->isActive() && ! $hasActiveApplicationNavigation"
+                                            :active="$item->isActive()"
                                             :active-child-items="$item->isChildItemsActive()"
                                             :active-icon="$itemActiveIcon"
                                             :badge="$item->getBadge()"
@@ -370,38 +380,41 @@
                 </div>
             </div>
 
-            {{-- Initialize collapsedGroups localStorage for standard collapsible groups --}}
-            <script>
-                var collapsedGroups = JSON.parse(localStorage.getItem('collapsedGroups'))
+            @endif
 
-                if (collapsedGroups === null || collapsedGroups === 'null') {
-                    localStorage.setItem(
-                        'collapsedGroups',
-                        JSON.stringify(@js(
-                            collect($navigation)
+            <script @if (filled($cspNonce)) nonce="{{ $cspNonce }}" @endif>
+                if (! window.Alpine?.store('sidebar')) {
+                    let collapsedGroups = JSON.parse(
+                        localStorage.getItem('filament:sidebar:collapsed_groups'),
+                    )
+
+                    if (collapsedGroups === null || collapsedGroups === 'null') {
+                        collapsedGroups = @js(
+                            collect($navigation ?? [])
                                 ->filter(fn (\Filament\Navigation\NavigationGroup $group): bool => $group->isCollapsed())
-                                ->map(fn (\Filament\Navigation\NavigationGroup $group): string => $group->getLabel())
+                                ->map(fn (\Filament\Navigation\NavigationGroup $group): ?string => ($label = $group->getLabel()) instanceof \Illuminate\Contracts\Support\Htmlable ? $label->toHtml() : $label)
                                 ->values()
                                 ->all()
-                        )),
-                    )
+                        )
+
+                        localStorage.setItem(
+                            'filament:sidebar:collapsed_groups',
+                            JSON.stringify(collapsedGroups),
+                        )
+                    }
+
+                    document.currentScript
+                        .closest('nav')
+                        .querySelectorAll('.fi-sidebar-group')
+                        .forEach((group) => {
+                            if (! collapsedGroups.includes(group.dataset.groupLabel)) {
+                                return
+                            }
+
+                            group.querySelector('.fi-sidebar-group-items').style.display = 'none'
+                            group.classList.add('fi-collapsed')
+                        })
                 }
-
-                collapsedGroups = JSON.parse(localStorage.getItem('collapsedGroups'))
-
-                document
-                    .querySelectorAll('.fi-sidebar-group')
-                    .forEach((group) => {
-                        if (
-                            !collapsedGroups.includes(group.dataset.groupLabel)
-                        ) {
-                            return
-                        }
-
-                        var items = group.querySelector('.fi-sidebar-group-items')
-                        if (items) items.style.display = 'none'
-                        group.classList.add('fi-collapsed')
-                    })
             </script>
 
             {{ \Filament\Support\Facades\FilamentView::renderHook(\Filament\View\PanelsRenderHook::SIDEBAR_NAV_END) }}
@@ -429,7 +442,7 @@
         @endif
 
         {{ \Filament\Support\Facades\FilamentView::renderHook(\Filament\View\PanelsRenderHook::SIDEBAR_FOOTER) }}
-    </aside>
+    </div>
     {{-- format-ignore-end --}}
 
     <x-filament-actions::modals />
