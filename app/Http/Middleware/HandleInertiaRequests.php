@@ -60,6 +60,18 @@ class HandleInertiaRequests extends Middleware
                     ? $layout
                     : app(ApplicationFeaturesSettings::class)->auth_layout;
             },
+            'authColorTheme' => function () use ($request): ?string {
+                $environment = $request->attributes->get('koamishin.application_environment');
+                if (! $environment instanceof TenantApplicationEnvironment) {
+                    return null;
+                }
+
+                $theme = $environment->getSetting('auth_color_theme');
+
+                return is_string($theme) && array_key_exists($theme, TenantApplicationEnvironment::AUTH_COLOR_THEMES)
+                    ? $theme
+                    : 'default';
+            },
             'notificationsEnabled' => app(ApplicationFeaturesSettings::class)->notifications_enabled,
             'settingsFeatures' => $settingsFeatures,
             'socialProviders' => function () use ($request): array {

@@ -35,6 +35,14 @@ class TenantApplicationEnvironment extends Model
 {
     use HasFactory;
 
+    public const AUTH_COLOR_THEMES = [
+        'default' => 'Default',
+        'rose' => 'Rose',
+        'ocean' => 'Ocean',
+        'sage-garden' => 'Sage Garden',
+        'claude' => 'Claude',
+    ];
+
     protected $fillable = [
         'tenant_application_id',
         'environment',

@@ -16,7 +16,7 @@ class AuthLayoutRadio extends Radio
         parent::setUp();
 
         $this->options([
-            'simple' => 'Simple Layout',
+            'simple' => 'Minimal Layout',
             'card' => 'Card Layout',
             'split' => 'Split Layout',
         ]);
@@ -29,7 +29,7 @@ class AuthLayoutRadio extends Radio
     {
         return [
             'simple' => [
-                'label' => 'Simple Layout',
+                'label' => 'Minimal Layout',
                 'description' => 'Clean, centered layout with minimal styling',
                 'icon' => Heroicon::OutlinedRectangleStack,
                 'preview' => [

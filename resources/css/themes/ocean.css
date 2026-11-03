@@ -12,7 +12,8 @@
 }
 
 :root.dark.theme-ocean,
-.dark.theme-ocean {
+.dark.theme-ocean,
+.dark .hosted-auth-theme.theme-ocean {
     --primary: oklch(0.7 0.14 230);
     --primary-foreground: oklch(0.18 0.03 220);
     --secondary: oklch(0.3 0.04 230);

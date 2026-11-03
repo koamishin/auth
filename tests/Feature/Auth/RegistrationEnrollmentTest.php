@@ -490,6 +490,31 @@ test('application login uses its own appearance and feature policies', function 
     Notification::assertSentTo($user, VerifyEmail::class);
 });
 
+test('hosted auth themes follow the active application flow and safely inherit', function (): void {
+    [$clientA, $environmentA] = registrationTestEnvironment('theme-a', ['auth_color_theme' => 'rose']);
+    [$clientB] = registrationTestEnvironment('theme-b', ['auth_color_theme' => 'ocean']);
+    [$clientC] = registrationTestEnvironment('theme-c', ['auth_color_theme' => ['unexpected']]);
+    [$clientD] = registrationTestEnvironment('theme-d');
+    $flowA = registrationFlow($clientA, signup: false);
+    $flowB = registrationFlow($clientB, signup: false);
+    $flowC = registrationFlow($clientC, signup: false);
+    $flowD = registrationFlow($clientD, signup: false);
+
+    expect(registrationPageProps(post('/auth/hosted', ['flow' => $flowA, 'hosted' => 1, 'screen' => 'login'])->assertOk())['authColorTheme'])->toBe('rose');
+    expect(registrationPageProps(get('/login?flow='.$flowA)->assertOk())['authColorTheme'])->toBe('rose');
+    expect(registrationPageProps(post('/auth/hosted', ['flow' => $flowB, 'hosted' => 1, 'screen' => 'login'])->assertOk())['authColorTheme'])->toBe('ocean');
+    expect(registrationPageProps(post('/auth/hosted', ['flow' => $flowC, 'hosted' => 1, 'screen' => 'login'])->assertOk())['authColorTheme'])->toBe('default');
+    expect(registrationPageProps(post('/auth/hosted', ['flow' => $flowD, 'hosted' => 1, 'screen' => 'login'])->assertOk())['authColorTheme'])->toBe('default');
+    expect(registrationPageProps(get('/login')->assertOk())['authColorTheme'])->toBeNull();
+
+    $environmentA->update(['settings' => ['auth_color_theme' => 'default']]);
+    expect(registrationPageProps(post('/auth/hosted', ['flow' => $flowA, 'hosted' => 1, 'screen' => 'login'])->assertOk())['authColorTheme'])->toBe('default');
+    $environmentA->update(['settings' => ['auth_color_theme' => 'sage-garden']]);
+    expect(registrationPageProps(post('/auth/hosted', ['flow' => $flowA, 'hosted' => 1, 'screen' => 'login'])->assertOk())['authColorTheme'])->toBe('sage-garden');
+    $environmentA->update(['settings' => ['auth_color_theme' => 'invalid']]);
+    expect(registrationPageProps(post('/auth/hosted', ['flow' => $flowA, 'hosted' => 1, 'screen' => 'login'])->assertOk())['authColorTheme'])->toBe('default');
+});
+
 test('custom social connections use application credentials without exposing or changing Portal credentials', function (): void {
     enableApplicationSocialLogin();
     [$client] = registrationTestEnvironment('custom-social', [

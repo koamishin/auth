@@ -12,7 +12,8 @@
 }
 
 :root.dark.theme-rose,
-.dark.theme-rose {
+.dark.theme-rose,
+.dark .hosted-auth-theme.theme-rose {
     --primary: oklch(0.75 0.18 18);
     --primary-foreground: oklch(0.2 0.02 20);
     --secondary: oklch(0.28 0.05 20);

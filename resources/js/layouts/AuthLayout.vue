@@ -4,6 +4,7 @@ import { usePage } from '@inertiajs/vue3';
 import AuthSimpleLayout from '@/layouts/auth/AuthSimpleLayout.vue';
 import AuthCardLayout from '@/layouts/auth/AuthCardLayout.vue';
 import AuthSplitLayout from '@/layouts/auth/AuthSplitLayout.vue';
+import { themes } from '@/conf/themes';
 
 defineProps<{
     title?: string;
@@ -45,6 +46,16 @@ const application = computed(
         } | null,
 );
 
+const hostedTheme = computed(() => {
+    const theme = page.props.authColorTheme;
+
+    if (!themes.some((config) => config.id === theme)) {
+        return null;
+    }
+
+    return theme;
+});
+
 const layoutComponent = computed(() => {
     const layout = page.props.authLayout ?? 'simple';
 
@@ -60,13 +71,27 @@ const layoutComponent = computed(() => {
 </script>
 
 <template>
-    <component
-        :is="layoutComponent"
-        :title="title"
-        :description="description"
-        :logo-url="application?.logoUrl"
-        :application-name="application?.name"
+    <div
+        :class="
+            hostedTheme
+                ? [
+                      'hosted-auth-theme',
+                      'bg-background',
+                      'font-sans',
+                      'text-foreground',
+                      `theme-${hostedTheme}`,
+                  ]
+                : undefined
+        "
     >
-        <slot />
-    </component>
+        <component
+            :is="layoutComponent"
+            :title="title"
+            :description="description"
+            :logo-url="application?.logoUrl"
+            :application-name="application?.name"
+        >
+            <slot />
+        </component>
+    </div>
 </template>

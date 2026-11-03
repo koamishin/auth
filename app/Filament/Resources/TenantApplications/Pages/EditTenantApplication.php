@@ -65,6 +65,9 @@ class EditTenantApplication extends EditRecord
         if (! is_bool($data['allow_signups'] ?? null)) {
             throw ValidationException::withMessages(['allow_signups' => 'Choose whether self-service signup is allowed.']);
         }
+        if (! in_array($data['auth_color_theme'] ?? 'inherit', ['inherit', ...array_keys(TenantApplicationEnvironment::AUTH_COLOR_THEMES)], true)) {
+            throw ValidationException::withMessages(['auth_color_theme' => 'Choose a valid login color theme.']);
+        }
         $verificationPolicy = $data['email_verification_policy'] ?? null;
         if (! in_array($verificationPolicy, ['inherit', 'required', 'disabled'], true)) {
             throw ValidationException::withMessages(['email_verification_policy' => 'Choose a valid email verification policy.']);
@@ -123,6 +126,7 @@ class EditTenantApplication extends EditRecord
                 'login_description' => null,
                 'login_logo_url' => null,
                 'auth_layout' => 'inherit',
+                'auth_color_theme' => 'inherit',
             ] as $key => $default) {
                 $value = $data[$key] ?? $default;
                 if ($value === $default || $value === '') {

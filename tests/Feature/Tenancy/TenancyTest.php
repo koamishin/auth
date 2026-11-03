@@ -284,6 +284,49 @@ test('application email verification can be required, disabled, or inherited per
     expect($development->fresh()->requiresEmailVerification())->toBeTrue();
 });
 
+test('hosted appearance themes are validated and saved independently per environment', function (): void {
+    Role::query()->firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+    $admin = User::factory()->create();
+    $admin->assignRole('super_admin');
+    $tenant = Tenant::query()->create(['name' => 'Appearance org', 'slug' => 'appearance-org']);
+    $application = app(ApplicationProvisioner::class)->create($tenant, [
+        'name' => 'Appearance app', 'framework' => 'laravel', 'environment' => 'development',
+        'redirect_uris' => ['http://localhost:8000/callback'],
+    ]);
+    $development = $application->environments()->where('environment', 'development')->sole();
+    $production = $application->environments()->where('environment', 'production')->sole();
+    $production->update(['settings' => ['auth_color_theme' => 'ocean', 'custom_setting' => 'keep']]);
+
+    actingAs($admin);
+    Filament::setCurrentPanel('admin');
+    Filament::setTenant($tenant);
+    Filament::bootCurrentPanel();
+
+    Livewire::actingAs($admin)->test(EditTenantApplication::class, ['record' => $application->getKey()])
+        ->assertSet('data.auth_color_theme', 'inherit')
+        ->set('data.auth_color_theme', 'rose')
+        ->call('save', false)
+        ->assertHasNoErrors();
+    expect($development->fresh()->getSetting('auth_color_theme'))->toBe('rose');
+    expect($production->fresh()->settings)->toBe(['auth_color_theme' => 'ocean', 'custom_setting' => 'keep']);
+
+    Livewire::actingAs($admin)->test(EditTenantApplication::class, ['record' => $application->getKey()])
+        ->assertSet('data.auth_color_theme', 'rose')
+        ->set('data.environment', 'production')
+        ->assertSet('data.auth_color_theme', 'ocean')
+        ->set('data.auth_color_theme', 'not-a-theme')
+        ->call('save', false)
+        ->assertHasErrors();
+    expect($production->fresh()->settings)->toBe(['auth_color_theme' => 'ocean', 'custom_setting' => 'keep']);
+
+    Livewire::actingAs($admin)->test(EditTenantApplication::class, ['record' => $application->getKey()])
+        ->set('data.auth_color_theme', 'inherit')
+        ->call('save', false)
+        ->assertHasNoErrors();
+    expect($development->fresh()->settings)->not->toHaveKey('auth_color_theme');
+    expect($production->fresh()->getSetting('auth_color_theme'))->toBe('ocean');
+});
+
 test('production provisioning refuses an insecure callback without creating a client', function (): void {
     $tenant = Tenant::query()->create(['name' => 'Production org', 'slug' => 'production-org']);
     $clientsBefore = Client::query()->count();

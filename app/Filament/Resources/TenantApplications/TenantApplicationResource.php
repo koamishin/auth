@@ -263,8 +263,11 @@ class TenantApplicationResource extends Resource
                         TextInput::make('login_logo_url')->label('Logo URL')->url()->rules(['nullable', 'url:https'])->maxLength(2048)
                             ->helperText('Use an HTTPS image URL. Leave blank to use the Portal logo.'),
                         Select::make('auth_layout')->label('Login layout')->options([
-                            'inherit' => 'Use Portal default', 'simple' => 'Simple', 'card' => 'Card', 'split' => 'Split',
+                            'inherit' => 'Use Portal default', 'simple' => 'Minimal', 'card' => 'Card', 'split' => 'Split',
                         ])->default('inherit')->required(),
+                        Select::make('auth_color_theme')->label('Login color theme')
+                            ->options(['inherit' => 'Use default theme', ...TenantApplicationEnvironment::AUTH_COLOR_THEMES])
+                            ->default('inherit')->required(),
                     ])->columns(2),
                 Section::make('Application authentication features')
                     ->description('These settings apply only to the selected environment. Portal-wide feature availability still applies.')
@@ -309,6 +312,7 @@ class TenantApplicationResource extends Resource
             'login_description' => $config?->getSetting('login_description'),
             'login_logo_url' => $config?->getSetting('login_logo_url'),
             'auth_layout' => $config?->getSetting('auth_layout', 'inherit') ?? 'inherit',
+            'auth_color_theme' => $config?->getSetting('auth_color_theme', 'inherit') ?? 'inherit',
         ];
         $connections = $config?->getSetting('social_providers', []);
         foreach (SocialLoginProvider::cases() as $provider) {
