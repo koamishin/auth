@@ -99,7 +99,7 @@ class TenantApplicationResource extends Resource
                             ->prefixIcon('heroicon-o-tag')
                             ->required()
                             ->maxLength(255)
-                            ->live(onBlur: true),
+                            ->live(debounce: 300),
 
                         Section::make('Sign in options')
                             ->description('You can change these anytime in the dashboard.')
