@@ -10,6 +10,7 @@ use App\Filament\Resources\TenantApplications\Pages\EditTenantApplication;
 use App\Filament\Resources\TenantApplications\Pages\ListTenantApplications;
 use App\Filament\Resources\TenantApplications\Pages\ViewTenantApplication;
 use App\Models\TenantApplication;
+use App\Models\TenantApplicationEnvironment;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -103,11 +104,12 @@ class TenantApplicationResource extends Resource
                             ->live(debounce: 300),
 
                         Section::make('Sign in options')
-                            ->description('You can change these anytime in the dashboard.')
+                            ->description('Email sign-in is available. Configuring sign-in methods here is coming soon.')
                             ->components([
                                 Toggle::make('auth_email')
                                     ->label('Email')
                                     ->default(true)
+                                    ->disabled()
                                     ->live(),
                                 Toggle::make('auth_phone')
                                     ->label('Phone number — coming soon')
@@ -115,20 +117,24 @@ class TenantApplicationResource extends Resource
                                     ->disabled()
                                     ->live(),
                                 Toggle::make('auth_username')
-                                    ->label('Username')
+                                    ->label('Username — coming soon')
                                     ->default(false)
+                                    ->disabled()
                                     ->live(),
                                 Toggle::make('auth_google')
-                                    ->label('Google')
-                                    ->default(true)
+                                    ->label('Google — configuration coming soon')
+                                    ->default(false)
+                                    ->disabled()
                                     ->live(),
                                 Toggle::make('auth_github')
-                                    ->label('GitHub')
+                                    ->label('GitHub — configuration coming soon')
                                     ->default(false)
+                                    ->disabled()
                                     ->live(),
                                 Toggle::make('auth_passkeys')
-                                    ->label('Passkeys')
-                                    ->default(true)
+                                    ->label('Passkeys — configuration coming soon')
+                                    ->default(false)
+                                    ->disabled()
                                     ->live(),
                             ])
                             ->columns([
@@ -138,57 +144,64 @@ class TenantApplicationResource extends Resource
                     ]),
 
                 Section::make('Target Architecture & Framework')
-                    ->description('Choose your application framework. We will configure confidential or public PKCE clients and generate tailored SDK guides.')
+                    ->description('Choose your application platform and OAuth client security profile.')
                     ->icon('heroicon-o-cpu-chip')
+                    ->visible(fn (?TenantApplication $record): bool => $record instanceof TenantApplication)
                     ->collapsible()
                     ->components([
                         ToggleButtons::make('framework')
-                            ->label('Target Framework')
+                            ->label('Platform / SDK Preset')
                             ->options([
-                                'laravel' => 'Laravel (PHP / Inertia)',
-                                'nextjs' => 'Next.js (React / SSR)',
-                                'vue' => 'Vue 3 / Nuxt',
+                                'nextjs' => 'Next.js (React)',
                                 'react' => 'React (Vite / SPA)',
-                                'nodejs' => 'Node.js (Backend)',
+                                'vue' => 'Vue 3 / Nuxt',
                                 'vanilla' => 'Vanilla JavaScript',
+                                'mobile' => 'Mobile / Native',
+                                'laravel' => 'Laravel (PHP / Inertia)',
+                                'nodejs' => 'Node.js (Backend)',
                             ])
                             ->icons([
-                                'laravel' => 'heroicon-o-fire',
                                 'nextjs' => 'heroicon-o-sparkles',
-                                'vue' => 'heroicon-o-code-bracket',
                                 'react' => 'heroicon-o-cube-transparent',
-                                'nodejs' => 'heroicon-o-server-stack',
+                                'vue' => 'heroicon-o-code-bracket',
                                 'vanilla' => 'heroicon-o-globe-alt',
+                                'mobile' => 'heroicon-o-device-phone-mobile',
+                                'laravel' => 'heroicon-o-fire',
+                                'nodejs' => 'heroicon-o-server-stack',
                             ])
                             ->colors([
-                                'laravel' => 'danger',
                                 'nextjs' => 'gray',
-                                'vue' => 'success',
                                 'react' => 'info',
-                                'nodejs' => 'warning',
+                                'vue' => 'success',
                                 'vanilla' => 'primary',
+                                'mobile' => 'info',
+                                'laravel' => 'danger',
+                                'nodejs' => 'warning',
                             ])
                             ->columns([
                                 'default' => 2,
                                 'sm' => 3,
-                                'lg' => 3,
+                                'lg' => 4,
                             ])
                             ->gridDirection('row')
-                            ->default('laravel')
                             ->live()
-                            ->afterStateUpdated(function ($state, callable $set, callable $get): void {
-                                $env = $get('environment');
-                                if ($env === 'development') {
-                                    $defaultCallback = match ($state) {
-                                        'laravel' => 'http://localhost:8000/koamishin/callback',
-                                        'nextjs' => 'http://localhost:3000/api/auth/callback',
-                                        'vue', 'react' => 'http://localhost:5173/auth/callback',
-                                        default => 'http://localhost:3000/callback',
-                                    };
-                                    $set('redirect_uris', [$defaultCallback]);
+                            ->afterStateUpdated(function (?string $state, callable $set): void {
+                                if ($state !== null && $state !== '') {
+                                    $set('client_type', in_array($state, ['laravel', 'nodejs'], true) ? 'confidential' : 'public');
                                 }
-                            })
-                            ->required(),
+                            }),
+
+                        Radio::make('client_type')
+                            ->label('Client Security Profile (Selected Environment)')
+                            ->options([
+                                'public' => 'Browser / Mobile App (Public + PKCE)',
+                                'confidential' => 'Server / Backend App (Confidential Secret)',
+                            ])
+                            ->descriptions([
+                                'public' => 'Authenticates with your Publishable Key (pk_...) and mandatory S256 PKCE. Never embed secret keys in browser or mobile apps.',
+                                'confidential' => 'Authenticates code exchanges on your backend using your Publishable Key (pk_...) and Secret Key (sk_...).',
+                            ])
+                            ->columns(2),
 
                         Textarea::make('description')
                             ->label('Description / Project Purpose')
@@ -200,10 +213,11 @@ class TenantApplicationResource extends Resource
                 Section::make('Environment & Callbacks')
                     ->description('Configure deployment environment and whitelisted redirect callback URLs.')
                     ->icon('heroicon-o-globe-alt')
+                    ->visible(fn (?TenantApplication $record): bool => $record instanceof TenantApplication)
                     ->collapsible()
                     ->components([
                         ToggleButtons::make('environment')
-                            ->label('Initial Environment')
+                            ->label('Environment')
                             ->options([
                                 'development' => 'Development (Localhost / Sandbox)',
                                 'production' => 'Production (Live / Strict HTTPS)',
@@ -218,21 +232,10 @@ class TenantApplicationResource extends Resource
                             ])
                             ->default('development')
                             ->live()
-                            ->afterStateUpdated(function (?string $state, Set $set, ?TenantApplication $record, Get $get): void {
+                            ->afterStateUpdated(function (?string $state, Set $set, ?TenantApplication $record): void {
                                 if ($record instanceof TenantApplication) {
                                     foreach (self::environmentFormValues($record, $state) as $name => $value) {
                                         $set($name, $value);
-                                    }
-                                } else {
-                                    $framework = $get('framework') ?? 'laravel';
-                                    if ($state === 'development') {
-                                        $defaultCallback = match ($framework) {
-                                            'laravel' => 'http://localhost:8000/koamishin/callback',
-                                            'nextjs' => 'http://localhost:3000/api/auth/callback',
-                                            'vue', 'react' => 'http://localhost:5173/auth/callback',
-                                            default => 'http://localhost:3000/callback',
-                                        };
-                                        $set('redirect_uris', [$defaultCallback]);
                                     }
                                 }
                             })
@@ -249,8 +252,7 @@ class TenantApplicationResource extends Resource
                             ->label('Allowed Callback URLs (Redirect URIs)')
                             ->helperText('Whitelisted URLs that the portal will redirect back to after signing in. Must be HTTPS in production.')
                             ->placeholder('Add callback URL and press Enter')
-                            ->default(['http://localhost:8000/koamishin/callback'])
-                            ->required(),
+                            ->default([]),
                     ]),
                 Section::make('Hosted login appearance')
                     ->description('Customize the Portal-hosted login for the selected environment.')
@@ -290,8 +292,11 @@ class TenantApplicationResource extends Resource
     /** @return array<string, mixed> */
     public static function environmentFormValues(?TenantApplication $application, ?string $environment): array
     {
+        /** @var TenantApplicationEnvironment|null $config */
         $config = $application?->environments()->where('environment', $environment)->first();
         $values = [
+            'redirect_uris' => $config instanceof TenantApplicationEnvironment ? ($config->redirect_uris ?? []) : [],
+            'client_type' => $config?->client_type,
             'allow_signups' => $application instanceof TenantApplication ? $config?->getSetting('allow_signups', false) === true : $environment === 'development',
             'email_verification_policy' => match ($config?->getSetting('email_verification_required')) {
                 true => 'required',
@@ -364,8 +369,14 @@ class TenantApplicationResource extends Resource
                             ->formatStateUsing(fn (TenantApplication $record): string => $record->getFrameworkLabel())
                             ->color('info'),
 
+                        TextEntry::make('publishable_key')
+                            ->label('Publishable Key')
+                            ->state(fn (TenantApplication $record): string => $record->getPublishableKey())
+                            ->fontFamily('mono')
+                            ->copyable(),
+
                         TextEntry::make('oauth_client_id')
-                            ->label('Client ID')
+                            ->label('Legacy OAuth Client ID')
                             ->fontFamily('mono')
                             ->copyable(),
 

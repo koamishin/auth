@@ -20,8 +20,14 @@
                     <span class="text-emerald-500 font-mono text-[11px]">V</span>
                 @elseif($app->framework === 'react')
                     <span class="text-cyan-500 font-mono text-[11px]">⚛</span>
-                @else
+                @elseif($app->framework === 'nodejs')
+                    <span class="text-amber-500 font-mono text-[10px]">Node</span>
+                @elseif($app->framework === 'mobile')
+                    <span class="text-sky-500 font-mono text-[11px]">M</span>
+                @elseif($app->framework === 'vanilla')
                     <span class="text-primary-500 font-mono text-[11px]">JS</span>
+                @else
+                    <x-filament::icon icon="heroicon-o-cube" class="w-4 h-4 text-gray-500 dark:text-gray-400" />
                 @endif
             </div>
 

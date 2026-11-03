@@ -18,13 +18,14 @@ use Laravel\Passport\Client;
  * @property int $tenant_id
  * @property string|null $oauth_client_id
  * @property string $name
- * @property string $framework
+ * @property string|null $framework
  * @property string $environment
- * @property array<string> $redirect_uris
+ * @property array<string>|null $redirect_uris
  * @property string|null $description
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
- * @property-read Tenant $tenant
+ * @property-read Tenant|null $tenant
+ * @property-read Client|null $oauthClient
  */
 class TenantApplication extends Model
 {
@@ -94,22 +95,49 @@ class TenantApplication extends Model
     {
         $env = $environment ?? $this->environment;
 
+        /** @var TenantApplicationEnvironment|null $existing */
+        $existing = $this->environments()->where('environment', $env)->first();
+
+        if ($existing instanceof TenantApplicationEnvironment) {
+            if (! filled($existing->publishable_key)) {
+                $existing->forceFill([
+                    'publishable_key' => TenantApplicationEnvironment::generatePublishableKey($env),
+                ])->save();
+            }
+
+            return $existing;
+        }
+
+        $legacyClient = $env === $this->environment ? $this->oauthClient : null;
+        $clientType = $legacyClient instanceof Client
+            ? ($legacyClient->confidential() ? 'confidential' : 'public')
+            : null;
+
         /** @var TenantApplicationEnvironment $config */
-        $config = $this->environments()->firstOrCreate(
-            ['environment' => $env],
-            [
-                'oauth_client_id' => $env === $this->environment ? $this->oauth_client_id : null,
-                'redirect_uris' => $env === $this->environment ? $this->redirect_uris : [],
-                'settings' => [
-                    'allow_signups' => false,
-                    'require_email_verification' => $env === 'production',
-                    'enforce_mfa' => $env === 'production',
-                    'session_lifetime_minutes' => $env === 'production' ? 120 : 1440,
-                ],
-            ]
-        );
+        $config = $this->environments()->firstOrCreate([
+            'environment' => $env,
+        ], [
+            'oauth_client_id' => $env === $this->environment ? $this->oauth_client_id : null,
+            'publishable_key' => TenantApplicationEnvironment::generatePublishableKey($env),
+            'client_type' => $clientType,
+            'redirect_uris' => $env === $this->environment ? ($this->redirect_uris ?? []) : [],
+            'settings' => [
+                'allow_signups' => false,
+                'require_email_verification' => $env === 'production',
+                'enforce_mfa' => $env === 'production',
+                'session_lifetime_minutes' => $env === 'production' ? 120 : 1440,
+            ],
+        ]);
 
         return $config;
+    }
+
+    public function getPublishableKey(?string $environment = null): string
+    {
+        $env = $environment ?? $this->environment;
+        $config = $this->getEnvironmentConfig($env);
+
+        return $config->publishable_key ?? ($env === 'production' ? 'pk_live_your_key' : 'pk_test_your_key');
     }
 
     public function getEnvSnippet(?string $environment = null, ?string $clientSecret = null): string
@@ -119,31 +147,28 @@ class TenantApplication extends Model
             ? request()->getSchemeAndHttpHost()
             : rtrim((string) config('app.url'), '/');
         $config = $this->getEnvironmentConfig($env);
-        $clientId = $config->oauth_client_id ?? 'your-client-id';
+        $publishableKey = $config->publishable_key ?? ($env === 'production' ? 'pk_live_your_key' : 'pk_test_your_key');
         $callback = $config->redirect_uris[0] ?? 'configure-your-callback';
 
-        $secret = $clientSecret;
-        if (! $secret) {
-            $regen = session('regenerated_secret');
-            if (is_array($regen) && ($regen['environment'] ?? '') === $env && filled($regen['secret'] ?? null)) {
-                $secret = $regen['secret'];
-            }
-        }
-        if (! $secret) {
-            $newAppCreds = session('new_app_credentials');
-            if (is_array($newAppCreds) && is_array($newAppCreds[$env] ?? null) && filled($newAppCreds[$env]['secret'] ?? null)) {
-                $secret = $newAppCreds[$env]['secret'];
-            }
-        }
-        $secret ??= 'YOUR_CLIENT_SECRET_HERE';
+        $secret = $clientSecret ?? 'YOUR_SECRET_KEY_HERE';
 
         if ($this->framework === 'laravel') {
             return <<<ENV
 KOAMISHIN_PORTAL_URL={$portalUrl}
 KOAMISHIN_APPLICATION_ID={$this->id}
 KOAMISHIN_ENVIRONMENT={$env}
-KOAMISHIN_CLIENT_ID={$clientId}
-KOAMISHIN_CLIENT_SECRET={$secret}
+KOAMISHIN_PUBLISHABLE_KEY={$publishableKey}
+KOAMISHIN_SECRET_KEY={$secret}
+KOAMISHIN_REDIRECT_URI={$callback}
+ENV;
+        }
+
+        if ($this->framework === 'nodejs') {
+            return <<<ENV
+KOAMISHIN_PORTAL_URL={$portalUrl}
+KOAMISHIN_ENVIRONMENT={$env}
+KOAMISHIN_PUBLISHABLE_KEY={$publishableKey}
+KOAMISHIN_SECRET_KEY={$secret}
 KOAMISHIN_REDIRECT_URI={$callback}
 ENV;
         }
@@ -151,16 +176,15 @@ ENV;
         if ($this->framework === 'nextjs') {
             return <<<ENV
 NEXT_PUBLIC_KOAMISHIN_PORTAL_URL={$portalUrl}
-NEXT_PUBLIC_KOAMISHIN_ENVIRONMENT={$env}
-NEXT_PUBLIC_KOAMISHIN_CLIENT_ID={$clientId}
+NEXT_PUBLIC_KOAMISHIN_PUBLISHABLE_KEY={$publishableKey}
 NEXT_PUBLIC_KOAMISHIN_REDIRECT_URI={$callback}
+KOAMISHIN_SECRET_KEY={$secret}
 ENV;
         }
 
         return <<<ENV
 VITE_KOAMISHIN_PORTAL_URL={$portalUrl}
-VITE_KOAMISHIN_ENVIRONMENT={$env}
-VITE_KOAMISHIN_CLIENT_ID={$clientId}
+VITE_KOAMISHIN_PUBLISHABLE_KEY={$publishableKey}
 VITE_KOAMISHIN_REDIRECT_URI={$callback}
 ENV;
     }
@@ -202,11 +226,13 @@ ENV;
     public function getFrameworkLabel(): string
     {
         return match ($this->framework) {
+            null, '' => 'Not connected',
             'laravel' => 'Laravel (PHP)',
             'nextjs' => 'Next.js (React)',
             'vue' => 'Vue 3 / Nuxt',
-            'react' => 'React (Vite / CRA)',
+            'react' => 'React (Vite / SPA)',
             'nodejs' => 'Node.js (Express / Fastify)',
+            'mobile' => 'Mobile / Native (PKCE)',
             default => 'Standard Web (Vanilla JS)',
         };
     }
@@ -215,7 +241,7 @@ ENV;
     {
         return match ($this->framework) {
             'laravel' => 'composer require koamishin/auth-php',
-            'nextjs', 'vue', 'react' => 'npm install @koamishin/auth-js',
+            'nodejs' => 'npm install express axios dotenv',
             default => 'npm install @koamishin/auth-js',
         };
     }
@@ -225,7 +251,7 @@ ENV;
         $portalUrl = request()->hasHeader('Host')
             ? request()->getSchemeAndHttpHost()
             : rtrim((string) config('app.url'), '/');
-        $clientId = $this->oauth_client_id ?? 'your-client-id';
+        $publishableKey = $this->getPublishableKey();
         $callback = $this->redirect_uris[0] ?? 'http://localhost:3000/auth/callback';
 
         return match ($this->framework) {
@@ -270,7 +296,7 @@ import { createKoamishinClient } from '@koamishin/auth-js';
 
 export const koamishin = createKoamishinClient({
   portalUrl: process.env.NEXT_PUBLIC_KOAMISHIN_PORTAL_URL!,
-  clientId: process.env.NEXT_PUBLIC_KOAMISHIN_CLIENT_ID!,
+  publishableKey: process.env.NEXT_PUBLIC_KOAMISHIN_PUBLISHABLE_KEY!,
   redirectUri: process.env.NEXT_PUBLIC_KOAMISHIN_REDIRECT_URI!,
 });
 
@@ -314,7 +340,7 @@ import { createKoamishinClient } from '@koamishin/auth-js';
 
 const koamishin = createKoamishinClient({
   portalUrl: import.meta.env.VITE_KOAMISHIN_PORTAL_URL,
-  clientId: import.meta.env.VITE_KOAMISHIN_CLIENT_ID,
+  publishableKey: import.meta.env.VITE_KOAMISHIN_PUBLISHABLE_KEY,
   redirectUri: import.meta.env.VITE_KOAMISHIN_REDIRECT_URI,
 });
 
@@ -333,7 +359,7 @@ import { createKoamishinClient } from '@koamishin/auth-js';
 
 const koamishin = createKoamishinClient({
   portalUrl: '{$portalUrl}',
-  clientId: '{$clientId}',
+  publishableKey: '{$publishableKey}',
   redirectUri: '{$callback}',
 });
 

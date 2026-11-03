@@ -89,7 +89,7 @@ Route::middleware(['web', 'auth'])->post('admin/{tenant:slug}/toggle-env/{applic
     }
 
     $configuration = $application->environments()->where('environment', $environment)->first();
-    abort_unless($configuration !== null && filled($configuration->oauth_client_id), 409, 'The selected environment has no OAuth client.');
+    abort_unless($configuration !== null, 409, 'The selected environment is not configured.');
 
     $application->update([
         'environment' => $environment,

@@ -10,6 +10,7 @@ use App\Services\OAuth\ApplicationProvisioner;
 use Filament\Facades\Filament;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Validation\ValidationException;
 
 class CreateTenantApplication extends CreateRecord
 {
@@ -38,91 +39,36 @@ class CreateTenantApplication extends CreateRecord
             'email' => (bool) ($this->data['auth_email'] ?? true),
             'phone' => (bool) ($this->data['auth_phone'] ?? false),
             'username' => (bool) ($this->data['auth_username'] ?? false),
-            'google' => (bool) ($this->data['auth_google'] ?? true),
+            'google' => (bool) ($this->data['auth_google'] ?? false),
             'github' => (bool) ($this->data['auth_github'] ?? false),
-            'passkeys' => (bool) ($this->data['auth_passkeys'] ?? true),
+            'passkeys' => (bool) ($this->data['auth_passkeys'] ?? false),
         ];
     }
 
     public function setProjectType(string $type): void
     {
-        if (in_array($type, ['consumer', 'b2b'], true)) {
+        if ($type === 'consumer') {
             $this->data['project_type'] = $type;
         }
-    }
-
-    public function toggleAuthOption(string $option): void
-    {
-        $key = 'auth_'.$option;
-        if (array_key_exists($key, $this->data)) {
-            $this->data[$key] = ! $this->data[$key];
-        } else {
-            $this->data[$key] = true;
-        }
-    }
-
-    /**
-     * @return array{name: string, badge: string, color: string, client_type: string, package: string}
-     */
-    public function getFrameworkInfo(): array
-    {
-        $framework = $this->data['framework'] ?? 'laravel';
-
-        return match ($framework) {
-            'nextjs' => [
-                'name' => 'Next.js',
-                'badge' => '▲ Next.js',
-                'color' => 'gray',
-                'client_type' => 'Public Client (PKCE)',
-                'package' => 'npm install @koamishin/auth-js',
-            ],
-            'vue' => [
-                'name' => 'Vue 3 / Nuxt',
-                'badge' => 'V Vue',
-                'color' => 'emerald',
-                'client_type' => 'Public Client (PKCE)',
-                'package' => 'npm install @koamishin/auth-js',
-            ],
-            'react' => [
-                'name' => 'React (Vite / SPA)',
-                'badge' => '⚛ React',
-                'color' => 'cyan',
-                'client_type' => 'Public Client (PKCE)',
-                'package' => 'npm install @koamishin/auth-js',
-            ],
-            'nodejs' => [
-                'name' => 'Node.js',
-                'badge' => 'Node',
-                'color' => 'amber',
-                'client_type' => 'Confidential Client (Secret)',
-                'package' => 'npm install @koamishin/auth-node',
-            ],
-            'vanilla' => [
-                'name' => 'Vanilla JavaScript',
-                'badge' => 'JS',
-                'color' => 'amber',
-                'client_type' => 'Public Client (PKCE)',
-                'package' => 'npm install @koamishin/auth-js',
-            ],
-            default => [
-                'name' => 'Laravel',
-                'badge' => 'Lv Laravel',
-                'color' => 'red',
-                'client_type' => 'Confidential Client (Secret)',
-                'package' => 'composer require koamishin/laravel-sdk',
-            ],
-        };
     }
 
     #[\Override]
     protected function handleRecordCreation(array $data): Model
     {
+        if (($data['project_type'] ?? 'consumer') !== 'consumer') {
+            throw ValidationException::withMessages([
+                'project_type' => 'B2B applications are coming soon. Select Consumer to continue.',
+            ]);
+        }
+
         $tenant = Filament::getTenant() ?? Tenant::query()->findOrFail($data['tenant_id'] ?? null);
         if (! $tenant instanceof Tenant) {
             abort(403);
         }
 
-        return app(ApplicationProvisioner::class)->create($tenant, $data);
+        return app(ApplicationProvisioner::class)->create($tenant, [
+            'name' => $data['name'] ?? null,
+        ]);
     }
 
     #[\Override]

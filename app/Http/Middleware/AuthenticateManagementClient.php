@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Middleware;
 
 use App\Models\ManagementApiClient;
+use App\Models\TenantApplicationEnvironment;
+use App\Services\OAuth\ApplicationAccess;
 use Closure;
 use Illuminate\Http\Request;
 use Laravel\Passport\AccessToken;
@@ -19,6 +21,34 @@ class AuthenticateManagementClient extends EnsureClientIsResourceOwner
     /** @param Closure(Request): Response $next */
     public function handle(Request $request, Closure $next, string ...$scopes): Response
     {
+        $bearer = $request->bearerToken();
+
+        if (is_string($bearer) && str_starts_with($bearer, 'pk_')) {
+            throw new AuthenticationException;
+        }
+
+        if (is_string($bearer) && str_starts_with($bearer, 'sk_')) {
+            $environment = app(ApplicationAccess::class)->environmentForSecretKey($bearer, requireActiveTenant: false);
+            if (! $environment instanceof TenantApplicationEnvironment) {
+                throw new AuthenticationException;
+            }
+
+            if (! $environment->application?->tenant?->is_active
+                || ! in_array($environment->environment, ['development', 'production'], true)) {
+                abort(403);
+            }
+
+            foreach ($scopes as $scope) {
+                if (! in_array($scope, ManagementApiClient::SCOPES, true)) {
+                    throw new MissingScopeException($scope);
+                }
+            }
+
+            $request->attributes->set('koamishin_management_environment', $environment);
+
+            return $next($request);
+        }
+
         $token = $this->validateToken($request);
 
         if (! $token instanceof AccessToken) {

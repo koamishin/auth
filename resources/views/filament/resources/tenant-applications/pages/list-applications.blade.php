@@ -122,6 +122,8 @@
                     @php
                         $isProd = $app->environment === 'production';
                         $isActive = $activeAppId === $app->id;
+                        $activeEnv = $app->environments->firstWhere('environment', $app->environment);
+                        $displayKey = $activeEnv?->publishable_key ?? $app->oauth_client_id;
                     @endphp
                     <div
                         wire:key="app-card-{{ $app->id }}"
@@ -142,8 +144,12 @@
                                             <span class="text-cyan-500 font-mono text-xs">⚛</span>
                                         @elseif($app->framework === 'nodejs')
                                             <span class="text-amber-500 font-mono text-xs">Node</span>
-                                        @else
+                                        @elseif($app->framework === 'mobile')
+                                            <span class="text-sky-500 font-mono text-xs">M</span>
+                                        @elseif($app->framework === 'vanilla')
                                             <span class="text-primary-500 font-mono text-xs">JS</span>
+                                        @else
+                                            <x-filament::icon icon="heroicon-o-cube" class="w-5 h-5 text-gray-500 dark:text-gray-400" />
                                         @endif
                                     </div>
 
@@ -181,18 +187,20 @@
                                 </p>
                             @endif
 
-                            <!-- Client ID with Copy Button -->
+                            <!-- Publishable Key with Copy Button -->
                             <div class="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 text-[11px] mb-3 font-mono">
-                                <span class="text-gray-500 truncate mr-2" title="{{ $app->oauth_client_id }}">
-                                    ID: {{ \Illuminate\Support\Str::limit($app->oauth_client_id ?? 'None', 26) }}
+                                <span class="text-gray-500 truncate mr-2" title="{{ $displayKey }}">
+                                    Key: {{ \Illuminate\Support\Str::limit($displayKey ?? 'None', 26) }}
                                 </span>
-                                <button
-                                    type="button"
-                                    @click="navigator.clipboard.writeText('{{ $app->oauth_client_id }}'); copiedId['{{ $app->id }}'] = true; setTimeout(() => copiedId['{{ $app->id }}'] = false, 2000)"
-                                    class="shrink-0 text-primary-600 dark:text-primary-400 hover:underline font-semibold"
-                                >
-                                    <span x-text="copiedId['{{ $app->id }}'] ? 'Copied!' : 'Copy'"></span>
-                                </button>
+                                @if($displayKey)
+                                    <button
+                                        type="button"
+                                        @click="navigator.clipboard.writeText(@js($displayKey)); copiedId['{{ $app->id }}'] = true; setTimeout(() => copiedId['{{ $app->id }}'] = false, 2000)"
+                                        class="shrink-0 text-primary-600 dark:text-primary-400 hover:underline font-semibold"
+                                    >
+                                        <span x-text="copiedId['{{ $app->id }}'] ? 'Copied!' : 'Copy'"></span>
+                                    </button>
+                                @endif
                             </div>
 
                             <!-- Specs & Meta details -->

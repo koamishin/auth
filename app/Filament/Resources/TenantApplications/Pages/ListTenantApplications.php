@@ -84,7 +84,8 @@ class ListTenantApplications extends ListRecords
                 $query->where(function (Builder $sub): void {
                     $sub->where('name', 'like', "%{$this->search}%")
                         ->orWhere('oauth_client_id', 'like', "%{$this->search}%")
-                        ->orWhere('description', 'like', "%{$this->search}%");
+                        ->orWhere('description', 'like', "%{$this->search}%")
+                        ->orWhereHas('environments', fn (Builder $env) => $env->where('publishable_key', 'like', "%{$this->search}%"));
                 });
             })
             ->when($this->environmentFilter !== 'all', fn (Builder $q) => $q->where('environment', $this->environmentFilter))

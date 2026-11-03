@@ -17,19 +17,20 @@ class ApplicationQuickstartWidget extends Widget
 
     public ?TenantApplication $record = null;
 
-    public string $framework = 'laravel';
+    public string $framework = 'nextjs';
+
+    public string $setupMode = 'manual';
 
     public int $activeStep = 1;
 
     public string $packageManager = 'npm';
 
-    public ?string $clientSecret = null;
-
-    public function mount(?TenantApplication $record = null, ?string $clientSecret = null): void
+    public function mount(?TenantApplication $record = null): void
     {
         $this->record = $record;
-        $this->framework = $record?->framework ?? 'laravel';
-        $this->clientSecret = $clientSecret ?? session('regenerated_secret.secret');
+        $this->framework = $record instanceof TenantApplication && $record->framework !== null
+            ? $record->framework
+            : 'nextjs';
 
         if ($this->framework === 'laravel') {
             $this->packageManager = 'composer';
@@ -38,11 +39,32 @@ class ApplicationQuickstartWidget extends Widget
 
     public function setFramework(string $framework): void
     {
-        if (in_array($framework, ['laravel', 'nextjs', 'vue', 'react', 'nodejs', 'vanilla'], true)) {
+        if (array_key_exists($framework, $this->getAvailableFrameworks())) {
             $this->framework = $framework;
             $this->packageManager = $framework === 'laravel' ? 'composer' : 'npm';
             $this->activeStep = 1;
         }
+    }
+
+    public function setSetupMode(string $mode): void
+    {
+        if (in_array($mode, ['agent', 'manual'], true)) {
+            $this->setupMode = $mode;
+        }
+    }
+
+    public function openConnectionSetup(): void
+    {
+        $this->dispatch('quickstart-connect', framework: $this->framework);
+    }
+
+    public function getEnrolledUsersCount(): int
+    {
+        if (! $this->record instanceof TenantApplication) {
+            return 0;
+        }
+
+        return $this->record->users($this->getEnvironment())->count();
     }
 
     public function setStep(int $step): void
@@ -68,41 +90,65 @@ class ApplicationQuickstartWidget extends Widget
 
     public function getClientId(): string
     {
-        return $this->record?->oauth_client_id ?? 'your-client-id';
+        return $this->record?->getPublishableKey() ?? 'your-publishable-key';
     }
 
     public function getCallbackUrl(): string
     {
-        return $this->record?->redirect_uris[0] ?? 'http://localhost:3000/auth/callback';
+        return $this->record instanceof TenantApplication && isset($this->record->redirect_uris[0])
+            ? $this->record->redirect_uris[0]
+            : 'YOUR_REGISTERED_CALLBACK_URL';
     }
 
     public function getApplicationId(): string
     {
-        return (string) ($this->record?->id ?? '1');
+        return $this->record instanceof TenantApplication ? (string) $this->record->id : '1';
     }
 
     public function getEnvironment(): string
     {
-        return $this->record?->environment ?? 'development';
+        return $this->record instanceof TenantApplication ? $this->record->environment : 'development';
     }
 
     public function getResolvedSecret(): string
     {
-        if ($this->clientSecret) {
-            return $this->clientSecret;
-        }
+        return 'YOUR_SECRET_KEY_HERE';
+    }
 
-        $sessionSecret = session('regenerated_secret.secret');
-        if ($sessionSecret) {
-            return $sessionSecret;
-        }
+    /** @return array{connected: bool, client_type: ?string} */
+    public function getConnectionStatus(): array
+    {
+        $environment = $this->record?->getEnvironmentConfig();
 
-        $newCreds = session('new_app_credentials.'.$this->getEnvironment().'.secret');
-        if ($newCreds) {
-            return $newCreds;
-        }
+        return [
+            'connected' => $environment?->isConnected() ?? false,
+            'client_type' => $environment?->client_type,
+        ];
+    }
 
-        return 'YOUR_CLIENT_SECRET_HERE';
+    public function getAgentPrompt(): string
+    {
+        $framework = $this->getAvailableFrameworks()[$this->framework]['name'] ?? 'application';
+        $portalUrl = $this->getPortalUrl();
+        $applicationId = $this->getApplicationId();
+        $environment = $this->getEnvironment();
+        $publishableKey = $this->getClientId();
+        $callback = $this->getCallbackUrl();
+        $connection = $this->getConnectionStatus()['connected']
+            ? "Use this registered callback URL exactly: {$callback}."
+            : 'Ask me for the callback URL and register it in the Koamishin dashboard before testing.';
+
+        return <<<PROMPT
+Integrate Koamishin authentication into this {$framework} application.
+
+Portal URL: {$portalUrl}
+Application ID: {$applicationId}
+Environment: {$environment}
+Publishable key: {$publishableKey}
+{$connection}
+
+Use the Koamishin quickstart for this platform and an SDK version that supports publishable keys. Follow the existing project conventions. Implement sign-in, sign-up, and the OAuth callback with state validation and S256 PKCE; validate the returned user against this application and environment. Do not put secret keys in browser or mobile code, URLs, logs, or version control. If server-side credentials are needed, ask me to supply them through my environment or secret manager. Run the relevant tests and explain any remaining setup.
+PROMPT;
     }
 
     /**
@@ -153,6 +199,13 @@ class ApplicationQuickstartWidget extends Widget
                 'icon' => 'heroicon-o-globe-alt',
                 'description' => 'Zero-framework HTML5 and modern ES module client with Web Crypto PKCE.',
             ],
+            'mobile' => [
+                'name' => 'Mobile',
+                'badge' => 'M',
+                'color' => 'info',
+                'icon' => 'heroicon-o-device-phone-mobile',
+                'description' => 'Native applications can integrate with OAuth authorization code and S256 PKCE.',
+            ],
         ];
     }
 
@@ -172,8 +225,9 @@ class ApplicationQuickstartWidget extends Widget
             'nextjs' => $this->getNextJsSteps($portalUrl, $clientId, $callback, $env),
             'vue' => $this->getVueSteps($portalUrl, $clientId, $callback, $env),
             'react' => $this->getReactSteps($portalUrl, $clientId, $callback, $env),
-            'nodejs' => $this->getNodeJsSteps($portalUrl, $clientId, $clientSecret, $callback, $env),
+            'nodejs' => $this->getNodeJsSteps($portalUrl, $clientId, $clientSecret, $callback, $appId, $env),
             'vanilla' => $this->getVanillaJsSteps($portalUrl, $clientId, $callback),
+            'mobile' => $this->getMobileSteps($portalUrl, $clientId, $callback),
             default => $this->getLaravelSteps($portalUrl, $clientId, $clientSecret, $callback, $appId, $env),
         };
     }
@@ -203,8 +257,8 @@ class ApplicationQuickstartWidget extends Widget
 KOAMISHIN_PORTAL_URL={$portalUrl}
 KOAMISHIN_APPLICATION_ID={$appId}
 KOAMISHIN_ENVIRONMENT={$env}
-KOAMISHIN_CLIENT_ID={$clientId}
-KOAMISHIN_CLIENT_SECRET={$clientSecret}
+KOAMISHIN_PUBLISHABLE_KEY={$clientId}
+KOAMISHIN_SECRET_KEY={$clientSecret}
 KOAMISHIN_REDIRECT_URI={$callback}
 ENV,
                 'tip' => 'Client secrets must remain on your server. Never expose this secret to frontend code or client bundles.',
@@ -319,7 +373,7 @@ PHP,
                 'code' => <<<ENV
 NEXT_PUBLIC_KOAMISHIN_PORTAL_URL={$portalUrl}
 NEXT_PUBLIC_KOAMISHIN_ENVIRONMENT={$env}
-NEXT_PUBLIC_KOAMISHIN_CLIENT_ID={$clientId}
+NEXT_PUBLIC_KOAMISHIN_PUBLISHABLE_KEY={$clientId}
 NEXT_PUBLIC_KOAMISHIN_REDIRECT_URI={$callback}
 ENV,
                 'tip' => 'Public variables in Next.js require the NEXT_PUBLIC_ prefix to be accessible in browser client components.',
@@ -335,7 +389,7 @@ import { createKoamishinClient } from '@koamishin/auth-js';
 
 export const koamishin = createKoamishinClient({
   portalUrl: process.env.NEXT_PUBLIC_KOAMISHIN_PORTAL_URL!,
-  clientId: process.env.NEXT_PUBLIC_KOAMISHIN_CLIENT_ID!,
+  publishableKey: process.env.NEXT_PUBLIC_KOAMISHIN_PUBLISHABLE_KEY!,
   redirectUri: process.env.NEXT_PUBLIC_KOAMISHIN_REDIRECT_URI!,
   scopes: ['openid', 'profile', 'email'],
 });
@@ -415,7 +469,7 @@ TS,
                 'code' => <<<ENV
 VITE_KOAMISHIN_PORTAL_URL={$portalUrl}
 VITE_KOAMISHIN_ENVIRONMENT={$env}
-VITE_KOAMISHIN_CLIENT_ID={$clientId}
+VITE_KOAMISHIN_PUBLISHABLE_KEY={$clientId}
 VITE_KOAMISHIN_REDIRECT_URI={$callback}
 ENV,
                 'tip' => 'Vite exposes environment variables prefixed with VITE_ via import.meta.env.',
@@ -431,7 +485,7 @@ import { createKoamishinClient } from '@koamishin/auth-js';
 
 export const auth = createKoamishinClient({
   portalUrl: import.meta.env.VITE_KOAMISHIN_PORTAL_URL,
-  clientId: import.meta.env.VITE_KOAMISHIN_CLIENT_ID,
+  publishableKey: import.meta.env.VITE_KOAMISHIN_PUBLISHABLE_KEY,
   redirectUri: import.meta.env.VITE_KOAMISHIN_REDIRECT_URI,
 });
 TS,
@@ -504,7 +558,7 @@ VUE,
                 'code' => <<<ENV
 VITE_KOAMISHIN_PORTAL_URL={$portalUrl}
 VITE_KOAMISHIN_ENVIRONMENT={$env}
-VITE_KOAMISHIN_CLIENT_ID={$clientId}
+VITE_KOAMISHIN_PUBLISHABLE_KEY={$clientId}
 VITE_KOAMISHIN_REDIRECT_URI={$callback}
 ENV,
                 'tip' => 'Restart your development server after editing environment variables.',
@@ -520,7 +574,7 @@ import { createKoamishinClient } from '@koamishin/auth-js';
 
 export const koamishin = createKoamishinClient({
   portalUrl: import.meta.env.VITE_KOAMISHIN_PORTAL_URL,
-  clientId: import.meta.env.VITE_KOAMISHIN_CLIENT_ID,
+  publishableKey: import.meta.env.VITE_KOAMISHIN_PUBLISHABLE_KEY,
   redirectUri: import.meta.env.VITE_KOAMISHIN_REDIRECT_URI,
 });
 TS,
@@ -563,17 +617,24 @@ TS,
     /**
      * @return array<int, array{number: int, title: string, subtitle: string, file: string, language: string, code: string, tip: string}>
      */
-    private function getNodeJsSteps(string $portalUrl, string $clientId, string $clientSecret, string $callback, string $env): array
+    private function getNodeJsSteps(string $portalUrl, string $clientId, string $clientSecret, string $callback, string $appId, string $env): array
     {
+        $installCommand = match ($this->packageManager) {
+            'pnpm' => 'pnpm add express express-session axios dotenv',
+            'yarn' => 'yarn add express express-session axios dotenv',
+            'bun' => 'bun add express express-session axios dotenv',
+            default => 'npm install express express-session axios dotenv',
+        };
+
         return [
             [
                 'number' => 1,
                 'title' => 'Install Dependencies',
-                'subtitle' => 'Install Express, Axios, and Dotenv for Node.js backend authentication.',
+                'subtitle' => 'Install Express, session middleware, Axios, and Dotenv for Node.js backend authentication.',
                 'file' => 'terminal',
                 'language' => 'bash',
-                'code' => 'npm install express axios dotenv',
-                'tip' => 'Node.js acts as a confidential OAuth2 client storing your client secret securely on the server.',
+                'code' => $installCommand,
+                'tip' => 'Use a shared production session store and keep the secret key on the server.',
             ],
             [
                 'number' => 2,
@@ -583,10 +644,12 @@ TS,
                 'language' => 'dotenv',
                 'code' => <<<ENV
 KOAMISHIN_PORTAL_URL={$portalUrl}
+KOAMISHIN_APPLICATION_ID={$appId}
 KOAMISHIN_ENVIRONMENT={$env}
-KOAMISHIN_CLIENT_ID={$clientId}
-KOAMISHIN_CLIENT_SECRET={$clientSecret}
+KOAMISHIN_PUBLISHABLE_KEY={$clientId}
+KOAMISHIN_SECRET_KEY={$clientSecret}
 KOAMISHIN_REDIRECT_URI={$callback}
+SESSION_SECRET=YOUR_RANDOM_SESSION_SECRET
 ENV,
                 'tip' => 'Never check .env into version control. Keep client secrets in production secret managers.',
             ],
@@ -598,61 +661,82 @@ ENV,
                 'language' => 'javascript',
                 'code' => <<<'JS'
 import express from 'express';
+import session from 'express-session';
 import axios from 'axios';
+import { randomBytes, createHash, timingSafeEqual } from 'node:crypto';
 import 'dotenv/config';
 
 const app = express();
+app.use(session({
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' },
+  // Configure a shared, persistent session store in production.
+}));
 
-// 1. Redirect to Koamishin Portal authorization
 app.get('/login', (req, res) => {
+  const state = randomBytes(32).toString('base64url');
+  const verifier = randomBytes(32).toString('base64url');
+  const challenge = createHash('sha256').update(verifier).digest('base64url');
+  req.session.oauth = { state, verifier, createdAt: Date.now() };
   const params = new URLSearchParams({
-    client_id: process.env.KOAMISHIN_CLIENT_ID,
+    client_id: process.env.KOAMISHIN_PUBLISHABLE_KEY,
     redirect_uri: process.env.KOAMISHIN_REDIRECT_URI,
     response_type: 'code',
     scope: 'openid profile email',
-    state: Math.random().toString(36).substring(7),
+    state,
+    code_challenge: challenge,
+    code_challenge_method: 'S256',
   });
-
-  res.redirect(`${process.env.KOAMISHIN_PORTAL_URL}/oauth/authorize?${params}`);
+  req.session.save((error) => {
+    if (error) return res.sendStatus(500);
+    res.redirect(`${process.env.KOAMISHIN_PORTAL_URL}/oauth/authorize?${params}`);
+  });
 });
 
-// 2. OAuth Callback & Code Exchange
+// Change this route to match the registered callback URL.
 app.get('/callback', async (req, res) => {
-  const { code } = req.query;
-
-  if (!code) {
-    return res.status(400).send('Missing authorization code.');
+  const { code, state } = req.query;
+  const transaction = req.session.oauth;
+  delete req.session.oauth;
+  if (typeof code !== 'string' || typeof state !== 'string' ||
+      !transaction || Date.now() - transaction.createdAt > 600000 ||
+      Buffer.byteLength(state) !== Buffer.byteLength(transaction.state) ||
+      !timingSafeEqual(Buffer.from(state), Buffer.from(transaction.state))) {
+    return res.status(403).send('Invalid or expired sign-in request.');
   }
 
   try {
-    const tokenResponse = await axios.post(`${process.env.KOAMISHIN_PORTAL_URL}/oauth/token`, {
+    const body = new URLSearchParams({
       grant_type: 'authorization_code',
-      client_id: process.env.KOAMISHIN_CLIENT_ID,
-      client_secret: process.env.KOAMISHIN_CLIENT_SECRET,
+      client_id: process.env.KOAMISHIN_PUBLISHABLE_KEY,
+      client_secret: process.env.KOAMISHIN_SECRET_KEY,
       redirect_uri: process.env.KOAMISHIN_REDIRECT_URI,
+      code_verifier: transaction.verifier,
       code,
     });
-
+    const tokenResponse = await axios.post(`${process.env.KOAMISHIN_PORTAL_URL}/oauth/token`, body, { timeout: 10000 });
     const { access_token } = tokenResponse.data;
-
-    // Fetch user claims
     const userResponse = await axios.get(`${process.env.KOAMISHIN_PORTAL_URL}/api/oauth/userinfo`, {
       headers: { Authorization: `Bearer ${access_token}` },
+      timeout: 10000,
     });
-
-    res.json({
-      status: 'authenticated',
-      user: userResponse.data,
-      token: access_token,
+    if (userResponse.data.application_id !== process.env.KOAMISHIN_APPLICATION_ID ||
+        userResponse.data.environment !== process.env.KOAMISHIN_ENVIRONMENT) {
+      return res.sendStatus(403);
+    }
+    req.session.regenerate((error) => {
+      if (error) return res.sendStatus(500);
+      req.session.accessToken = access_token;
+      req.session.save((saveError) => saveError ? res.sendStatus(500) : res.redirect('/dashboard'));
     });
-  } catch (err) {
-    res.status(500).json({ error: err.response?.data || err.message });
+  } catch {
+    res.status(502).send('Sign-in could not be completed.');
   }
 });
-
-app.listen(3000, () => console.log('Server running on http://localhost:3000'));
 JS,
-                'tip' => 'Store access tokens in httpOnly secure cookies or verified server sessions.',
+                'tip' => 'The default session store is for development only. Use HTTPS and a shared persistent session store in production.',
             ],
             [
                 'number' => 4,
@@ -672,8 +756,13 @@ export async function requireAuth(req, res, next) {
   try {
     const response = await axios.get(`${process.env.KOAMISHIN_PORTAL_URL}/api/oauth/userinfo`, {
       headers: { Authorization: authHeader },
+      timeout: 10000,
     });
 
+    if (response.data.application_id !== process.env.KOAMISHIN_APPLICATION_ID ||
+        response.data.environment !== process.env.KOAMISHIN_ENVIRONMENT) {
+      return res.sendStatus(403);
+    }
     req.user = response.data;
     next();
   } catch (err) {
@@ -682,6 +771,51 @@ export async function requireAuth(req, res, next) {
 }
 JS,
                 'tip' => 'Userinfo claims are strictly scoped to this application environment.',
+            ],
+        ];
+    }
+
+    /**
+     * @return array<int, array{number: int, title: string, subtitle: string, file: string, language: string, code: string, tip: string}>
+     */
+    private function getMobileSteps(string $portalUrl, string $clientId, string $callback): array
+    {
+        return [
+            [
+                'number' => 1,
+                'title' => 'Choose an OAuth library',
+                'subtitle' => 'Use a native OAuth 2.0 library that supports authorization code with S256 PKCE and the system browser.',
+                'file' => 'Native OAuth configuration',
+                'language' => 'text',
+                'code' => "Portal URL: {$portalUrl}\nPublishable key: {$clientId}\nCallback URL: {$callback}",
+                'tip' => 'Use an HTTPS universal link or app link for the callback. Custom-scheme callbacks are not supported yet.',
+            ],
+            [
+                'number' => 2,
+                'title' => 'Start authorization',
+                'subtitle' => 'Generate a random state and PKCE verifier, then open the authorization endpoint in the system browser.',
+                'file' => 'Authorization request',
+                'language' => 'text',
+                'code' => "GET {$portalUrl}/oauth/authorize\nresponse_type=code\nclient_id={$clientId}\nredirect_uri={$callback}\nstate=YOUR_RANDOM_STATE\ncode_challenge=YOUR_S256_CHALLENGE\ncode_challenge_method=S256",
+                'tip' => 'Generate a fresh state and verifier for every attempt; keep the verifier private until the exchange.',
+            ],
+            [
+                'number' => 3,
+                'title' => 'Handle the callback',
+                'subtitle' => 'Validate state and exchange the authorization code with the original verifier and callback URL.',
+                'file' => 'Token request',
+                'language' => 'text',
+                'code' => "POST {$portalUrl}/oauth/token\ngrant_type=authorization_code\nclient_id={$clientId}\nredirect_uri={$callback}\ncode=AUTHORIZATION_CODE\ncode_verifier=YOUR_ORIGINAL_VERIFIER",
+                'tip' => 'Never embed an sk_ secret key in a native application. A public client uses PKCE, not a client secret.',
+            ],
+            [
+                'number' => 4,
+                'title' => 'Read user information',
+                'subtitle' => 'Call userinfo with the access token and verify the application and environment claims.',
+                'file' => 'Userinfo request',
+                'language' => 'text',
+                'code' => "GET {$portalUrl}/api/oauth/userinfo\nAuthorization: Bearer ACCESS_TOKEN",
+                'tip' => 'Keep tokens in your platform’s secure storage and do not log them.',
             ],
         ];
     }
@@ -704,7 +838,7 @@ JS,
 
   window.koamishin = createKoamishinClient({
     portalUrl: '{$portalUrl}',
-    clientId: '{$clientId}',
+    publishableKey: '{$clientId}',
     redirectUri: '{$callback}',
   });
 </script>
@@ -744,7 +878,7 @@ HTML,
 
     const client = createKoamishinClient({
       portalUrl: '{$portalUrl}',
-      clientId: '{$clientId}',
+      publishableKey: '{$clientId}',
       redirectUri: '{$callback}',
     });
 
@@ -776,7 +910,7 @@ HTML,
 
   const client = createKoamishinClient({
     portalUrl: '{$portalUrl}',
-    clientId: '{$clientId}',
+    publishableKey: '{$clientId}',
     redirectUri: '{$callback}',
   });
 

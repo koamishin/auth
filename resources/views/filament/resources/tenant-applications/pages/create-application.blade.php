@@ -1,10 +1,7 @@
 @php
-    $frameworkInfo = $this->getFrameworkInfo();
     $appName = $this->getAppName();
     $projectType = $this->getProjectType();
     $authOptions = $this->getAuthOptions();
-    $env = $this->data['environment'] ?? 'development';
-    $isProd = $env === 'production';
     $hasSocial = $authOptions['google'] || $authOptions['github'];
     $hasCredentials = $authOptions['email'] || $authOptions['phone'] || $authOptions['username'];
 @endphp
@@ -22,11 +19,16 @@
             </a>
         </div>
 
-        <!-- 2-Column Split: Clerk Creation Form (Left) + Interactive Live Sign-In Canvas (Right) -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <!-- Creation form and sign-in preview -->
+        <div class="grid grid-cols-1 items-start gap-8 lg:grid-cols-12 lg:gap-12">
             
             <!-- Left Column: Form Controls -->
-            <div class="lg:col-span-6 space-y-6">
+            <div class="w-full max-w-xl space-y-6 lg:col-span-5 lg:justify-self-end">
+                <div class="space-y-2">
+                    <p class="text-xs font-semibold uppercase tracking-wider text-primary-600 dark:text-primary-400">New application</p>
+                    <h2 class="text-xl font-semibold tracking-tight text-gray-950 dark:text-white">Start with the essentials</h2>
+                    <p class="text-sm leading-6 text-gray-500 dark:text-gray-400">Name your application now. You'll configure its connection after creation.</p>
+                </div>
                 <form wire:submit="create" class="space-y-6">
                     {{ $this->form }}
 
@@ -50,9 +52,13 @@
                 </form>
             </div>
 
-            <!-- Right Column: Interactive Clerk-Style Live Preview Canvas -->
-            <div class="lg:col-span-6 sticky top-6">
+            <!-- Illustrative sign-in preview -->
+            <div class="lg:sticky lg:top-6 lg:col-span-7">
                 <div class="rounded-2xl border border-gray-200 dark:border-white/10 bg-slate-50/70 dark:bg-slate-950/40 p-8 min-h-[640px] flex flex-col items-center justify-center relative overflow-hidden [background-image:radial-gradient(#d1d5db_1.2px,transparent_1.2px)] dark:[background-image:radial-gradient(#374151_1.2px,transparent_1.2px)] [background-size:24px_24px]">
+                    <div class="mb-8 text-center">
+                        <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Sign-in preview</p>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">A sample of your application's sign-in experience.</p>
+                    </div>
                     
                     <div class="flex items-center justify-center gap-6 w-full max-w-lg">
                         <!-- Floating Live Sign-In Modal -->

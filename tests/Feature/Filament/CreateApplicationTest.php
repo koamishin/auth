@@ -37,16 +37,13 @@ test('create application page renders clerk style project type and authenticatio
         ->set('data.project_type', 'consumer')
         ->fillForm([
             'name' => 'Clerk Style SaaS',
-            'framework' => 'laravel',
-            'environment' => 'development',
-            'redirect_uris' => ['http://localhost:8000/callback'],
-            'auth_google' => true,
-            'auth_email' => true,
         ])
         ->call('create')
         ->assertHasNoFormErrors();
 
     $app = TenantApplication::where('name', 'Clerk Style SaaS')->first();
     expect($app)->not->toBeNull()
-        ->and($app->framework)->toBe('laravel');
+        ->and($app->framework)->toBeNull()
+        ->and($app->oauth_client_id)->toBeNull()
+        ->and($app->environments()->count())->toBe(2);
 });

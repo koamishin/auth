@@ -17,11 +17,9 @@ use App\Services\Webhooks\WebhookDispatcher;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Forms\Components\ToggleButtons;
 use Filament\Notifications\Notification;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Schemas\Components\Utilities\Get;
@@ -150,40 +148,15 @@ class Dashboard extends BaseDashboard
                     TextInput::make('name')
                         ->label('Application Name')
                         ->placeholder('e.g. Acme Billing, Internal CRM')
+                        ->default('My Application')
                         ->required()
                         ->maxLength(255),
 
-                    ToggleButtons::make('environment')
-                        ->label('Environment')
-                        ->options([
-                            'development' => 'Development',
-                            'production' => 'Production',
-                        ])
-                        ->colors([
-                            'development' => 'warning',
-                            'production' => 'success',
-                        ])
-                        ->default('development')
-                        ->inline()
-                        ->required(),
-
-                    Select::make('framework')
-                        ->label('Target Framework')
-                        ->options([
-                            'laravel' => 'Laravel (PHP / Blade / Inertia)',
-                            'nextjs' => 'Next.js (React / SSR)',
-                            'vue' => 'Vue 3 / Nuxt',
-                            'react' => 'React (Vite / SPA)',
-                            'nodejs' => 'Node.js (Express / Fastify)',
-                            'vanilla' => 'Vanilla JavaScript',
-                        ])
-                        ->default('laravel')
-                        ->required(),
-
-                    TagsInput::make('redirect_uris')
-                        ->label('Callback URLs (Redirect URIs)')
-                        ->default(['http://localhost:8000/koamishin/callback'])
-                        ->required(),
+                    Textarea::make('description')
+                        ->label('Description (Optional)')
+                        ->placeholder('What this application is for...')
+                        ->rows(2)
+                        ->maxLength(500),
                 ])
                 ->action(function (array $data): void {
                     $tenant = Filament::getTenant();
@@ -199,8 +172,8 @@ class Dashboard extends BaseDashboard
                     $this->redirect(TenantApplicationResource::getUrl('view', ['record' => $app, 'tenant' => $tenant]));
 
                     Notification::make()
-                        ->title('Application Provisioned')
-                        ->body("{$app->name} created and active.")
+                        ->title('Application Created')
+                        ->body("{$app->name} provisioned. Connect your frontend or backend SDK next.")
                         ->success()
                         ->send();
                 }),

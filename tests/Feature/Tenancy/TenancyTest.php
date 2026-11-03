@@ -42,24 +42,30 @@ test('admin can create an organization tenant and applications', function (): vo
     Filament::setTenant($tenant);
     Filament::bootCurrentPanel();
 
-    // Create development Next.js application
+    // Create the application before choosing its connection.
     Livewire::actingAs($admin)
         ->test(CreateTenantApplication::class)
         ->fillForm([
             'name' => 'Marketing WebApp',
-            'framework' => 'nextjs',
-            'environment' => 'development',
-            'redirect_uris' => ['http://localhost:3000/api/auth/callback'],
-            'description' => 'Frontend marketing portal',
         ])
         ->call('create')
         ->assertHasNoFormErrors();
 
     $app = TenantApplication::where('name', 'Marketing WebApp')->first();
     expect($app)->not->toBeNull()
-        ->framework->toBe('nextjs')
+        ->framework->toBeNull()
         ->environment->toBe('development')
-        ->oauth_client_id->not->toBeNull();
+        ->oauth_client_id->toBeNull();
+
+    Livewire::actingAs($admin)
+        ->test(ViewTenantApplication::class, ['record' => $app->getKey()])
+        ->callAction('connectApplication', [
+            'framework' => 'nextjs',
+            'client_type' => 'public',
+            'redirect_uris' => ['http://localhost:3000/api/auth/callback'],
+        ])
+        ->assertHasNoActionErrors();
+    $app->refresh();
 
     $client = Client::find($app->oauth_client_id);
     expect($client)->not->toBeNull()
@@ -68,7 +74,7 @@ test('admin can create an organization tenant and applications', function (): vo
 
     // Check generated setup guides
     expect($app->getInstallCommand())->toBe('npm install @koamishin/auth-js');
-    expect($app->getEnvSnippet())->toContain('NEXT_PUBLIC_KOAMISHIN_CLIENT_ID='.$app->oauth_client_id);
+    expect($app->getEnvSnippet())->toContain('NEXT_PUBLIC_KOAMISHIN_PUBLISHABLE_KEY='.$app->getPublishableKey());
     expect($app->getSetupGuideCode())->toContain("import { createKoamishinClient } from '@koamishin/auth-js';");
 });
 
@@ -96,7 +102,7 @@ test('tenant application setup guide generates laravel sdk instructions', functi
     ]);
 
     expect($app->getInstallCommand())->toBe('composer require koamishin/auth-php');
-    expect($app->getEnvSnippet())->toContain('KOAMISHIN_CLIENT_ID='.$client->id);
+    expect($app->getEnvSnippet())->toContain('KOAMISHIN_PUBLISHABLE_KEY='.$app->getPublishableKey());
     expect($app->getEnvSnippet())->toContain('KOAMISHIN_APPLICATION_ID='.$app->id);
     expect($app->getSetupGuideCode())->toContain('Koamishin::getLoginUrl(');
     expect($app->getSetupGuideCode())->toContain("->middleware('auth:koamishin')");
@@ -461,5 +467,5 @@ test('admin can rotate client secret on application view page', function (): voi
     $regen = $test->get('regeneratedSecret');
     expect($regen)->not->toBeNull();
     expect($regen['secret'])->not->toBeEmpty();
-    expect($app->getEnvSnippet(null, $regen['secret']))->toContain($regen['secret']);
+    expect(Hash::check($regen['secret'], $client->secret))->toBeTrue();
 });

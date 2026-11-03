@@ -153,6 +153,14 @@ class EnsureOAuthApplicationAccess
     /** @param Closure(Request): Response $next */
     private function authorize(Request $request, Closure $next): Response
     {
+        $requestedClient = $request->query('client_id');
+        if (is_string($requestedClient) && str_starts_with($requestedClient, 'pk_')) {
+            $requestedEnvironment = $this->access->environmentForPublishableKey($requestedClient);
+            if ($requestedEnvironment?->oauthClient && ! $requestedEnvironment->oauthClient->confidential()) {
+                abort_unless($request->query('code_challenge_method') === 'S256', 400, 'Public applications must use S256 PKCE.');
+            }
+        }
+
         try {
             $authorization = $this->server->validateAuthorizationRequest(app(ServerRequestInterface::class));
         } catch (OAuthServerException) {

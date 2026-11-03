@@ -7,6 +7,7 @@ namespace App\Filament\Resources\TenantApplications\Pages;
 use App\Enums\SocialLoginProvider;
 use App\Filament\Resources\TenantApplications\TenantApplicationResource;
 use App\Models\TenantApplication;
+use App\Models\TenantApplicationEnvironment;
 use App\Services\OAuth\ApplicationProvisioner;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ViewAction;
@@ -15,6 +16,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Laravel\Passport\Client;
+use Laravel\Passport\ClientRepository;
 
 class EditTenantApplication extends EditRecord
 {
@@ -48,7 +51,17 @@ class EditTenantApplication extends EditRecord
     protected function handleRecordUpdate(Model $record, array $data): Model
     {
         /** @var TenantApplication $record */
-        app(ApplicationProvisioner::class)->validateRedirects($data['environment'], $data['redirect_uris']);
+        $redirectUris = is_array($data['redirect_uris'] ?? null) ? array_values(array_filter($data['redirect_uris'], fn ($u): bool => is_string($u) && trim($u) !== '')) : [];
+        if ($redirectUris !== []) {
+            app(ApplicationProvisioner::class)->validateRedirects($data['environment'], $redirectUris);
+        }
+        $data['redirect_uris'] = $redirectUris;
+
+        $clientType = $data['client_type'] ?? null;
+        if ($clientType !== null && ! in_array($clientType, ['public', 'confidential'], true)) {
+            throw ValidationException::withMessages(['client_type' => 'Select a valid client security profile.']);
+        }
+
         if (! is_bool($data['allow_signups'] ?? null)) {
             throw ValidationException::withMessages(['allow_signups' => 'Choose whether self-service signup is allowed.']);
         }
@@ -62,12 +75,39 @@ class EditTenantApplication extends EditRecord
             }
         }
 
-        return DB::transaction(function () use ($record, $data, $verificationPolicy): Model {
+        return DB::transaction(function () use ($record, $data, $verificationPolicy, $clientType): Model {
             $configuration = $record->environments()->where('environment', $data['environment'])->firstOrFail();
             $client = $configuration->oauthClient;
-            abort_unless($client && ! $client->getAttribute('revoked'), 409, 'The selected environment has no active OAuth client.');
 
-            $client->forceFill(['redirect_uris' => $data['redirect_uris']])->save();
+            if ($configuration->oauth_client_id !== null && (! $client instanceof Client || $client->getAttribute('revoked'))) {
+                abort(409, 'The selected environment has no active OAuth client.');
+            }
+
+            if ($client instanceof Client && TenantApplicationEnvironment::query()->where('oauth_client_id', $client->getKey())->count() !== 1) {
+                abort(409, 'The OAuth client is shared by multiple environments and cannot be changed.');
+            }
+
+            if ($client instanceof Client && $configuration->redirect_uris !== [] && $data['redirect_uris'] === []) {
+                throw ValidationException::withMessages(['redirect_uris' => 'A connected application must retain at least one callback URL.']);
+            }
+
+            $resolvedClientType = $clientType;
+
+            if ($client instanceof Client) {
+                if ($clientType !== null && $client->confidential() !== ($clientType === 'confidential')) {
+                    throw ValidationException::withMessages(['client_type' => 'Changing an existing OAuth client type would break connected applications.']);
+                }
+                $client->forceFill(['redirect_uris' => $data['redirect_uris']])->save();
+            } elseif ($data['redirect_uris'] !== []) {
+                if (! in_array($resolvedClientType, ['public', 'confidential'], true)) {
+                    throw ValidationException::withMessages(['client_type' => 'Select a valid client security profile before registering callback URLs.']);
+                }
+                $client = app(ClientRepository::class)->createAuthorizationCodeGrantClient(
+                    name: $record->name.' ('.ucfirst($data['environment']).')',
+                    redirectUris: $data['redirect_uris'],
+                    confidential: $resolvedClientType === 'confidential',
+                );
+            }
             $settings = $configuration->settings ?? [];
             $settings['allow_signups'] = $data['allow_signups'];
             if ($verificationPolicy === 'inherit') {
@@ -127,9 +167,17 @@ class EditTenantApplication extends EditRecord
             } else {
                 $settings['social_providers'] = $connections;
             }
-            $configuration->update(['redirect_uris' => $data['redirect_uris'], 'settings' => $settings]);
-            unset($data['allow_signups']);
-            $data['oauth_client_id'] = (string) $client->getKey();
+            $envUpdates = [
+                'oauth_client_id' => $client instanceof Client ? (string) $client->getKey() : null,
+                'redirect_uris' => $data['redirect_uris'],
+                'settings' => $settings,
+            ];
+            if ($resolvedClientType !== null && $client instanceof Client) {
+                $envUpdates['client_type'] = $resolvedClientType;
+            }
+            $configuration->update($envUpdates);
+            unset($data['allow_signups'], $data['client_type']);
+            $data['oauth_client_id'] = $client instanceof Client ? (string) $client->getKey() : null;
             $record->update($data);
 
             return $record;

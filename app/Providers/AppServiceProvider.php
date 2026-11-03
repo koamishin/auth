@@ -6,6 +6,7 @@ use App\Features\FeatureRegistry;
 use App\Models\User;
 use App\Observers\UserObserver;
 use App\Services\OAuth\ApplicationAuthentication;
+use App\Services\OAuth\PassportBridgeClientRepository;
 use Carbon\CarbonImmutable;
 use Filament\Panel;
 use Illuminate\Support\Facades\Date;
@@ -14,6 +15,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
+use Laravel\Passport\Bridge\ClientRepository;
 use Laravel\Passport\Passport;
 use Laravel\Pennant\FeatureManager;
 use Nwidart\Modules\Facades\Module;
@@ -27,6 +29,7 @@ class AppServiceProvider extends ServiceProvider
     #[\Override]
     public function register(): void
     {
+        $this->app->bind(ClientRepository::class, PassportBridgeClientRepository::class);
         $this->registerFilamentPlugins();
     }
 
