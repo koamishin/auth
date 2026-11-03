@@ -61,3 +61,169 @@
     border-radius: 0.5rem !important;
     transition: background-color 0.15s ease !important;
 }
+
+/* Application-specific navigation inside the Applications drilldown. */
+.fi-app-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.25rem 0.25rem 0.75rem;
+}
+
+.fi-app-nav-context {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+    padding-inline: 0.25rem;
+}
+
+.fi-app-nav-caption,
+.fi-app-nav-workspace-label {
+    color: var(--gray-500);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.fi-app-nav-name {
+    overflow: hidden;
+    color: var(--gray-950);
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fi-app-nav-search {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.5rem;
+    padding: 0.375rem 0.625rem;
+    color: var(--gray-500);
+}
+
+.fi-app-nav-search:focus-within {
+    outline: 2px solid var(--primary-500);
+    outline-offset: 2px;
+}
+
+.fi-app-nav-search svg,
+.fi-app-nav-group-button svg {
+    width: 1rem;
+    height: 1rem;
+    flex: none;
+}
+
+.fi-app-nav-search input {
+    min-width: 0;
+    width: 100%;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: var(--gray-950);
+    font-size: 0.8125rem;
+    outline: none;
+    box-shadow: none;
+}
+
+.fi-app-nav-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.fi-app-nav-group-button,
+.fi-app-nav-link {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    border-radius: 0.375rem;
+    padding: 0.5rem;
+    text-align: start;
+}
+
+.fi-app-nav-group-button {
+    justify-content: space-between;
+    gap: 0.5rem;
+    color: var(--gray-700);
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+
+.fi-app-nav-chevron-closed {
+    transform: rotate(-90deg);
+}
+
+[dir='rtl'] .fi-app-nav-chevron-closed {
+    transform: rotate(90deg);
+}
+
+.fi-app-nav-items {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    margin-inline-start: 0.75rem;
+    border-inline-start: 1px solid var(--gray-200);
+    padding-inline-start: 0.375rem;
+}
+
+.fi-app-nav-link {
+    color: var(--gray-600);
+    font-size: 0.8125rem;
+}
+
+.fi-app-nav-group-button:hover,
+.fi-app-nav-link:hover {
+    background: var(--gray-100);
+}
+
+.fi-app-nav-link-active {
+    background: var(--primary-50);
+    color: var(--primary-700);
+    font-weight: 600;
+}
+
+.fi-app-nav-group-button:focus-visible,
+.fi-app-nav-link:focus-visible {
+    outline: 2px solid var(--primary-500);
+    outline-offset: 2px;
+}
+
+.fi-app-nav-empty {
+    padding: 0.25rem;
+    color: var(--gray-500);
+    font-size: 0.8125rem;
+}
+
+.fi-app-nav-workspace-label {
+    margin: 0.5rem 0.5rem 0.375rem;
+}
+
+.dark .fi-app-nav-name,
+.dark .fi-app-nav-search input {
+    color: var(--gray-100);
+}
+
+.dark .fi-app-nav-search,
+.dark .fi-app-nav-items {
+    border-color: var(--gray-700);
+}
+
+.dark .fi-app-nav-group-button,
+.dark .fi-app-nav-link {
+    color: var(--gray-300);
+}
+
+.dark .fi-app-nav-group-button:hover,
+.dark .fi-app-nav-link:hover {
+    background: rgb(255 255 255 / 0.05);
+}
+
+.dark .fi-app-nav-link-active {
+    background: rgb(255 255 255 / 0.08);
+    color: var(--primary-400);
+}

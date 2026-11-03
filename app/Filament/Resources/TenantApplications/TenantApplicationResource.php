@@ -211,6 +211,7 @@ class TenantApplicationResource extends Resource
                     ]),
 
                 Section::make('Environment & Callbacks')
+                    ->id('environment-callbacks')
                     ->description('Configure deployment environment and whitelisted redirect callback URLs.')
                     ->icon('heroicon-o-globe-alt')
                     ->visible(fn (?TenantApplication $record): bool => $record instanceof TenantApplication)
@@ -255,6 +256,7 @@ class TenantApplicationResource extends Resource
                             ->default([]),
                     ]),
                 Section::make('Hosted login appearance')
+                    ->id('hosted-login-appearance')
                     ->description('Customize the Portal-hosted login for the selected environment.')
                     ->visible(fn (?TenantApplication $record): bool => $record instanceof TenantApplication)
                     ->components([
@@ -270,6 +272,7 @@ class TenantApplicationResource extends Resource
                             ->default('inherit')->required(),
                     ])->columns(2),
                 Section::make('Application authentication features')
+                    ->id('application-authentication-features')
                     ->description('These settings apply only to the selected environment. Portal-wide feature availability still applies.')
                     ->visible(fn (?TenantApplication $record): bool => $record instanceof TenantApplication)
                     ->components([
@@ -286,6 +289,7 @@ class TenantApplicationResource extends Resource
                             ->helperText('Share sign-in with other opted-in applications in this organization and environment for up to eight hours. Each application still checks membership and consent.'),
                     ])->columns(2),
                 Section::make('Social connections')
+                    ->id('social-connections')
                     ->description('Choose Portal credentials, disable a provider, or configure credentials for this application environment. Custom secrets are encrypted and never displayed again.')
                     ->visible(fn (?TenantApplication $record): bool => $record instanceof TenantApplication)
                     ->components(array_map(self::socialConnectionFields(...), SocialLoginProvider::cases())),

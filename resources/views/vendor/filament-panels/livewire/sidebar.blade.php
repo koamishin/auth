@@ -285,6 +285,7 @@
                                 {{-- Group title --}}
                                 @php
                                     $detailIcon = $group->getIcon() ?? collect($group->getItems())->first()?->getIcon();
+                                    $hasActiveApplicationNavigation = false;
                                 @endphp
                                 <div class="fi-dd-detail-header">
                                     @if ($detailIcon)
@@ -299,6 +300,23 @@
                                 </div>
 
                                 <hr class="fi-dd-detail-divider" />
+
+                                @if ($group->getLabel() === 'Applications')
+                                    @php
+                                        $applicationNavigation = filament()->getTenant()
+                                            ? \App\Support\ApplicationNavigation::forTenant(filament()->getTenant())
+                                            : ['application' => null, 'groups' => []];
+                                        $hasActiveApplicationNavigation = collect($applicationNavigation['groups'])
+                                            ->flatMap(fn (array $applicationGroup): array => $applicationGroup['items'])
+                                            ->contains(fn (array $applicationItem): bool => $applicationItem['active']);
+                                    @endphp
+
+                                    @include('filament.components.application-sidebar-navigation', [
+                                        'applicationNavigation' => $applicationNavigation,
+                                    ])
+
+                                    <p class="fi-app-nav-workspace-label">{{ __('Workspace') }}</p>
+                                @endif
 
                                 {{-- Items --}}
                                 <ul class="fi-dd-detail-items">
@@ -315,7 +333,7 @@
                                             }
                                         @endphp
                                         <x-filament-panels::sidebar.item
-                                            :active="$item->isActive()"
+                                            :active="$item->isActive() && ! $hasActiveApplicationNavigation"
                                             :active-child-items="$item->isChildItemsActive()"
                                             :active-icon="$itemActiveIcon"
                                             :badge="$item->getBadge()"

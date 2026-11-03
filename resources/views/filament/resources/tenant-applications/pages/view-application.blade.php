@@ -275,7 +275,7 @@
         </div>
 
         <!-- API Keys Card -->
-        <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-xs dark:border-white/10 dark:bg-gray-900" x-data="{ copiedPk: false }">
+        <div id="api-keys" class="rounded-xl border border-gray-200 bg-white p-5 shadow-xs dark:border-white/10 dark:bg-gray-900" x-data="{ copiedPk: false }">
             <div class="flex flex-wrap items-start justify-between gap-3">
                 <div>
                     <h2 class="text-sm font-bold text-gray-950 dark:text-white tracking-tight">API Keys ({{ ucfirst($app->environment) }})</h2>

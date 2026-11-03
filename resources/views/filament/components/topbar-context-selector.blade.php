@@ -1,7 +1,7 @@
 @php
     use Filament\Facades\Filament;
     use App\Models\Tenant;
-    use App\Models\TenantApplication;
+    use App\Support\ApplicationNavigation;
     use App\Filament\Resources\TenantApplications\TenantApplicationResource;
     use App\Filament\Resources\Tenants\TenantResource;
 
@@ -19,15 +19,7 @@
 
     $applications = $currentTenant->applications()->latest()->get();
 
-    $routeRecord = request()->route('record');
-    $currentApp = null;
-
-    if ($routeRecord instanceof TenantApplication) {
-        $currentApp = $routeRecord;
-        session(['current_application_id' => $currentApp->id]);
-    } else {
-        $currentApp = TenantApplication::current($currentTenant);
-    }
+    $currentApp = ApplicationNavigation::currentApplication($currentTenant);
 
     $currentEnv = $currentApp?->environment ?? 'development';
 @endphp
