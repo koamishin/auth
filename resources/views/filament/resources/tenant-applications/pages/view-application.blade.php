@@ -252,69 +252,11 @@
             </span>
         </div>
 
-        <!-- Setup Guide & Code Snippets Tabs -->
-        <div class="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 p-6 space-y-5 shadow-xs" x-data="{ tab: 'env', copiedEnv: false, copiedCode: false }">
-            <div class="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-4">
-                <div>
-                    <h2 class="text-sm font-bold text-gray-900 dark:text-white tracking-tight">Quickstart Integration Guide</h2>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Configured for {{ $app->getFrameworkLabel() }}</p>
-                </div>
-                <div class="flex items-center gap-2">
-                    <button
-                        type="button"
-                        @click="tab = 'env'"
-                        :class="tab === 'env' ? 'bg-primary-600 text-white shadow-xs' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-white/5'"
-                        class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-                    >
-                        .env Settings
-                    </button>
-                    <button
-                        type="button"
-                        @click="tab = 'code'"
-                        :class="tab === 'code' ? 'bg-primary-600 text-white shadow-xs' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-white/5'"
-                        class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-                    >
-                        Integration Code
-                    </button>
-                </div>
-            </div>
-
-            <!-- Tab 1: Environment Variables -->
-            <div x-show="tab === 'env'" class="space-y-3">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-mono text-gray-500 dark:text-gray-400">Add to your project's .env file:</span>
-                    <button
-                        type="button"
-                        @click="navigator.clipboard.writeText('{{ addslashes($app->getEnvSnippet(null, $regenSecret['secret'] ?? null)) }}'); copiedEnv = true; setTimeout(() => copiedEnv = false, 2000)"
-                        class="inline-flex items-center gap-1.5 text-xs text-primary-600 dark:text-primary-400 hover:underline font-semibold"
-                    >
-                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                        </svg>
-                        <span x-text="copiedEnv ? 'Copied!' : 'Copy .env'"></span>
-                    </button>
-                </div>
-                <pre class="p-4 rounded-xl bg-gray-900 text-emerald-400 border border-gray-800 text-xs font-mono overflow-x-auto leading-relaxed shadow-inner">{{ $app->getEnvSnippet(null, $regenSecret['secret'] ?? null) }}</pre>
-            </div>
-
-            <!-- Tab 2: Integration Code -->
-            <div x-show="tab === 'code'" class="space-y-3" style="display: none;">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-mono text-gray-500 dark:text-gray-400">Boilerplate code for {{ $app->getFrameworkLabel() }}:</span>
-                    <button
-                        type="button"
-                        @click="navigator.clipboard.writeText('{{ addslashes($app->getSetupGuideCode()) }}'); copiedCode = true; setTimeout(() => copiedCode = false, 2000)"
-                        class="inline-flex items-center gap-1.5 text-xs text-primary-600 dark:text-primary-400 hover:underline font-semibold"
-                    >
-                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                        </svg>
-                        <span x-text="copiedCode ? 'Copied Code!' : 'Copy Snippet'"></span>
-                    </button>
-                </div>
-                <pre class="p-4 rounded-xl bg-gray-900 text-primary-300 border border-gray-800 text-xs font-mono overflow-x-auto leading-relaxed shadow-inner">{{ $app->getSetupGuideCode() }}</pre>
-            </div>
-        </div>
+        <!-- Step-by-Step Quickstart Integration Guide Widget -->
+        @livewire(\App\Filament\Widgets\ApplicationQuickstartWidget::class, [
+            'record' => $app,
+            'clientSecret' => $regenSecret['secret'] ?? null,
+        ], key('quickstart-guide-' . $app->id))
 
         <!-- Active Users Table -->
         <div class="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 overflow-hidden shadow-xs">
