@@ -34,6 +34,7 @@ test('create application page renders clerk style project type and authenticatio
         ->set('data.project_type', 'b2b')
         ->assertSee('Roles')
         ->assertSee('Manage default roles for members')
+        ->set('data.project_type', 'consumer')
         ->fillForm([
             'name' => 'Clerk Style SaaS',
             'framework' => 'laravel',

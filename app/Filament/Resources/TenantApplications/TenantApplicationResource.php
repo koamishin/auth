@@ -76,7 +76,7 @@ class TenantApplicationResource extends Resource
                             ->label('Project Type')
                             ->options([
                                 'consumer' => 'Consumer',
-                                'b2b' => 'B2B',
+                                'b2b' => 'B2B — coming soon',
                             ])
                             ->descriptions([
                                 'consumer' => 'Designed for individual end users.',
@@ -84,6 +84,7 @@ class TenantApplicationResource extends Resource
                             ])
                             ->default('consumer')
                             ->columns(2)
+                            ->disableOptionWhen(fn (string $value): bool => $value === 'b2b')
                             ->live(),
                     ]),
 
@@ -109,8 +110,9 @@ class TenantApplicationResource extends Resource
                                     ->default(true)
                                     ->live(),
                                 Toggle::make('auth_phone')
-                                    ->label('Phone number')
+                                    ->label('Phone number — coming soon')
                                     ->default(false)
+                                    ->disabled()
                                     ->live(),
                                 Toggle::make('auth_username')
                                     ->label('Username')
