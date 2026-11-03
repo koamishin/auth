@@ -18,7 +18,7 @@ class ApplicationNavigation
         $application = self::currentApplication($tenant);
         $groups = [];
 
-        if ($tenant === null || $application === null) {
+        if (!$tenant instanceof \App\Models\Tenant || !$application instanceof \App\Models\TenantApplication) {
             return ['application' => null, 'groups' => []];
         }
 
@@ -54,7 +54,7 @@ class ApplicationNavigation
 
     public static function currentApplication(?Tenant $tenant): ?TenantApplication
     {
-        if ($tenant === null) {
+        if (!$tenant instanceof \App\Models\Tenant) {
             return null;
         }
 

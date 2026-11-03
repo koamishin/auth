@@ -48,7 +48,7 @@ test('navigation contains only real application destinations with route based ac
     navigationRoute('filament.admin.resources.tenant-applications.edit', (string) $application->id);
 
     $navigation = ApplicationNavigation::forTenant($tenant);
-    $items = collect($navigation['groups'])->flatMap(fn (array $group) => $group['items'])->keyBy('label');
+    $items = collect($navigation['groups'])->flatMap(fn (array $group): array => $group['items'])->keyBy('label');
 
     expect($navigation['application']->is($application))->toBeTrue();
     expect($items->keys()->all())->toBe(['Overview', 'API keys', 'Settings', 'Environment', 'Appearance', 'Authentication features', 'Social connections']);
