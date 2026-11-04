@@ -7,6 +7,7 @@ namespace App\Filament\Resources\TenantApplications;
 use App\Enums\SocialLoginProvider;
 use App\Filament\Resources\TenantApplications\Pages\CreateTenantApplication;
 use App\Filament\Resources\TenantApplications\Pages\EditTenantApplication;
+use App\Filament\Resources\TenantApplications\Pages\ListApplicationUsers;
 use App\Filament\Resources\TenantApplications\Pages\ListTenantApplications;
 use App\Filament\Resources\TenantApplications\Pages\ViewTenantApplication;
 use App\Models\TenantApplication;
@@ -475,6 +476,7 @@ class TenantApplicationResource extends Resource
             'create' => CreateTenantApplication::route('/create'),
             'view' => ViewTenantApplication::route('/{record}'),
             'edit' => EditTenantApplication::route('/{record}/edit'),
+            'users' => ListApplicationUsers::route('/{record}/users'),
         ];
     }
 }

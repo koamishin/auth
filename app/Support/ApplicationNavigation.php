@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Support;
 
 use App\Filament\Resources\TenantApplications\TenantApplicationResource;
+use App\Filament\Resources\Users\UserResource;
 use App\Models\Tenant;
 use App\Models\TenantApplication;
 
@@ -34,6 +35,21 @@ class ApplicationNavigation
                 'items' => [
                     ['label' => 'Overview', 'icon' => 'heroicon-o-squares-2x2', 'url' => $url, 'active' => $active, 'fragment' => null],
                     ['label' => 'API keys', 'icon' => 'heroicon-o-key', 'url' => $url, 'active' => $active, 'fragment' => 'api-keys'],
+                ],
+            ];
+        }
+
+        if (TenantApplicationResource::canView($application) && UserResource::canViewAny()) {
+            $groups[] = [
+                'label' => 'Directory',
+                'items' => [
+                    [
+                        'label' => 'Users',
+                        'icon' => 'heroicon-o-users',
+                        'url' => TenantApplicationResource::getUrl('users', ['tenant' => $tenant, 'record' => $application]),
+                        'active' => request()->routeIs('filament.admin.resources.tenant-applications.users'),
+                        'fragment' => null,
+                    ],
                 ],
             ];
         }
@@ -84,6 +100,6 @@ class ApplicationNavigation
 
     private static function isApplicationRecordRoute(): bool
     {
-        return request()->routeIs('filament.admin.resources.tenant-applications.view', 'filament.admin.resources.tenant-applications.edit');
+        return request()->routeIs('filament.admin.resources.tenant-applications.view', 'filament.admin.resources.tenant-applications.edit', 'filament.admin.resources.tenant-applications.users');
     }
 }

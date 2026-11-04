@@ -1,6 +1,7 @@
 <?php
 
 use App\Filament\Resources\OAuthClients\OAuthClientResource;
+use App\Filament\Resources\TenantApplications\Pages\ListApplicationUsers;
 use App\Filament\Resources\TenantApplications\TenantApplicationResource;
 use App\Filament\Resources\Webhooks\WebhookEndpointResource;
 use App\Models\Tenant;
@@ -76,7 +77,7 @@ test('navigation contains only real application destinations with route based ac
     $items = collect($navigation['groups'])->flatMap(fn (array $group): array => $group['items'])->keyBy('label');
 
     expect($navigation['application']->is($application))->toBeTrue();
-    expect($items->keys()->all())->toBe(['Overview', 'API keys', 'Settings', 'Environment', 'Appearance', 'Authentication features', 'Social connections']);
+    expect($items->keys()->all())->toBe(['Overview', 'API keys', 'Users', 'Settings', 'Environment', 'Appearance', 'Authentication features', 'Social connections']);
     expect($items['Overview'])->toBe([
         'label' => 'Overview',
         'icon' => 'heroicon-o-squares-2x2',
@@ -154,6 +155,33 @@ test('navigation applies view and edit permissions independently', function (boo
     'both' => [true, true, ['Application', 'Configuration']],
 ]);
 
+test('application users navigation and page require both application view and user listing permissions', function (bool $viewApplication, bool $listUsers): void {
+    $tenant = navigationTenant('navigation');
+    $application = navigationApplication($tenant, 'Selected');
+    $this->actingAs(User::factory()->create());
+    Filament::setCurrentPanel('admin');
+    Filament::setTenant($tenant);
+    navigationRoute('filament.admin.resources.tenant-applications.users', $application->id);
+    Gate::before(fn (User $user, string $ability, array $arguments): ?bool => match (true) {
+        $ability === 'view' && ($arguments[0] ?? null) instanceof TenantApplication => $viewApplication,
+        $ability === 'viewAny' && ($arguments[0] ?? null) === User::class => $listUsers,
+        default => null,
+    });
+
+    $items = collect(ApplicationNavigation::forTenant($tenant)['groups'])->flatMap(fn (array $group): array => $group['items'])->keyBy('label');
+
+    expect($items->has('Users'))->toBe($viewApplication && $listUsers);
+    expect(ListApplicationUsers::canAccess(['record' => $application]))->toBe($viewApplication && $listUsers);
+    if ($viewApplication && $listUsers) {
+        expect($items['Users']['active'])->toBeTrue();
+    }
+})->with([
+    'both' => [true, true],
+    'application only' => [true, false],
+    'users only' => [false, true],
+    'neither' => [false, false],
+]);
+
 test('view and edit destinations render their fragment targets and switching persists selection', function (): void {
     $tenant = navigationTenant('navigation');
     $first = navigationApplication($tenant, 'First application');
@@ -195,13 +223,13 @@ test('direct application URLs render only contextual navigation in the shared si
 
     $sidebar = navigationSidebar($response);
     expect($sidebar)
-        ->toContain('Opened directly', 'Overview', 'API keys', 'Settings', 'Environment', 'Appearance', 'Authentication features', 'Social connections')
+        ->toContain('Opened directly', 'Overview', 'API keys', 'Users', 'Settings', 'Environment', 'Appearance', 'Authentication features', 'Social connections')
         ->toContain('href="'.$editUrl.'#hosted-login-appearance"')
         ->not->toContain('href="'.$staleEditUrl.'#hosted-login-appearance"')
         ->not->toContain('fi-dd-', 'Back', 'Applications', 'Search settings', 'type="search"', 'Workspace', 'OAuth', 'API Clients', 'Webhook Endpoints');
     expect(substr_count($sidebar, 'class="fi-app-nav"'))->toBe(1);
-    expect(substr_count($sidebar, 'class="fi-app-nav-link"'))->toBe(7);
-})->with(['view', 'edit']);
+    expect(substr_count($sidebar, 'class="fi-app-nav-link"'))->toBe(8);
+})->with(['view', 'edit', 'users']);
 
 test('workspace pages render both collapsible groups with tenant links and the active group', function (string $route, string $activeGroup): void {
     $tenant = navigationTenant('navigation');
@@ -293,7 +321,7 @@ test('an application record from another tenant returns not found without replac
         ->get(TenantApplicationResource::getUrl($page, ['tenant' => $tenant, 'record' => $foreign]))
         ->assertNotFound()
         ->assertSessionHas('current_application_id', $selected->id);
-})->with(['view', 'edit']);
+})->with(['view', 'edit', 'users']);
 
 test('application pages remain forbidden to application users', function (string $page): void {
     $tenant = navigationTenant('navigation');
@@ -303,4 +331,4 @@ test('application pages remain forbidden to application users', function (string
     $this->get(TenantApplicationResource::getUrl($page, ['tenant' => $tenant, 'record' => $application]))
         ->assertForbidden()
         ->assertDontSee('class="fi-app-nav"', false);
-})->with(['view', 'edit']);
+})->with(['view', 'edit', 'users']);
