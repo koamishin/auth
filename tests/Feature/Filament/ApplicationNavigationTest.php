@@ -1,14 +1,19 @@
 <?php
 
+use App\Filament\Resources\OAuthClients\OAuthClientResource;
 use App\Filament\Resources\TenantApplications\TenantApplicationResource;
+use App\Filament\Resources\Webhooks\WebhookEndpointResource;
 use App\Models\Tenant;
 use App\Models\TenantApplication;
 use App\Models\User;
 use App\Support\ApplicationNavigation;
 use Filament\Facades\Filament;
+use Filament\Livewire\Sidebar;
+use Filament\Navigation\NavigationGroup;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Testing\TestResponse;
+use Livewire\Livewire;
 use Spatie\Permission\Models\Role;
 
 function navigationTenant(string $slug): Tenant
@@ -198,7 +203,7 @@ test('direct application URLs render only contextual navigation in the shared si
     expect(substr_count($sidebar, 'class="fi-app-nav-link"'))->toBe(7);
 })->with(['view', 'edit']);
 
-test('workspace pages keep normal navigation despite a selected application', function (string $route): void {
+test('workspace pages render both collapsible groups with tenant links and the active group', function (string $route, string $activeGroup): void {
     $tenant = navigationTenant('navigation');
     $application = navigationApplication($tenant, 'Selected application');
     $this->actingAs(navigationAdmin());
@@ -209,14 +214,73 @@ test('workspace pages keep normal navigation despite a selected application', fu
         ->assertSee('Selected application')
         ->assertSee('Organization settings');
 
-    expect(navigationSidebar($response))
-        ->toContain('fi-dd-nav-wrapper', 'Applications', 'OAuth', 'Webhook Endpoints', 'Directory', 'filament:sidebar:collapsed_groups')
-        ->not->toContain('class="fi-app-nav"', 'Search settings', 'Select an application to see its settings.');
+    $sidebar = navigationSidebar($response);
+    $document = new DOMDocument;
+    $document->loadHTML($sidebar, LIBXML_NOERROR | LIBXML_NOWARNING);
+    $xpath = new DOMXPath($document);
+
+    foreach (['Applications', 'Directory & Access'] as $group) {
+        $groups = $xpath->query('//li[@data-group-label="'.$group.'"]');
+        expect($groups)->toHaveCount(1);
+        $groupElement = $groups->item(0);
+        expect($groupElement->getAttribute('class'))->toContain('fi-collapsible');
+        expect(str_contains($groupElement->getAttribute('class'), 'fi-active'))->toBe($group === $activeGroup);
+        $buttons = $xpath->query('.//button[@aria-controls]', $groupElement);
+        expect($buttons)->toHaveCount(1);
+        expect($buttons->item(0)->getAttribute('x-bind:aria-expanded'))->not->toBeEmpty();
+    }
+
+    expect($sidebar)
+        ->toContain(
+            'href="'.route('filament.admin.resources.tenant-applications.index', ['tenant' => $tenant]).'"',
+            'href="'.OAuthClientResource::getUrl('index', ['tenant' => $tenant]).'"',
+            'href="'.WebhookEndpointResource::getUrl('index', ['tenant' => $tenant]).'"',
+            'href="'.route('filament.admin.resources.users.index', ['tenant' => $tenant]).'"',
+            'filament:sidebar:collapsed_groups',
+        )
+        ->not->toContain('fi-dd-', 'goBack()', 'class="fi-app-nav"', 'Search settings', 'Select an application to see its settings.');
 })->with([
-    'application list' => 'filament.admin.resources.tenant-applications.index',
-    'application creation' => 'filament.admin.resources.tenant-applications.create',
-    'directory' => 'filament.admin.resources.users.index',
+    'application list' => ['filament.admin.resources.tenant-applications.index', 'Applications'],
+    'application creation' => ['filament.admin.resources.tenant-applications.create', 'Applications'],
+    'directory' => ['filament.admin.resources.users.index', 'Directory & Access'],
 ]);
+
+test('desktop collapsed navigation retains group icon dropdowns and their links', function (): void {
+    $tenant = navigationTenant('navigation');
+    $this->actingAs(navigationAdmin());
+    $panel = Filament::getPanel('admin');
+    $panel->sidebarCollapsibleOnDesktop();
+    $panel->navigationGroups([
+        NavigationGroup::make('Applications')->icon('heroicon-o-cube'),
+        NavigationGroup::make('Directory & Access')->icon('heroicon-o-users'),
+    ]);
+
+    $response = $this->get(route('filament.admin.resources.users.index', ['tenant' => $tenant]))->assertOk();
+
+    $sidebar = navigationSidebar($response);
+    expect($sidebar)
+        ->toContain('fi-sidebar-group-dropdown-trigger-btn', 'aria-label="Applications"', 'aria-label="Directory &amp; Access"')
+        ->toContain('href="'.TenantApplicationResource::getUrl('index', ['tenant' => $tenant]).'"')
+        ->not->toContain('fi-dd-');
+});
+
+test('workspace navigation excludes resources the user cannot view', function (): void {
+    $tenant = navigationTenant('navigation');
+    $this->actingAs(User::factory()->create());
+    Filament::setCurrentPanel('admin');
+    Filament::setTenant($tenant);
+    Gate::before(fn (User $user, string $ability, array $arguments): ?bool => $ability === 'viewAny'
+        ? ($arguments[0] ?? null) === TenantApplication::class
+        : null);
+
+    $sidebar = Livewire::test(Sidebar::class)->html();
+
+    expect($sidebar)
+        ->toContain(route('filament.admin.resources.tenant-applications.index', ['tenant' => $tenant]))
+        ->not->toContain(
+            route('filament.admin.resources.users.index', ['tenant' => $tenant]),
+        );
+});
 
 test('an application record from another tenant returns not found without replacing the selection', function (string $page): void {
     $tenant = navigationTenant('navigation');

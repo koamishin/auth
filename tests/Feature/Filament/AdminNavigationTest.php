@@ -5,7 +5,6 @@ use App\Filament\Resources\Users\UserResource;
 use App\Models\Tenant;
 use App\Models\User;
 use Filament\Facades\Filament;
-use OsamaAtef\DrilldownSidebar\DrilldownSidebarPlugin;
 use Spatie\Permission\Models\Role;
 
 beforeEach(function (): void {
@@ -13,14 +12,10 @@ beforeEach(function (): void {
     $this->tenant = Tenant::firstOrCreate(['slug' => 'default'], ['name' => 'Default Organization', 'is_active' => true]);
 });
 
-test('admin panel has drilldown sidebar plugin registered with application groups', function (): void {
+test('admin panel uses native sidebar groups instead of drilldowns', function (): void {
     $panel = Filament::getPanel('admin');
 
-    expect($panel->hasPlugin('drilldown-sidebar'))->toBeTrue();
-
-    $plugin = $panel->getPlugin('drilldown-sidebar');
-    expect($plugin)->toBeInstanceOf(DrilldownSidebarPlugin::class);
-    expect($plugin->getDrilledGroups())->toContain('Applications', 'Directory & Access');
+    expect($panel->hasPlugin('drilldown-sidebar'))->toBeFalse();
 });
 
 test('admin navigation sidebar is focused on application management', function (): void {

@@ -36,7 +36,6 @@ use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
-use OsamaAtef\DrilldownSidebar\DrilldownSidebarPlugin;
 use RobertBoes\FilamentPasskeys\FilamentPasskeysPlugin;
 
 class AdminPanelProvider extends PanelProvider
@@ -145,12 +144,6 @@ class AdminPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([])
             ->plugins([
-                DrilldownSidebarPlugin::make()
-                    ->drilledGroups([
-                        'Applications',
-                        'Directory & Access',
-                    ])
-                    ->withSearch(),
                 FilamentShieldPlugin::make()
                     ->registerNavigation(false)
                     ->gridColumns([
