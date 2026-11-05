@@ -17,6 +17,7 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Support\Components\Attributes\Unexposed;
+use Illuminate\Contracts\View\Factory;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
@@ -139,11 +140,11 @@ class ViewTenantApplication extends ViewRecord
                 ->color('gray')
                 ->slideOver()
                 ->modalWidth('5xl')
-                ->modalHeading(fn (): string => 'Setup Guide — ' . $this->getRecord()->name)
-                ->modalDescription(fn (): string => 'Tailored integration steps and code snippets for the ' . ucfirst($this->getRecord()->environment) . ' environment')
+                ->modalHeading(fn (): string => 'Setup Guide — '.$this->getRecord()->name)
+                ->modalDescription(fn (): string => 'Tailored integration steps and code snippets for the '.ucfirst($this->getRecord()->environment).' environment')
                 ->modalSubmitAction(false)
                 ->modalCancelActionLabel('Close')
-                ->modalContent(fn (): \Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View => view('filament.resources.tenant-applications.components.quickstart-modal-content', [
+                ->modalContent(fn (): Factory|\Illuminate\Contracts\View\View => view('filament.resources.tenant-applications.components.quickstart-modal-content', [
                     'record' => $this->getRecord(),
                 ])),
             Action::make('connectApplication')
