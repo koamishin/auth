@@ -133,6 +133,19 @@ class ViewTenantApplication extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('openSetupGuide')
+                ->label('Setup Guide')
+                ->icon('heroicon-m-question-mark-circle')
+                ->color('gray')
+                ->slideOver()
+                ->modalWidth('5xl')
+                ->modalHeading(fn (): string => 'Setup Guide — ' . $this->getRecord()->name)
+                ->modalDescription(fn (): string => 'Tailored integration steps and code snippets for the ' . ucfirst($this->getRecord()->environment) . ' environment')
+                ->modalSubmitAction(false)
+                ->modalCancelActionLabel('Close')
+                ->modalContent(fn () => view('filament.resources.tenant-applications.components.quickstart-modal-content', [
+                    'record' => $this->getRecord(),
+                ])),
             Action::make('connectApplication')
                 ->label('Connect your app')
                 ->icon('heroicon-m-link')

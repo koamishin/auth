@@ -3,7 +3,8 @@
     $tenant = $app->tenant;
     $isProd = $app->environment === 'production';
     $configuration = $app->getEnvironmentConfig();
-    $users = $app->users()->latest('tenant_application_user.created_at')->limit(8)->get();
+    $enrolledUsersCount = $app->users($app->environment)->count();
+    $users = $app->users($app->environment)->latest('tenant_application_user.created_at')->limit(8)->get();
 @endphp
 
 <x-filament-panels::page>
@@ -74,23 +75,7 @@
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 shadow-xs">
             <div class="flex items-center gap-3.5">
                 <div class="w-12 h-12 rounded-xl bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 flex items-center justify-center text-lg font-bold shadow-xs">
-                    @if($app->framework === 'nextjs')
-                        <span class="font-mono">▲</span>
-                    @elseif($app->framework === 'laravel')
-                        <span class="text-red-500 font-mono">Lv</span>
-                    @elseif($app->framework === 'vue')
-                        <span class="text-emerald-500 font-mono">V</span>
-                    @elseif($app->framework === 'react')
-                        <span class="text-cyan-500 font-mono">⚛</span>
-                    @elseif($app->framework === 'nodejs')
-                        <span class="text-amber-500 font-mono text-sm">Node</span>
-                    @elseif($app->framework === 'mobile')
-                        <span class="text-sky-500 font-mono">M</span>
-                    @elseif($app->framework === 'vanilla')
-                        <span class="text-primary-500 font-mono">JS</span>
-                    @else
-                        <x-filament::icon icon="heroicon-o-cube" class="w-6 h-6 text-gray-500 dark:text-gray-400" />
-                    @endif
+                    <x-framework-logo :framework="$app->framework" class="w-7 h-7" />
                 </div>
                 <div class="min-w-0">
                     <div class="flex flex-wrap items-center gap-2.5">
@@ -138,6 +123,16 @@
 
                 <button
                     type="button"
+                    wire:click="mountAction('openSetupGuide')"
+                    title="Open Setup Guide"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-white/10 shadow-xs transition-colors"
+                >
+                    <x-filament::icon icon="heroicon-m-question-mark-circle" class="w-4 h-4 text-primary-500" />
+                    <span>Setup Guide</span>
+                </button>
+
+                <button
+                    type="button"
                     wire:click="mountAction('rotateSecretKey')"
                     class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30 shadow-xs transition-colors"
                 >
@@ -161,9 +156,11 @@
             </div>
         </div>
 
-        @livewire(\App\Filament\Widgets\ApplicationQuickstartWidget::class, [
-            'record' => $app,
-        ], key('quickstart-guide-' . $app->id . '-' . $app->environment . '-' . $app->updated_at?->format('U.u')))
+        @if($enrolledUsersCount === 0)
+            @livewire(\App\Filament\Widgets\ApplicationQuickstartWidget::class, [
+                'record' => $app,
+            ], key('quickstart-guide-' . $app->id . '-' . $app->environment . '-' . $app->updated_at?->format('U.u')))
+        @endif
 
         <!-- 4 Quick-Action Insight Cards -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" x-data="{ copiedCmd: false, copiedSkills: false }">

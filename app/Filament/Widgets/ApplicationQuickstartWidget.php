@@ -241,11 +241,11 @@ PROMPT;
             [
                 'number' => 1,
                 'title' => 'Install Laravel SDK',
-                'subtitle' => 'Install the official Koamishin authentication SDK and publish the configuration file.',
+                'subtitle' => 'Install the official Koamishin authentication SDK and run the automated setup command.',
                 'file' => 'terminal',
                 'language' => 'bash',
-                'code' => "composer require koamishin/auth-php\nphp artisan vendor:publish --tag=koamishin-config",
-                'tip' => 'The SDK automatically registers the service provider and provides the official Koamishin authentication guard.',
+                'code' => "composer require koamishin/auth-php\nphp artisan vendor:publish --tag=koamishin-config\nphp artisan koamishin:setup",
+                'tip' => 'The setup command configures the koamishin authentication guard and optionally replaces starter kit routes.',
             ],
             [
                 'number' => 2,
@@ -261,12 +261,12 @@ KOAMISHIN_PUBLISHABLE_KEY={$clientId}
 KOAMISHIN_SECRET_KEY={$clientSecret}
 KOAMISHIN_REDIRECT_URI={$callback}
 ENV,
-                'tip' => 'Client secrets must remain on your server. Never expose this secret to frontend code or client bundles.',
+                'tip' => 'Client secrets must remain on your server. Never expose secret keys to frontend JavaScript or client-side code.',
             ],
             [
                 'number' => 3,
-                'title' => 'Register Koamishin Guard',
-                'subtitle' => 'Register the koamishin driver under guards in config/auth.php.',
+                'title' => 'Verify Authentication Guard',
+                'subtitle' => 'Ensure the koamishin guard is registered in config/auth.php.',
                 'file' => 'config/auth.php',
                 'language' => 'php',
                 'code' => <<<'PHP'
@@ -281,7 +281,7 @@ ENV,
     ],
 ],
 PHP,
-                'tip' => 'The guard validates access tokens on every request and automatically refreshes tokens when needed.',
+                'tip' => 'The koamishin guard validates access tokens on every request and automatically refreshes expired tokens.',
             ],
             [
                 'number' => 4,
@@ -326,7 +326,7 @@ Route::get('/dashboard', function (Request $request) {
         'id' => $user->id,
         'name' => $user->name,
         'email' => $user->email,
-        'metadata' => $user->publicMetadata ?? [],
+        'public_metadata' => $user->publicMetadata ?? [],
     ]);
 })->middleware('auth:koamishin');
 
@@ -337,7 +337,7 @@ Route::post('/logout', function () {
     return redirect('/');
 })->name('logout');
 PHP,
-                'tip' => 'Koamishin::getRegistrationUrl() passes screen_hint=signup to present your application registration view.',
+                'tip' => 'Koamishin::getRegistrationUrl() automatically passes screen_hint=signup to present your application registration view.',
             ],
         ];
     }

@@ -38,7 +38,7 @@
                 </p>
             </div>
             <div class="flex h-11 w-11 items-center justify-center rounded-xl border border-gray-200 bg-gray-50 text-sm font-bold text-gray-800 dark:border-white/10 dark:bg-white/5 dark:text-gray-100" aria-hidden="true">
-                {{ $currentFramework['badge'] }}
+                <x-framework-logo :framework="$framework" class="w-6 h-6" />
             </div>
         </div>
 
@@ -56,7 +56,9 @@
                         wire:click="setFramework('{{ $key }}')"
                         class="flex min-w-24 shrink-0 flex-col items-center gap-2 rounded-xl border px-3 py-3 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 {{ $framework === $key ? 'border-gray-300 bg-gray-100 text-gray-950 dark:border-white/20 dark:bg-white/10 dark:text-white' : 'border-transparent text-gray-500 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-white' }}"
                     >
-                        <span class="flex h-9 w-9 items-center justify-center rounded-full bg-white font-mono text-sm font-bold shadow-xs dark:bg-gray-800" aria-hidden="true">{{ $meta['badge'] }}</span>
+                        <span class="flex h-9 w-9 items-center justify-center rounded-full bg-white font-mono text-sm font-bold shadow-xs dark:bg-gray-800 p-1.5" aria-hidden="true">
+                            <x-framework-logo :framework="$key" class="w-5 h-5" />
+                        </span>
                         <span>{{ $meta['name'] }}</span>
                     </button>
                 @endforeach
