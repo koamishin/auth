@@ -134,6 +134,7 @@ test('publishable keys complete oauth authorization and token refresh for each c
         'client_type' => $clientType,
         'redirect_uris' => ['http://localhost:3000/callback'],
     ]);
+    $environment->update(['settings' => array_merge($environment->settings ?? [], ['oauth_consent_enabled' => true])]);
     $user = User::factory()->create(['identity_namespace' => $environment->identityNamespace()]);
     $tenant->users()->attach($user);
     $application->users()->attach($user, ['environment' => 'development', 'role' => 'member']);

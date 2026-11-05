@@ -178,6 +178,11 @@ class TenantApplicationEnvironment extends Model
         return $this->getSetting('sso_enabled', false) === true;
     }
 
+    public function requiresOAuthConsent(): bool
+    {
+        return $this->getSetting('oauth_consent_enabled', false) === true;
+    }
+
     public function identityNamespace(): string
     {
         return 'environment:'.$this->getKey();

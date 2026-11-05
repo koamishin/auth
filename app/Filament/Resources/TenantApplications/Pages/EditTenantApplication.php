@@ -121,6 +121,7 @@ class EditTenantApplication extends EditRecord
             unset($data['email_verification_policy']);
             foreach ([
                 'passkeys_enabled' => true,
+                'oauth_consent_enabled' => false,
                 'sso_enabled' => false,
                 'login_title' => null,
                 'login_description' => null,

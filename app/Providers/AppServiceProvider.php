@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Features\FeatureRegistry;
+use App\Models\Client;
 use App\Models\User;
 use App\Observers\UserObserver;
 use App\Services\OAuth\ApplicationAuthentication;
@@ -81,6 +82,7 @@ class AppServiceProvider extends ServiceProvider
 
     protected function configurePassport(): void
     {
+        Passport::useClientModel(Client::class);
         Passport::tokensExpireIn(now()->addDays(15));
         Passport::refreshTokensExpireIn(now()->addDays(30));
         Passport::personalAccessTokensExpireIn(now()->addMonths(6));

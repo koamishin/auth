@@ -138,7 +138,7 @@ test('authentication isolates identical emails between portal and application en
         'environment' => 'development',
         'oauth_client_id' => $client->getKey(),
         'redirect_uris' => $client->getAttribute('redirect_uris'),
-        'settings' => ['allow_signups' => true],
+        'settings' => ['allow_signups' => true, 'oauth_consent_enabled' => true],
     ]);
 
     $sharedEmail = 'same@isolate.test';

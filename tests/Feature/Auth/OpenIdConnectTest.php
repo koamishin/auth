@@ -38,6 +38,7 @@ function oauthTestEnvironment(User $user, string $name = 'test', string $environ
         'environment' => $environment,
         'oauth_client_id' => $client->getKey(),
         'redirect_uris' => $client->getAttribute('redirect_uris'),
+        'settings' => ['oauth_consent_enabled' => true],
     ]);
     $tenant->users()->attach($user);
     $application->users()->attach($user, ['environment' => $environment, 'role' => 'member']);

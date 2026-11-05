@@ -286,6 +286,10 @@ class TenantApplicationResource extends Resource
                             ->helperText('Choose whether this application requires verified email, or use the Portal default.')
                             ->default('inherit')->required(),
                         Toggle::make('passkeys_enabled')->label('Allow passkey sign-in')->default(true),
+                        Toggle::make('oauth_consent_enabled')
+                            ->label('Require OAuth consent screen')
+                            ->helperText('Ask users to confirm granting access to their profile and scopes. Leave off for seamless first-party login without a permission prompt.')
+                            ->default(false),
                         Toggle::make('sso_enabled')->label('Allow single sign-on')->default(false)
                             ->helperText('Share sign-in with other opted-in applications in this organization and environment for up to eight hours. Each application still checks membership and consent.'),
                     ])->columns(2),
@@ -312,6 +316,7 @@ class TenantApplicationResource extends Resource
                 default => 'inherit',
             },
             'passkeys_enabled' => $config?->getSetting('passkeys_enabled', true) === true,
+            'oauth_consent_enabled' => $config?->getSetting('oauth_consent_enabled', false) === true,
             'sso_enabled' => $config?->getSetting('sso_enabled', false) === true,
             'login_title' => $config?->getSetting('login_title'),
             'login_description' => $config?->getSetting('login_description'),

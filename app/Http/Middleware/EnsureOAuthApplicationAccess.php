@@ -231,8 +231,12 @@ class EnsureOAuthApplicationAccess
                 throw PassportOAuthServerException::consentRequired($authorization);
             }
             abort_unless($this->authentication->allowsSignups($environment), 403, 'You do not have access to this application.');
-            $prompts[] = 'consent';
-            $request->attributes->set('koamishin.joining_application', true);
+            if ($environment->requiresOAuthConsent()) {
+                $prompts[] = 'consent';
+                $request->attributes->set('koamishin.joining_application', true);
+            } else {
+                $this->authentication->enroll($environment, $user);
+            }
         }
         $request->query->set('prompt', implode(' ', array_unique($prompts)));
 

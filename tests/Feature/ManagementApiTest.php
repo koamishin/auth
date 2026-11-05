@@ -404,7 +404,7 @@ test('revoking an OAuth grant rejects its real refresh token', function (): void
     $user = User::factory()->create();
     enrollManagementUser($tenant, $application, $user, 'development');
     $client = app(ClientRepository::class)->createAuthorizationCodeGrantClient('application', ['https://app.example/callback']);
-    $environment->update(['oauth_client_id' => $client->getKey()]);
+    $environment->update(['oauth_client_id' => $client->getKey(), 'settings' => array_merge($environment->settings ?? [], ['oauth_consent_enabled' => true])]);
     $verifier = str_repeat('a', 64);
     $challenge = rtrim(strtr(base64_encode(hash('sha256', $verifier, true)), '+/', '-_'), '=');
     $start = actingAs($user)->get('/oauth/authorize?'.http_build_query([

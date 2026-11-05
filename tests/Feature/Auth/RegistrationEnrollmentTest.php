@@ -37,6 +37,10 @@ use function Pest\Laravel\withToken;
 /** @return array{Client, TenantApplicationEnvironment} */
 function registrationTestEnvironment(string $name = 'signup-app', array $settings = ['allow_signups' => true]): array
 {
+    if (! array_key_exists('oauth_consent_enabled', $settings)) {
+        $settings['oauth_consent_enabled'] = true;
+    }
+
     $client = new Client;
     $client->forceFill([
         'name' => $name,
@@ -357,7 +361,7 @@ test('a pending hosted verification continues when the application disables the 
     post('/register', registrationInput('hosted.toggle@example.test') + ['flow' => $flow, 'hosted' => 1])->assertOk();
     expect(post('/auth/hosted', ['flow' => $flow, 'hosted' => 1, 'screen' => 'continue'])->viewData('screen'))->toBe('verify');
 
-    $environment->update(['settings' => ['allow_signups' => true, 'email_verification_required' => false]]);
+    $environment->update(['settings' => ['allow_signups' => true, 'email_verification_required' => false, 'oauth_consent_enabled' => true]]);
     $resumed = post('/auth/hosted', ['flow' => $flow, 'hosted' => 1, 'screen' => 'verify'])->assertOk();
     expect($resumed->viewData('screen'))->toBe('continue');
     $consent = post('/auth/hosted', ['flow' => $flow, 'hosted' => 1, 'screen' => 'continue'])->assertOk();
@@ -1426,6 +1430,20 @@ test('the impersonation setting controls whether an administrator may impersonat
 
     applicationFeatureSettings(['user_impersonation_enabled' => false]);
     expect($user->canImpersonate())->toBeFalse();
+});
+
+test('applications skip OAuth consent screen by default when oauth_consent_enabled is false', function (): void {
+    applicationFeatureSettings(['email_verification_required' => false]);
+    [$client, $environment] = registrationTestEnvironment('seamless-app', ['allow_signups' => true, 'oauth_consent_enabled' => false]);
+    $flow = registrationFlow($client, signup: true);
+    $response = post('/register', registrationInput('seamless@example.test') + ['flow' => $flow]);
+    $response->assertRedirect();
+    $authorizeUrl = (string) $response->headers->get('Location');
+    $authorized = get($authorizeUrl)->assertRedirect();
+    $callbackUrl = (string) $authorized->headers->get('Location');
+    expect($callbackUrl)->toContain('https://seamless-app.internal/callback')
+        ->toContain('code=')
+        ->toContain('state=signup123');
 });
 
 class EnforceApplicationRegistrationCsrf extends PreventRequestForgery
