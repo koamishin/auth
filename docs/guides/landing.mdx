@@ -32,13 +32,13 @@ PUBLIC_APP_URL=https://auth.example.com npm run build --prefix landing
 
 The generated site is in `landing/dist/`. Upload the **contents** of this directory to a static host configured to serve `index.html` in directories. Deploy all assets and pages together, then verify the landing page, `/docs/`, a nested guide loaded directly, and the sign-in link. Configure the host's domain and HTTPS separately. The static output does not need PHP.
 
-Outside GitHub Actions, the current Astro configuration builds for the domain root. It uses `/koamishin-portal` as its base whenever `GITHUB_ACTIONS` is set, so a custom domain or a different repository path needs corresponding changes to the Astro base and documentation link generation. The landing currently includes a root-relative hero logo; check and adjust that asset path when using a subpath. Test both page navigation and assets at the actual deployed path.
+Outside GitHub Actions, the current Astro configuration builds for the domain root. It uses `/auth` as its base whenever `GITHUB_ACTIONS` is set, so a custom domain or a different repository path needs corresponding changes to the Astro base and documentation link generation. Test both page navigation and assets at the actual deployed path.
 
 If root Composer development dependencies are installed, `PUBLIC_APP_URL=https://auth.example.com php artisan landing:build --no-interaction` performs the build through the Laravel Astro Landing package. The package is a development dependency, so this Artisan command is not available after a `composer install --no-dev` deployment. The direct npm build above does not require the package.
 
 ## Publish with the existing GitHub Pages workflow
 
-`.github/workflows/deploy-pages.yml` builds the site on relevant pushes to `main` and can also be run manually. For the current repository, it builds under `/koamishin-portal` and uploads `landing/dist/` as a GitHub Pages artifact. To use it:
+`.github/workflows/deploy-pages.yml` builds the site on relevant pushes to `main` and can also be run manually. For the current repository, it builds under `/auth` and uploads `landing/dist/` as a GitHub Pages artifact. To use it:
 
 1. Configure the repository's Pages source as GitHub Actions and check that the workflow's permissions and environment are allowed by your organization.
 2. Add a public `PUBLIC_APP_URL` environment value to the workflow's **Build Astro site** step, pointing to your actual Laravel HTTPS origin. The committed workflow does not set it, so without this change its sign-in links point to `http://localhost:8000`.
