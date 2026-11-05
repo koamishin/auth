@@ -224,8 +224,8 @@ class EditTenantApplication extends EditRecord
                 ->color('gray')
                 ->slideOver()
                 ->modalWidth('5xl')
-                ->modalHeading(fn (): string => 'Setup Guide — ' . $this->getRecord()->name)
-                ->modalDescription(fn (): string => 'Tailored integration steps and code snippets for the ' . ucfirst($this->data['environment'] ?? $this->getRecord()->environment) . ' environment')
+                ->modalHeading(fn (): string => 'Setup Guide — '.$this->getRecord()->name)
+                ->modalDescription(fn (): string => 'Tailored integration steps and code snippets for the '.ucfirst($this->data['environment'] ?? $this->getRecord()->environment).' environment')
                 ->modalSubmitAction(false)
                 ->modalCancelActionLabel('Close')
                 ->modalContent(fn () => view('filament.resources.tenant-applications.components.quickstart-modal-content', [
