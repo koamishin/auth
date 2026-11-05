@@ -518,7 +518,7 @@ onMounted(async () => {
 
 <template>
   <div class="callback-container">
-    <p>Authenticating with Koamishin Portal...</p>
+    <p>Authenticating with Koamishin Auth...</p>
   </div>
 </template>
 VUE,

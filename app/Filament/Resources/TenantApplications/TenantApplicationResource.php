@@ -401,7 +401,7 @@ class TenantApplicationResource extends Resource
                     ])->columns(2),
 
                 Section::make('Setup Guide (Clerk Workflow)')
-                    ->description('Follow these tailored steps to connect your application to Koamishin Portal')
+                    ->description('Follow these tailored steps to connect your application to Koamishin Auth')
                     ->components([
                         TextEntry::make('install_command')
                             ->label('1. Install SDK Package')

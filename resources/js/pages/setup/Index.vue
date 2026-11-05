@@ -8,7 +8,7 @@ import { Spinner } from '@/components/ui/spinner';
 import AuthBase from '@/layouts/AuthLayout.vue';
 
 const form = useForm({
-    instance_name: 'Koamishin Auth Portal',
+    instance_name: 'Koamishin Auth',
     name: '',
     email: '',
     password: '',
@@ -24,7 +24,7 @@ function submit() {
 
 <template>
     <AuthBase
-        title="Setup Your Auth Portal"
+        title="Setup Koamishin Auth"
         description="Configure your instance name and create your primary administrator account"
     >
         <Head title="Instance Setup" />

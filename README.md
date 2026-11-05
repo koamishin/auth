@@ -1,6 +1,6 @@
-# Koamishin Portal
+# Koamishin Auth
 
-[![CI](https://github.com/koamishin/koamishin-portal/actions/workflows/ci.yml/badge.svg)](https://github.com/koamishin/koamishin-portal/actions/workflows/ci.yml)
+[![CI](https://github.com/koamishin/auth/actions/workflows/ci.yml/badge.svg)](https://github.com/koamishin/auth/actions/workflows/ci.yml)
 [![PHP](https://img.shields.io/badge/PHP-8.4%20%7C%208.5-777BB4?logo=php&logoColor=white)](https://php.net)
 [![Laravel](https://img.shields.io/badge/Laravel-13.x-FF2D20?logo=laravel&logoColor=white)](https://laravel.com)
 [![Filament](https://img.shields.io/badge/Filament-5.x-F59E0B?logo=filament&logoColor=white)](https://filamentphp.com)
@@ -8,44 +8,45 @@
 [![npm](https://img.shields.io/badge/npm-%40koamishin%2Fauth--js-CB3837?logo=npm&logoColor=white)](https://www.npmjs.com/package/@koamishin/auth-js)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-**Koamishin Portal** is a self-hosted authentication and user-management service for applications that share one user directory. It provides OAuth 2.0 authorization-code login with PKCE, a Laravel SDK, application environments, a scoped management API, and signed webhooks.
+**Koamishin Auth** is an open-source, self-hosted authentication and user-management platform. It provides OAuth 2.0 / OpenID Connect login with PKCE, official Laravel and JavaScript SDKs, multi-tenant application environments, a scoped management API, and signed webhooks.
 
-A person can register from App A through the Portal and return authenticated to App A, then sign in to App B with the same Portal identity. Access to each application follows that environment's signup policy or an administrator's enrollment decision.
+A person can register from App A through Koamishin Auth and return authenticated to App A, with independent application identities scoped per application and environment. Access to each application follows that environment's signup policy or an administrator's enrollment decision.
 
 ## How application signup and login work
 
 1. Create an organization and register each application with its own callback URL and client credentials.
-2. App A's Register link calls `Koamishin::getRegistrationUrl('/dashboard')`. The SDK stores OAuth state and a PKCE verifier and sends `screen_hint=signup` to the Portal.
-3. The Portal validates the client and exact registered callback, then shows App A's name and environment on its registration page. With **Allow self-service signup** enabled, the new account can join App A's organization and environment and complete authorization back to App A.
-4. App B's Login link calls `getLoginUrl('/dashboard')`. The Portal shows App B's login form and requires a fresh sign-in, even when the person has a Portal or App A session. An existing user who is not yet enrolled can join App B after approving consent only when App B's environment also allows self-service signup.
-5. Both apps receive the same Portal user ID. Separate application IDs, memberships, sessions, and metadata keep their contexts distinct.
+2. App A's Register link calls `Koamishin::getRegistrationUrl('/dashboard')`. The SDK stores OAuth state and a PKCE verifier and sends `screen_hint=signup` to Koamishin Auth.
+3. Koamishin Auth validates the client and exact registered callback, then shows App A's name and environment on its registration page. With **Allow self-service signup** enabled, the new account can join App A's organization and environment and complete authorization back to App A.
+4. App B's Login link calls `getLoginUrl('/dashboard')`. Koamishin Auth shows App B's login form and requires sign-in for that application environment. An existing user who is not yet enrolled can join App B when App B's environment allows self-service signup.
+5. Separate application IDs, environment namespaces, memberships, sessions, and metadata keep application contexts completely distinct.
 
-The environment setting is `settings.allow_signups`; only the JSON boolean `true` enables self-service enrollment. A missing or false setting requires administrator enrollment. Direct registration on the generic Portal `/register` page creates a global account without choosing an application or returning to one.
+The environment setting is `settings.allow_signups`; only the JSON boolean `true` enables self-service enrollment. A missing or false setting requires administrator enrollment.
 
-The [two-application walkthrough](docs/getting-started/centralized-auth.mdx) includes complete routes, configuration, signup policy, local Eloquent user projections, metadata, and expected redirects. The SDK guard returns the central identity; a local `users` row keyed by `koamishin_user_id` gives each app normal relationships to its own data. The existing local test harness uses Portal port **8120**, App A **8121**, and App B **8122**, with an isolated Portal test database.
+The [two-application walkthrough](docs/getting-started/centralized-auth.mdx) includes complete routes, configuration, signup policy, local Eloquent user projections, metadata, and expected redirects. The SDK guard returns the authenticated identity; a local `users` row keyed by `koamishin_user_id` gives each app normal relationships to its own data. The existing local test harness uses port **8120**, App A **8121**, and App B **8122**.
 
 ## Features
 
-- Laravel 13 Portal with Vue/Inertia account pages and a Filament 5 administration panel.
-- One central user directory with organization and application-environment memberships.
-- Contextual registration and login, authorization-code flow with PKCE, and scoped userinfo claims.
+- Laravel 13 server with Vue/Inertia account pages and a Filament 5 administration panel.
+- Central user directory with multi-tenant organization and application-environment scoped identities.
+- Contextual registration and login, authorization-code flow with PKCE, and scoped user claims.
 - Laravel SDK guard with application/environment checks, token revalidation, and refresh support.
 - Public and private metadata scoped to each application environment.
 - Server-to-server management for scoped users, metadata, memberships, organization context, and OAuth grants.
-- Queued user webhooks with explicit legacy and Standard Webhooks signature formats.
-- Optional social login, passkeys, and multi-factor features provided by the installed authentication packages.
+- Queued user webhooks with explicit legacy and Standard Webhooks (Svix) signature formats.
+- Seamless first-party sign-in (OAuth consent prompt skipped by default, toggleable per application).
+- Optional social login, passkeys, and multi-factor features.
 
-The Portal publishes discovery and JWKS endpoints, but does not issue OIDC ID tokens or provide complete OpenID Connect conformance. See [architecture](docs/architecture.mdx) and [security](docs/guides/security.mdx) for the boundaries of the service.
+The server publishes discovery and JWKS endpoints, but does not issue OIDC ID tokens or provide complete OpenID Connect conformance. See [architecture](docs/architecture.mdx) and [security](docs/guides/security.mdx) for the boundaries of the service.
 
-## Install the Portal
+## Install Koamishin Auth
 
 Use PHP 8.5 with the extensions required by the lockfile, Composer 2, Git, and a compatible Node.js version. The [installation guide](docs/getting-started/installation.mdx) contains the full prerequisites, Docker considerations, and first-run setup.
 
 For a **new** local SQLite installation:
 
 ```bash
-git clone https://github.com/koamishin/koamishin-portal.git
-cd koamishin-portal
+git clone https://github.com/koamishin/auth.git
+cd auth
 composer install
 cp .env.example .env
 touch database/database.sqlite
