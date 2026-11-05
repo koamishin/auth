@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![npm version](https://img.shields.io/npm/v/@koamishin/auth-js.svg?style=flat-square)](https://www.npmjs.com/package/@koamishin/auth-js)
 
-Official browser JavaScript and TypeScript SDK for **Koamishin Portal**, using OAuth 2.0 authorization codes and PKCE. The Portal currently does not issue OIDC ID tokens; do not assume OIDC conformance.
+Official browser JavaScript and TypeScript SDK for **Koamishin Auth**, using OAuth 2.0 authorization codes and PKCE. The server currently does not issue OIDC ID tokens; do not assume OIDC conformance.
 
 ---
 
@@ -54,12 +54,12 @@ Request `metadata:public` explicitly if your application needs public metadata; 
 
 ### 2. Sign In Button
 
-Call `redirectToSignIn()` to send the user to your centralized Koamishin Portal:
+Call `redirectToSignIn()` to send the user to your centralized Koamishin Auth:
 
 ```typescript
 import { koamishin } from './auth';
 
-// Triggers PKCE challenge and redirects browser to Koamishin Portal
+// Triggers PKCE challenge and redirects browser to Koamishin Auth
 async function handleLogin() {
   await koamishin.redirectToSignIn();
 }

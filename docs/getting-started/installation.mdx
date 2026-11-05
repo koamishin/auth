@@ -1,11 +1,11 @@
 ---
 title: Installation & Getting Started
-description: Quickstart guide to deploying Koamishin Portal using Docker or manual installation.
+description: Quickstart guide to deploying Koamishin Auth using Docker or manual installation.
 ---
 
 # Installation & Getting Started
 
-Koamishin Portal is a self-hosted, centralized identity provider and user management service. It allows organizations to manage user authentication, multi-factor security, and OAuth2/OIDC connections across multiple internal applications.
+Koamishin Auth is a self-hosted, centralized identity provider and user management service. It allows organizations to manage user authentication, multi-factor security, and OAuth2/OIDC connections across multiple internal applications with isolated application user directories.
 
 Choose your preferred setup method:
 
@@ -22,7 +22,7 @@ Before beginning, ensure your environment meets the minimum requirements:
 | :----------- | :----------------------------------------- | :----------------------------------------------------------------------------------------------- |
 | **PHP**      | 8.4 or 8.5                                 | Required extensions: `pdo`, `mbstring`, `openssl`, `bcmath`, `curl`, `redis` (optional), `pcntl` |
 | **Composer** | 2.5+                                       | Dependency manager for PHP                                                                       |
-| **Node.js**  | 22.18+ (22.x) or 24.11+                    | Vite Plus asset bundling                                                                         |
+| **Node.js**  | 22.18+ (22.x) or 24.11+                    | Vite asset bundling                                                                              |
 | **Database** | PostgreSQL 17, MySQL 8.4+, or SQLite 3.35+ | PostgreSQL 17 is default in Docker                                                               |
 | **Redis**    | 7.0+                                       | Recommended for session cache and queue worker                                                   |
 
@@ -30,13 +30,13 @@ Before beginning, ensure your environment meets the minimum requirements:
 
 ## Method 1: Docker Compose (Recommended)
 
-The fastest way to run Koamishin Portal locally or in self-hosted staging is with the bundled Docker Compose stack.
+The fastest way to run Koamishin Auth locally or in self-hosted staging is with the bundled Docker Compose stack.
 
 ### 1. Clone Repository & Copy Environment
 
 ```bash
-git clone https://github.com/koamishin/koamishin-portal.git
-cd koamishin-portal
+git clone https://github.com/koamishin/auth.git
+cd auth
 cp .env.example .env
 ```
 
@@ -45,7 +45,7 @@ cp .env.example .env
 Open `.env` in your text editor and ensure the following variables are configured:
 
 ```dotenv
-APP_NAME="Koamishin Portal"
+APP_NAME="Koamishin Auth"
 APP_ENV=production
 APP_DEBUG=false
 APP_URL=http://localhost:8000
@@ -54,7 +54,7 @@ APP_URL=http://localhost:8000
 DB_CONNECTION=pgsql
 DB_HOST=pgsql
 DB_PORT=5432
-DB_DATABASE=koamishin_portal
+DB_DATABASE=koamishin_auth
 DB_USERNAME=portal
 DB_PASSWORD=secret_password_here
 
@@ -76,14 +76,14 @@ docker compose up -d
 
 Docker Compose will start:
 
-- **`portal`**: High-performance Laravel Octane (FrankenPHP) application server on port `8000`.
+- **`portal`**: High-performance Laravel Octane application server on port `8000`.
 - **`queue`**: Dedicated background worker for asynchronous webhook deliveries and email jobs.
-- **`pgsql`**: PostgreSQL 17 database with persistent storage volume.
+- **`pgsql`**: PostgreSQL 17 [REDACTED] with persistent storage volume.
 - **`redis`**: In-memory Redis instance for queues and session management.
 
 ### 4. Run Migrations & Generate Keys
 
-Initialize the database schema and OAuth encryption keys inside the container:
+Initialize the [REDACTED] schema and OAuth encryption keys inside the container:
 
 ```bash
 docker compose exec portal php artisan key:generate --no-interaction
@@ -104,8 +104,8 @@ For local development or custom bare-metal environments:
 ### 1. Clone & Install PHP Dependencies
 
 ```bash
-git clone https://github.com/koamishin/koamishin-portal.git
-cd koamishin-portal
+git clone https://github.com/koamishin/auth.git
+cd auth
 composer install
 ```
 
@@ -115,23 +115,23 @@ Copy the example environment file and set up SQLite (or configure PostgreSQL/MyS
 
 ```bash
 cp .env.example .env
-touch database/database.sqlite
+touch [REDACTED]/[REDACTED].sqlite
 ```
 
 Ensure your `.env` contains:
 
 ```dotenv
-APP_NAME="Koamishin Portal"
+APP_NAME="Koamishin Auth"
 APP_ENV=local
 APP_DEBUG=true
 APP_URL=http://localhost:8000
 
 DB_CONNECTION=sqlite
-DB_DATABASE=/absolute/path/to/database/database.sqlite
+DB_DATABASE=/absolute/path/to/[REDACTED]/[REDACTED].sqlite
 
-SESSION_DRIVER=database
-QUEUE_CONNECTION=database
-CACHE_STORE=database
+SESSION_DRIVER=[REDACTED]
+QUEUE_CONNECTION=[REDACTED]
+CACHE_STORE=[REDACTED]
 MAIL_MAILER=log
 ```
 
@@ -181,9 +181,9 @@ Open your browser and navigate to:
 http://localhost:8000/setup
 ```
 
-If no super administrator exists in the database, the interactive setup wizard will appear:
+If no super administrator exists in the [REDACTED], the interactive setup wizard will appear:
 
-1. **Portal Name**: Give your portal an identity (e.g. _Acme Identity_).
+1. **Instance Name**: Set your instance branding (defaults to _Koamishin Auth_).
 2. **Super Administrator Account**:
     - Full Name
     - Email Address
@@ -192,7 +192,7 @@ If no super administrator exists in the database, the interactive setup wizard w
 
 The setup wizard will:
 
-- Create and verify the initial `super_admin` user.
+- Create and verify the initial `super_admin` user in the portal identity namespace.
 - Configure default application branding settings.
 - Automatically sign you into the **Filament Administration Panel** at `/admin`.
 - Lock the `/setup` route to prevent unauthorized re-initialization.
@@ -206,7 +206,7 @@ Once logged into the Filament Admin Panel:
 ### 1. Register Your First Organization (Tenant)
 
 1. Open the top-left tenant dropdown or navigate to `/admin/new`.
-2. Enter the **Organization Name** (e.g., _Engineering HQ_) and **Slug** (e.g., `engineering-hq`).
+2. Enter the **Organization Name** (e.g., _Acme Corp_) and **Slug** (e.g., `acme-corp`).
 3. Click **Create Organization**.
 
 ### 2. Register an Application
@@ -217,9 +217,10 @@ Once logged into the Filament Admin Panel:
     - **Framework**: Select `Laravel`, `Node.js`, `Vue`, or `React`.
     - **Environment**: Choose `Development` or `Production`.
     - **Callback URLs**: Enter the exact redirect URI where authorization codes will be delivered (e.g. `http://localhost:8001/koamishin/callback`).
+    - **Authentication Features**: Configure whether to allow self-service signups, require verified email, or enforce OAuth consent prompts (off by default for seamless first-party sign-in).
 3. Click **Create Application**.
 
-> 🔑 **Important**: The modal will display your **Client ID** and **Client Secret**. Copy and store the client secret immediately—it is hashed and cannot be shown again.
+> 🔑 **Important**: The modal will display your **Publishable Key** (`pk_...`) and **Secret Key** (`sk_...`), plus the underlying OAuth **Client ID** and **Client Secret**. Copy and store the secret keys immediately—they are hashed and cannot be shown again.
 
 ---
 

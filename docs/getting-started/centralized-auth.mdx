@@ -1,42 +1,40 @@
 ---
 title: Centralized login for two Laravel applications
-description: Start signup in App A, create one Portal account, and sign in to App B with the same identity.
+description: Start signup in App A, create an account, and sign in to App B with isolated application identities.
 ---
 
 # Centralized login for two Laravel applications
 
-This walkthrough connects two Laravel applications to one Koamishin Portal. App A starts a contextual registration flow, the Portal creates the account, and OAuth returns the user to App A. App B can then authenticate the same Portal account through its own client. Each app keeps its own local session, application membership, and metadata.
+This walkthrough connects two Laravel applications to one Koamishin Auth instance. App A starts a contextual registration flow, Koamishin Auth creates the account scoped to App A's environment, and OAuth returns the user to App A. App B can then authenticate its own users through its client. Each app keeps its own local session, application membership, isolated identity namespace, and metadata.
 
-Self-service access is controlled by the selected environment's **Allow self-service signup** setting. When it is enabled, a new account can join that environment during signup, and an existing Portal user can join another application after approving its authorization request. When the setting is missing or false, an administrator must enroll the user first. Creating a global account directly at the Portal's generic `/register` page does not choose an application or grant application access.
+Self-service access is controlled by the selected environment's **Allow self-service signup** setting. When it is enabled, a new account can join that environment during signup. When the setting is missing or false, an administrator must enroll the user first.
 
 ## Before you start
 
-Complete [Portal installation](installation.mdx), including `/setup`. The local test environment uses these development-only origins:
+Complete [installation](installation.mdx), including `/setup`. The local test environment uses these development-only origins:
 
-| Service | Origin                         | Callback                                         |
-| ------- | ------------------------------ | ------------------------------------------------ |
-| Portal  | `http://portal.localhost:8120` | —                                                |
-| App A   | `http://app-a.localhost:8121`  | `http://app-a.localhost:8121/koamishin/callback` |
-| App B   | `http://app-b.localhost:8122`  | `http://app-b.localhost:8122/koamishin/callback` |
+| Service        | Origin                         | Callback                                         |
+| -------------- | ------------------------------ | ------------------------------------------------ |
+| Koamishin Auth | `http://auth.localhost:8120`   | —                                                |
+| App A          | `http://app-a.localhost:8121`  | `http://app-a.localhost:8121/koamishin/callback` |
+| App B          | `http://app-b.localhost:8122`  | `http://app-b.localhost:8122/koamishin/callback` |
 
 Make sure all three hostnames resolve to the machine running the servers. Separate hostnames and host-only cookies keep session and CSRF cookies from different apps from interfering. Use HTTPS and your actual domains in production.
 
-For the existing development harness in `~/koamishin-sso-test`, `./run-sso-test.sh start` starts these three servers. Its Portal process uses the isolated `database/sso-test.sqlite` database, not the Portal's normal database. Starting a separate Portal server against the normal database will not find the harness's applications and credentials. Review setup/reset scripts before using them: they are test helpers that can replace test accounts, clients, memberships, and metadata.
-
-For your own local instance, configure its Portal origin and session settings before starting the server:
+For your own local instance, configure its server origin and session settings before starting the server:
 
 ```dotenv
-APP_URL=http://portal.localhost:8120
-SESSION_COOKIE=koamishin_portal_session
+APP_URL=http://auth.localhost:8120
+SESSION_COOKIE=koamishin_auth_session
 SESSION_DOMAIN=null
 MAIL_MAILER=log
 ```
 
-`MAIL_MAILER=log` is for local testing. Verification messages and their links are written to `storage/logs/laravel.log`; configure a real mail transport for production. Use a separate browser profile for the administrator and the test user so their Portal sessions do not replace each other.
+`MAIL_MAILER=log` is for local testing. Verification messages and their links are written to `storage/logs/laravel.log`; configure a real mail transport for production. Use a separate browser profile for the administrator and the test user so their sessions do not replace each other.
 
 ## 1. Configure the applications and signup policy
 
-In the Portal admin panel, select an organization and create **App A** and **App B** separately:
+In the admin panel, select an organization and create **App A** and **App B** separately:
 
 | Setting                   | App A                                            | App B                                            |
 | ------------------------- | ------------------------------------------------ | ------------------------------------------------ |
@@ -45,30 +43,25 @@ In the Portal admin panel, select an organization and create **App A** and **App
 | Callback URL              | `http://app-a.localhost:8121/koamishin/callback` | `http://app-b.localhost:8122/koamishin/callback` |
 | Allow self-service signup | On for this walkthrough                          | On for this walkthrough                          |
 
-Save each development client ID, one-time secret, and numeric application ID. The application's Laravel environment snippet includes `KOAMISHIN_APPLICATION_ID`. Register the exact callback; a different host, port, or path is a different callback. The Portal validates the client and callback before displaying contextual login or registration.
+Save each development Publishable Key (`pk_test_...`), Secret Key (`sk_test_...`), and numeric application ID. The application's Laravel environment snippet includes `KOAMISHIN_APPLICATION_ID`. Register the exact callback; a different host, port, or path is a different callback. Koamishin Auth validates the client and callback before displaying contextual login or registration.
 
 To change an existing environment's policy, edit the application, choose that environment, and set **Allow self-service signup**. The stored setting is `tenant_application_environments.settings.allow_signups`; only the JSON boolean `true` enables it. Missing or false values keep self-service access closed. Set this policy deliberately for development and production separately.
 
-Two consumers can intentionally share one Portal application and register both callbacks on one client. They then share the application ID, membership boundary, and metadata. To test independent applications, use separate application IDs and client credentials as shown here.
-
 ## 2. Configure the Laravel clients
 
-Use the existing `app-a/` and `app-b/` projects, or create two new Laravel 13 projects:
+Use existing projects, or create two new Laravel 13 projects:
 
 ```bash
 composer create-project laravel/laravel app-a '^13.0' --no-interaction
 composer create-project laravel/laravel app-b '^13.0' --no-interaction
 ```
 
-Install an SDK version containing `getRegistrationUrl()` in each app. The repository source can be newer than the stable Composer release. For development, use the updated branch and commit the consuming project's lockfile to pin the resolved revision:
+Install the SDK in each app:
 
 ```bash
-composer config repositories.koamishin-auth vcs https://github.com/koamishin/auth-php.git
-composer require koamishin/auth-php:dev-main
+composer require koamishin/auth-php
 php artisan vendor:publish --tag=koamishin-config --no-interaction
 ```
-
-Use a reviewed release for production. The local test projects may instead use a Composer path repository pointing to the Portal's `packages/koamishin-auth-php` directory; changes to that source are then available directly to the clients.
 
 Configure App A's `.env` with its own credentials and actual numeric application ID:
 
@@ -77,11 +70,11 @@ APP_URL=http://app-a.localhost:8121
 SESSION_COOKIE=app_a_session
 SESSION_DOMAIN=null
 
-KOAMISHIN_PORTAL_URL=http://portal.localhost:8120
-KOAMISHIN_CLIENT_ID=app-a-development-client-id
-KOAMISHIN_CLIENT_SECRET=app-a-development-client-secret
+KOAMISHIN_PORTAL_URL=http://auth.localhost:8120
+KOAMISHIN_PUBLISHABLE_KEY=pk_test_app_a_key
+KOAMISHIN_SECRET_KEY=sk_test_app_a_key
 KOAMISHIN_REDIRECT_URI=http://app-a.localhost:8121/koamishin/callback
-KOAMISHIN_APPLICATION_ID=app-a-numeric-id
+KOAMISHIN_APPLICATION_ID=1
 KOAMISHIN_ENVIRONMENT=development
 ```
 
@@ -92,11 +85,11 @@ APP_URL=http://app-b.localhost:8122
 SESSION_COOKIE=app_b_session
 SESSION_DOMAIN=null
 
-KOAMISHIN_PORTAL_URL=http://portal.localhost:8120
-KOAMISHIN_CLIENT_ID=app-b-development-client-id
-KOAMISHIN_CLIENT_SECRET=app-b-development-client-secret
+KOAMISHIN_PORTAL_URL=http://auth.localhost:8120
+KOAMISHIN_PUBLISHABLE_KEY=pk_test_app_b_key
+KOAMISHIN_SECRET_KEY=sk_test_app_b_key
 KOAMISHIN_REDIRECT_URI=http://app-b.localhost:8122/koamishin/callback
-KOAMISHIN_APPLICATION_ID=app-b-numeric-id
+KOAMISHIN_APPLICATION_ID=2
 KOAMISHIN_ENVIRONMENT=development
 ```
 

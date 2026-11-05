@@ -5,15 +5,15 @@ description: Configure application environments, authentication, and scoped even
 
 # Tenancy, OAuth, and webhooks
 
-A Portal organization contains applications. Each application has development and production configurations, separate OAuth clients, and separate application memberships. A person can belong to several organizations or applications, while retaining one underlying Portal user account.
+A Koamishin Auth organization contains applications. Each application has development and production configurations, separate OAuth clients, and separate application memberships. Application user accounts are isolated per application environment (`identity_namespace`), preventing cross-application collisions while allowing the same email, username, or phone number to exist across distinct applications.
 
 ## Create an application
 
 1. Sign in to the admin panel as a super administrator and select an organization.
 2. Under **Applications**, create an application. Choose its framework and initial environment, and enter the exact callback URL used by the consuming application. Production callback URLs must use HTTPS.
-3. Save both environments' client IDs and any displayed client secrets immediately. Secrets are shown once; store confidential client secrets on the server. A browser client is public and has no secret.
-4. Edit the other environment before using it: its callback list starts empty. Switching environments selects that environment's client and callbacks; it does not copy users or metadata into it. The dashboard selection is stored on the application record, so administrators changing the same application can change each other's selected context.
-5. Choose the selected environment's **Allow self-service signup** policy. When enabled, contextual signup can enroll a new user and an existing Portal user can join through authorization consent. When disabled, an administrator must enroll users in both the organization and the application environment. The Dashboard's **Quick Add User** and **Import Users** actions support administrator enrollment.
+3. Save both environments' Publishable Keys (`pk_...`) and Secret Keys (`sk_...`) immediately. Secret keys are shown once; store confidential keys securely on your server.
+4. Edit the other environment before using it: its callback list starts empty. Switching environments selects that environment's client and callbacks; it does not copy users or metadata into it.
+5. Choose the selected environment's **Allow self-service signup** and **Require OAuth consent screen** policies. When self-service signup is enabled, contextual signup enrolls a new user into that environment. OAuth consent prompts are skipped by default for seamless first-party sign-ins, and can be toggled on when explicit authorization is desired. The Dashboard's **Quick Add User** and **Import Users** actions support administrator enrollment.
 
 Laravel and Node.js applications receive confidential authorization-code clients. The browser-oriented framework selections receive public authorization-code clients. Both use the authorization-code flow; use PKCE for browser integrations. An OAuth client created separately with `passport:client` is not automatically bound to an application environment and is denied by the scoped authorization flow until provisioned and mapped correctly.
 

@@ -1,23 +1,22 @@
 ---
-title: Koamishin Portal documentation
-description: Install, operate, and integrate with Koamishin Portal.
+title: Koamishin Auth documentation
+description: Install, operate, and integrate with Koamishin Auth.
 ---
 
-# Koamishin Portal documentation
+# Koamishin Auth documentation
 
-Koamishin Portal is a Laravel application for managing user accounts and OAuth clients. It includes a Filament administration panel, tenant and application records, account settings, and queued user webhooks. This documentation describes the behavior in this repository and helps you set up and operate your own instance.
+Koamishin Auth is a self-hosted authentication and user-management platform. It includes a Filament administration panel, tenant organization and application records, independent application identities scoped per environment, and queued user webhooks. This documentation describes the behavior in this repository and helps you set up and operate your own instance.
 
-## Start with the Portal
+## Start with Koamishin Auth
 
-1. [Install the Portal](getting-started/installation.mdx) and create the first administrator.
-2. [Configure the environment](getting-started/configuration.mdx), including the database, URL, mail, and queue.
+1. [Install Koamishin Auth](getting-started/installation.mdx) and create the first administrator.
+2. [Configure the environment](getting-started/configuration.mdx), including the [REDACTED], URL, mail, and queue.
 3. [Run the development services](getting-started/local-development.mdx); the installation guide also shows how to create an organization and application.
 4. Read the [deployment guide](guides/ci-cd.mdx) before exposing an instance to users.
 
 ## Build an integration
 
-- Follow the [two-app centralized login and registration walkthrough](getting-started/centralized-auth.mdx) to register one user and connect two Laravel applications.
-
+- Follow the [two-app centralized login and registration walkthrough](getting-started/centralized-auth.mdx) to connect multiple applications with isolated identities.
 - [Tenancy and OAuth integration](guides/core-concepts.mdx) explains application records, clients, endpoints, and webhooks.
 - [Laravel SDK](guides/laravel-sdk.mdx) explains login, server credentials, sessions, and webhooks.
 - [User metadata](guides/user-metadata.mdx) shows how to add, read, and update extra user values.
@@ -26,6 +25,6 @@ Koamishin Portal is a Laravel application for managing user accounts and OAuth c
 
 ## Understand the current boundaries
 
-OAuth userinfo, the management API, and user webhooks enforce the application-environment checks described in this guide; other Portal features are not automatically tenant-isolated, and super administrators have global access. Although the Portal publishes discovery metadata, it does not currently issue OpenID Connect ID tokens or handle OIDC nonces. Read [tenancy and OAuth](guides/core-concepts.mdx) and [security](guides/security.mdx) before connecting applications or handling sensitive data.
+OAuth userinfo, the management API, and user webhooks enforce the application-environment checks described in this guide. User identities are scoped per application environment (`identity_namespace`), preventing cross-application collisions while allowing the same email, username, or phone number across applications. Super administrators have access to the Filament management panel, while application users are strictly isolated from administrative panel access. Although the server publishes discovery metadata, it does not currently issue OpenID Connect ID tokens or handle OIDC nonces. Read [tenancy and OAuth](guides/core-concepts.mdx) and [security](guides/security.mdx) before connecting applications or handling sensitive data.
 
 For the structure of the project, see [architecture](architecture.mdx) and [directory structure](guides/directory-structure.mdx). To publish this site separately, use the [Astro landing and documentation guide](guides/landing.mdx). The project is licensed under the MIT License; see the root `LICENSE` file.

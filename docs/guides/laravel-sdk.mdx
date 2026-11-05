@@ -1,17 +1,17 @@
 ---
 title: Laravel SDK integration
-description: Add Koamishin login, management operations, and verified webhooks to a Laravel application.
+description: Add Koamishin Auth login, management operations, and verified webhooks to a Laravel application.
 ---
 
 # Laravel SDK integration
 
-The PHP SDK connects a Laravel application to Koamishin Portal using OAuth 2.0 authorization code with PKCE. It includes a Laravel authentication guard, a server-side management client, and webhook verification. The SDK source in this repository may be newer than the published Composer package; install a version that contains these features before following this guide. See the [package README](../../packages/koamishin-auth-php/README.md) for the complete reference and supported dependency ranges.
+The PHP SDK connects a Laravel application to Koamishin Auth using OAuth 2.0 authorization code with PKCE. It includes a Laravel authentication guard, a server-side management client, and webhook verification. The SDK source in this repository may be newer than the published Composer package; install a version that contains these features before following this guide. See the [package README](../../packages/koamishin-auth-php/README.md) for the complete reference and supported dependency ranges.
 
-## 1. Prepare the Portal
+## 1. Prepare Koamishin Auth
 
-Create an organization and a Laravel application in the Portal. Register the exact callback URL used by your Laravel application and save the displayed authorization-code client ID and secret. For contextual self-service registration, enable **Allow self-service signup** for this environment. If that policy is off or missing, enroll the test user in both the organization and application environment before login. Development and production use separate clients and memberships. The other environment's callback list starts empty. See [tenancy and OAuth](core-concepts.mdx).
+Create an organization and a Laravel application in the admin panel. Register the exact callback URL used by your Laravel application and save the displayed Publishable Key (`pk_...`) and Secret Key (`sk_...`). For contextual self-service registration, enable **Allow self-service signup** for this environment. If that policy is off or missing, enroll the test user in both the organization and application environment before login. Development and production use separate clients and memberships. The other environment's callback list starts empty. See [tenancy and OAuth](core-concepts.mdx).
 
-Deploy a Portal release that includes the scoped API described here. Record the Portal application ID and environment; the SDK checks both against each userinfo response to prevent a token for another application from authenticating to yours.
+Deploy a release that includes the scoped API described here. Record the application ID and environment; the SDK checks both against each userinfo response to prevent a token for another application from authenticating to yours.
 
 ## 2. Install and configure the SDK
 
@@ -22,21 +22,12 @@ composer require koamishin/auth-php
 php artisan vendor:publish --tag=koamishin-config --no-interaction
 ```
 
-Until a tagged release containing these features is published, a normal stable install may select an older version. For development, once the updated GitHub branch is available, you can configure the consuming project to use it explicitly:
-
-```bash
-composer config repositories.koamishin-auth vcs https://github.com/koamishin/auth-php.git
-composer require koamishin/auth-php:dev-main
-```
-
-Commit that project's Composer lockfile to pin the resolved revision; use a reviewed release for production.
-
-Set these values in the consuming application's `.env`, using the authorization-code client for the selected environment:
+Set these values in the consuming application's `.env`, using the keys for the selected environment:
 
 ```dotenv
 KOAMISHIN_PORTAL_URL=https://auth.example.com
-KOAMISHIN_CLIENT_ID=your-authorization-client-id
-KOAMISHIN_CLIENT_SECRET=your-authorization-client-secret
+KOAMISHIN_PUBLISHABLE_KEY=pk_live_your_publishable_key
+KOAMISHIN_SECRET_KEY=sk_live_your_secret_key
 KOAMISHIN_REDIRECT_URI=https://app.example.com/koamishin/callback
 KOAMISHIN_APPLICATION_ID=42
 KOAMISHIN_ENVIRONMENT=production

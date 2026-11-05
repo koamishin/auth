@@ -54,10 +54,10 @@ Create a dedicated `docker-compose.prod.yml` on your server:
 ```yaml
 services:
     portal:
-        image: ghcr.io/koamishin/koamishin-portal:latest
+        image: ghcr.io/koamishin/auth:latest
         restart: unless-stopped
         ports:
-            - '127.0.0.1:8000:8000'
+            - '[REDACTED]:8000:8000'
         env_file: .env.production
         volumes:
             - portal_storage:/app/storage
@@ -68,7 +68,7 @@ services:
                 condition: service_healthy
 
     queue:
-        image: ghcr.io/koamishin/koamishin-portal:latest
+        image: ghcr.io/koamishin/auth:latest
         restart: unless-stopped
         command: php artisan queue:work redis --sleep=3 --tries=3 --timeout=60 --no-interaction
         env_file: .env.production
@@ -205,13 +205,13 @@ sudo apt update && sudo apt install -y \
 
 ### 2. Configure Nginx Virtual Host
 
-Create `/etc/nginx/sites-available/koamishin-portal.conf`:
+Create `/etc/nginx/sites-available/koamishin-auth.conf`:
 
 ```nginx
 server {
     listen 80;
     server_name auth.example.com;
-    root /var/www/koamishin-portal/public;
+    root /var/www/koamishin-auth/public;
 
     add_header X-Frame-Options "SAMEORIGIN";
     add_header X-Content-Type-Options "nosniff";
@@ -245,7 +245,7 @@ server {
 Enable the site and obtain a free Let's Encrypt SSL certificate:
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/koamishin-portal.conf /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/koamishin-auth.conf /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
 sudo certbot --nginx -d auth.example.com
 ```
@@ -257,7 +257,7 @@ Create `/etc/supervisor/conf.d/koamishin-worker.conf`:
 ```ini
 [program:koamishin-worker]
 process_name=%(program_name)s_%(process_num)02d
-command=php /var/www/koamishin-portal/artisan queue:work redis --sleep=3 --tries=3 --timeout=60 --no-interaction
+command=php /var/www/koamishin-auth/artisan queue:work redis --sleep=3 --tries=3 --timeout=60 --no-interaction
 autostart=true
 autorestart=true
 stopasgroup=true
@@ -284,7 +284,7 @@ sudo supervisorctl start koamishin-worker:*
 When deploying application updates, run the following command sequence to ensure zero disruption and clear caches safely:
 
 ```bash
-cd /var/www/koamishin-portal
+cd /var/www/koamishin-auth
 
 # 1. Pull latest release or checkout new release directory
 git pull origin main
