@@ -64,7 +64,7 @@ test('application users directory strictly excludes system administrators', func
     $admin = User::factory()->create(['email' => 'sysadmin@test.com']);
     $admin->assignRole('super_admin');
 
-    $appUser = User::factory()->create(['email' => 'enduser@test.com']);
+    $appUser = User::factory()->create(['email' => 'enduser@test.com', 'identity_namespace' => 'environment:1']);
     $role = Role::firstOrCreate(['name' => 'user', 'guard_name' => 'web']);
     $appUser->assignRole($role);
 

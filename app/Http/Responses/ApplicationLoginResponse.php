@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\OAuth\ApplicationAuthentication;
 use Filament\Facades\Filament;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Laravel\Fortify\Fortify;
 use Laravel\Fortify\Http\Responses\LoginResponse;
@@ -22,12 +23,15 @@ class ApplicationLoginResponse extends LoginResponse
             return $resume;
         }
 
+        $user = $request->user();
+        $isSystemAdmin = $user instanceof User && $user->canAccessPanel(Filament::getPanel('admin'));
+        if ($isSystemAdmin && $request->attributes->get('koamishin.application_flow') === null) {
+            Auth::guard('portal')->login($user);
+        }
+
         if ($request->wantsJson()) {
             return response()->json(['two_factor' => false]);
         }
-
-        $user = $request->user();
-        $isSystemAdmin = $user instanceof User && $user->canAccessPanel(Filament::getPanel('admin'));
 
         $intended = $request->session()->get('url.intended');
         if ($intended !== null) {

@@ -36,6 +36,7 @@ test('system admins completing two factor challenge are redirected to filament a
         ->post(route('two-factor.login.store'), ['recovery_code' => 'code1']);
 
     $this->assertAuthenticated();
+    $this->assertAuthenticatedAs($user, 'portal');
     $response->assertRedirect('/admin');
 });
 
@@ -53,6 +54,7 @@ test('system admins completing two factor challenge via inertia are redirected t
         ->post(route('two-factor.login.store'), ['recovery_code' => 'code1']);
 
     $this->assertAuthenticated();
+    $this->assertAuthenticatedAs($user, 'portal');
     expect($response->status())->toBe(409);
     expect($response->headers->get('X-Inertia-Location'))->toBe(url('/admin'));
 });

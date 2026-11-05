@@ -5,6 +5,7 @@ namespace App\Actions\Fortify;
 use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
 use App\Enums\RoleEnums;
+use App\Models\TenantApplicationEnvironment;
 use App\Models\User;
 use App\Services\OAuth\ApplicationAuthentication;
 use App\Settings\ApplicationFeaturesSettings;
@@ -30,10 +31,20 @@ class CreateNewUser implements CreatesNewUsers
         ])->validate();
 
         return DB::transaction(function () use ($input): User {
+            $environment = request()?->attributes?->get('koamishin.application_environment');
+            $identityNamespace = $environment instanceof TenantApplicationEnvironment
+                ? $environment->identityNamespace()
+                : User::PORTAL_IDENTITY_NAMESPACE;
+            $environmentId = $environment instanceof TenantApplicationEnvironment
+                ? $environment->getKey()
+                : null;
+
             $user = User::query()->create([
                 'name' => $input['name'],
                 'email' => $input['email'],
                 'password' => $input['password'],
+                'identity_namespace' => $identityNamespace,
+                'tenant_application_environment_id' => $environmentId,
             ]);
 
             $user->assignRole($this->defaultRole());

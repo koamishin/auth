@@ -8,6 +8,7 @@ use App\Settings\ApplicationFeaturesSettings;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -175,5 +176,18 @@ class TenantApplicationEnvironment extends Model
     public function allowsSingleSignOn(): bool
     {
         return $this->getSetting('sso_enabled', false) === true;
+    }
+
+    public function identityNamespace(): string
+    {
+        return 'environment:'.$this->getKey();
+    }
+
+    /**
+     * @return HasMany<User, $this>
+     */
+    public function users(): HasMany
+    {
+        return $this->hasMany(User::class, 'tenant_application_environment_id');
     }
 }

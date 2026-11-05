@@ -386,6 +386,12 @@ class ApplicationAuthentication
             abort_unless($current?->is($environment) && $this->allowsSignups($current), 403);
             $tenant = $current->application->tenant;
             $tenant->users()->syncWithoutDetaching([$user->getKey()]);
+            if ($user->tenant_application_environment_id === null) {
+                $user->forceFill([
+                    'tenant_application_environment_id' => $current->getKey(),
+                    'identity_namespace' => $current->identityNamespace(),
+                ])->save();
+            }
             $membership = $current->application->users($current->environment)->syncWithoutDetaching([
                 $user->getKey() => ['environment' => $current->environment],
             ]);

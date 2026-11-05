@@ -7,6 +7,7 @@ namespace App\Http\Responses;
 use App\Models\User;
 use App\Services\OAuth\ApplicationAuthentication;
 use Filament\Facades\Filament;
+use Illuminate\Support\Facades\Auth;
 use Laravel\Passkeys\Http\Responses\PasskeyLoginResponse;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -29,6 +30,9 @@ class ApplicationPasskeyLoginResponse extends PasskeyLoginResponse
 
         $user = $request->user();
         $isSystemAdmin = $user instanceof User && $user->canAccessPanel(Filament::getPanel('admin'));
+        if ($isSystemAdmin && ! is_array($flow)) {
+            Auth::guard('portal')->login($user);
+        }
 
         $intended = $request->session()->get('url.intended');
         if ($intended !== null) {

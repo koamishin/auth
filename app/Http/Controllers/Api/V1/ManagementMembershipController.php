@@ -76,6 +76,7 @@ class ManagementMembershipController extends Controller
     {
         $users = $environment->application->tenant->users();
         $users->where('users.id', $userId);
+        $users->where('users.identity_namespace', $environment->identityNamespace());
         $users->lockForUpdate();
 
         return $users->firstOrFail();

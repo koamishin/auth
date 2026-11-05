@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\OAuth\ApplicationAuthentication;
 use Filament\Facades\Filament;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Laravel\Fortify\Fortify;
 use Laravel\Fortify\Http\Responses\TwoFactorLoginResponse;
@@ -28,12 +29,15 @@ class ApplicationTwoFactorLoginResponse extends TwoFactorLoginResponse
             return $resume;
         }
 
+        $user = $request->user();
+        $isSystemAdmin = $user instanceof User && $user->canAccessPanel(Filament::getPanel('admin'));
+        if ($isSystemAdmin && $flow === null) {
+            Auth::guard('portal')->login($user);
+        }
+
         if ($request->wantsJson()) {
             return response()->json('', 204);
         }
-
-        $user = $request->user();
-        $isSystemAdmin = $user instanceof User && $user->canAccessPanel(Filament::getPanel('admin'));
 
         $intended = $request->session()->get('url.intended');
         if ($intended !== null) {

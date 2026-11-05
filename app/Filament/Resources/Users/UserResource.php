@@ -39,6 +39,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Unique;
 
 class UserResource extends Resource
 {
@@ -64,7 +65,14 @@ class UserResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
+            ->where('users.identity_namespace', '!=', User::PORTAL_IDENTITY_NAMESPACE)
             ->whereDoesntHave('roles', fn (Builder $q) => $q->whereIn('name', ['super_admin', 'admin']));
+    }
+
+    #[\Override]
+    public static function canCreate(): bool
+    {
+        return false;
     }
 
     #[\Override]
@@ -81,17 +89,17 @@ class UserResource extends Resource
                             ->email()
                             ->required()
                             ->maxLength(255)
-                            ->unique(ignoreRecord: true),
+                            ->unique(ignoreRecord: true, modifyRuleUsing: fn (Unique $rule, ?User $record): Unique => $rule->where('identity_namespace', $record?->getAttribute('identity_namespace') ?? User::PORTAL_IDENTITY_NAMESPACE)),
                         TextInput::make('username')
                             ->label('Username (@)')
                             ->prefix('@')
                             ->maxLength(50)
-                            ->unique(ignoreRecord: true),
+                            ->unique(ignoreRecord: true, modifyRuleUsing: fn (Unique $rule, ?User $record): Unique => $rule->where('identity_namespace', $record?->getAttribute('identity_namespace') ?? User::PORTAL_IDENTITY_NAMESPACE)),
                         TextInput::make('phone_number')
                             ->label('Phone Number')
                             ->tel()
                             ->maxLength(30)
-                            ->unique(ignoreRecord: true),
+                            ->unique(ignoreRecord: true, modifyRuleUsing: fn (Unique $rule, ?User $record): Unique => $rule->where('identity_namespace', $record?->getAttribute('identity_namespace') ?? User::PORTAL_IDENTITY_NAMESPACE)),
                         TextInput::make('web3_wallet')
                             ->label('Web3 Wallet Address (0x...)')
                             ->extraInputAttributes(['class' => 'font-mono'])

@@ -26,6 +26,7 @@ class EnsureSetupIsComplete
 
         try {
             $hasSuperAdmin = User::query()
+                ->where('identity_namespace', User::PORTAL_IDENTITY_NAMESPACE)
                 ->whereHas('roles', fn ($q) => $q->where('name', 'super_admin'))
                 ->exists();
 

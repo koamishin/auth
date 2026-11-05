@@ -35,6 +35,9 @@ class LaravelUserImporter
             throw new \InvalidArgumentException('The application and environment must belong to the selected organization.');
         }
 
+        $configuration = $application?->getEnvironmentConfig($environment);
+        $identityNamespace = $configuration?->identityNamespace() ?? User::PORTAL_IDENTITY_NAMESPACE;
+
         $defaultRoleName = $options['default_role'] ?? 'user';
         $autoVerify = (bool) ($options['auto_verify'] ?? false);
         $updateExisting = (bool) ($options['update_existing'] ?? true);
@@ -79,7 +82,20 @@ class LaravelUserImporter
             }
 
             /** @var User|null $existingUser */
-            $existingUser = User::query()->where('email', $email)->first();
+            $existingUser = User::query()
+                ->where('identity_namespace', $identityNamespace)
+                ->where('email', $email)
+                ->first();
+
+            if ($existingUser && ! $application && (
+                $existingUser->hasAnyRole(['super_admin', 'admin'])
+                || ! $tenant->users()->whereKey($existingUser->getKey())->exists()
+            )) {
+                $errors[] = "Row #{$index} ({$email}): Existing portal user cannot be imported.";
+                $skipped++;
+
+                continue;
+            }
 
             try {
                 if ($existingUser) {
@@ -96,12 +112,14 @@ class LaravelUserImporter
                     $user = $existingUser;
                 } else {
                     /** @var User $user */
-                    $user = User::query()->create([
+                    $user = new User;
+                    $user->forceFill([
                         'name' => $name,
                         'email' => $email,
                         'password' => $passwordHash,
-                    ]);
-                    $user->forceFill(['email_verified_at' => $emailVerifiedAt])->save();
+                        'identity_namespace' => $identityNamespace,
+                        'email_verified_at' => $emailVerifiedAt,
+                    ])->save();
 
                     $user->assignRole($defaultRole);
 
@@ -124,7 +142,6 @@ class LaravelUserImporter
                     ]);
 
                     if ($membership['attached'] !== []) {
-                        $configuration = $application->environments()->where('environment', $environment)->first();
                         if ($configuration) {
                             WebhookDispatcher::dispatchForEnvironment($configuration, 'user.created', $user);
                         }

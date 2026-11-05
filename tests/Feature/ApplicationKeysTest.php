@@ -89,7 +89,7 @@ test('a secret key cannot read users enrolled only in a different application or
     $application = app(ApplicationProvisioner::class)->create($tenant, ['name' => 'First']);
     $credentials = session('new_app_credentials');
     $otherApplication = app(ApplicationProvisioner::class)->create($tenant, ['name' => 'Second']);
-    $user = User::factory()->create();
+    $user = User::factory()->create(['identity_namespace' => $application->getEnvironmentConfig('production')->identityNamespace()]);
     $tenant->users()->attach($user);
     $otherApplication->users()->attach($user, ['environment' => 'development', 'role' => 'member']);
     $application->users()->attach($user, ['environment' => 'production', 'role' => 'member']);
@@ -134,7 +134,7 @@ test('publishable keys complete oauth authorization and token refresh for each c
         'client_type' => $clientType,
         'redirect_uris' => ['http://localhost:3000/callback'],
     ]);
-    $user = User::factory()->create();
+    $user = User::factory()->create(['identity_namespace' => $environment->identityNamespace()]);
     $tenant->users()->attach($user);
     $application->users()->attach($user, ['environment' => 'development', 'role' => 'member']);
     $verifier = str_repeat('a', 64);

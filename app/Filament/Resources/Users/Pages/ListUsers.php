@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Users\Pages;
 
+use App\Filament\Pages\Dashboard;
 use App\Filament\Resources\Users\UserResource;
-use Filament\Actions\CreateAction;
+use Filament\Actions\Action;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\Tabs\Tab;
 use Illuminate\Database\Eloquent\Builder;
@@ -18,7 +19,9 @@ class ListUsers extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            CreateAction::make(),
+            Action::make('quickAdd')
+                ->label('Quick Add on Dashboard')
+                ->url(fn (): string => Dashboard::getUrl()),
         ];
     }
 

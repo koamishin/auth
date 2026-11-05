@@ -9,6 +9,7 @@ use App\Filament\Widgets\AuthMethodsChartWidget;
 use App\Filament\Widgets\UserSignupsChartWidget;
 use App\Models\Tenant;
 use App\Models\TenantApplication;
+use App\Models\TenantApplicationEnvironment;
 use App\Models\User;
 use App\Models\WebhookDelivery;
 use App\Services\OAuth\ApplicationProvisioner;
@@ -24,10 +25,12 @@ use Filament\Notifications\Notification;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Schemas\Components\Utilities\Get;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Unique;
 use Spatie\Permission\Models\Role;
 
 /**
@@ -72,7 +75,7 @@ class Dashboard extends BaseDashboard
                         ->label('Email Address')
                         ->email()
                         ->required()
-                        ->unique('users', 'email'),
+                        ->unique('users', 'email', modifyRuleUsing: fn (Unique $rule): Unique => $rule->where('identity_namespace', $this->activeIdentityNamespace())),
 
                     TextInput::make('password')
                         ->label('Password')
@@ -97,13 +100,19 @@ class Dashboard extends BaseDashboard
                         ->required(),
                 ])
                 ->action(function (array $data): void {
-                    /** @var User $newUser */
-                    $newUser = User::query()->create([
+                    $tenant = $this->getActiveTenant();
+                    abort_unless($tenant instanceof Tenant, 403);
+                    $currentApp = $this->getActiveApplication();
+                    $environment = $currentApp?->getEnvironmentConfig();
+
+                    $newUser = new User;
+                    $newUser->forceFill([
                         'name' => $data['name'],
                         'email' => $data['email'],
                         'password' => Hash::make($data['password']),
-                    ]);
-                    $newUser->forceFill(['email_verified_at' => now()])->save();
+                        'identity_namespace' => $environment?->identityNamespace() ?? User::PORTAL_IDENTITY_NAMESPACE,
+                        'email_verified_at' => now(),
+                    ])->save();
 
                     $role = Role::query()->firstOrCreate([
                         'name' => $data['role'],
@@ -112,13 +121,9 @@ class Dashboard extends BaseDashboard
 
                     $newUser->assignRole($role);
 
-                    $tenant = Filament::getTenant();
-                    if ($tenant instanceof Tenant) {
-                        $newUser->tenants()->syncWithoutDetaching([$tenant->id => ['role' => 'member']]);
-                    }
+                    $newUser->tenants()->syncWithoutDetaching([$tenant->id => ['role' => 'member']]);
 
-                    $currentApp = $this->getActiveApplication();
-                    if ($currentApp instanceof TenantApplication) {
+                    if ($currentApp instanceof TenantApplication && $environment instanceof TenantApplicationEnvironment) {
                         $currentApp->users($currentApp->environment)->syncWithoutDetaching([
                             $newUser->id => [
                                 'environment' => $currentApp->environment,
@@ -127,10 +132,7 @@ class Dashboard extends BaseDashboard
                             ],
                         ]);
 
-                        $environment = $currentApp->environments()->where('environment', $currentApp->environment)->first();
-                        if ($environment) {
-                            WebhookDispatcher::dispatchForEnvironment($environment, 'user.created', $newUser);
-                        }
+                        WebhookDispatcher::dispatchForEnvironment($environment, 'user.created', $newUser);
                     }
 
                     Notification::make()
@@ -338,6 +340,29 @@ class Dashboard extends BaseDashboard
         return TenantApplication::current($this->getActiveTenant());
     }
 
+    private function activeIdentityNamespace(): string
+    {
+        return $this->getActiveApplication()?->getEnvironmentConfig()->identityNamespace() ?? User::PORTAL_IDENTITY_NAMESPACE;
+    }
+
+    /** @return Builder<User>|BelongsToMany<User, TenantApplication>|BelongsToMany<User, Tenant> */
+    private function scopedUsers(): Builder|BelongsToMany
+    {
+        $tenant = $this->getActiveTenant();
+        if (! $tenant instanceof Tenant) {
+            return User::query()->whereRaw('1 = 0');
+        }
+
+        $app = $this->getActiveApplication();
+        $users = $app instanceof TenantApplication
+            ? $app->users($app->environment)
+            : $tenant->users();
+
+        return $users
+            ->where('users.identity_namespace', $this->activeIdentityNamespace())
+            ->whereDoesntHave('roles', fn (Builder $query): Builder => $query->where('name', 'super_admin'));
+    }
+
     /**
      * @return Collection<int, TenantApplication>
      */
@@ -357,14 +382,7 @@ class Dashboard extends BaseDashboard
      */
     public function getStatsProperty(): array
     {
-        $app = $this->getActiveApplication();
-        $env = $app instanceof TenantApplication ? $app->environment : 'development';
-
-        $userQuery = $app instanceof TenantApplication
-            ? $app->users($env)
-            : ($this->getActiveTenant() instanceof Tenant
-                ? $this->getActiveTenant()->users()->whereDoesntHave('roles', fn (Builder $q) => $q->where('name', 'super_admin'))
-                : User::query()->whereDoesntHave('roles', fn (Builder $q) => $q->where('name', 'super_admin')));
+        $userQuery = $this->scopedUsers();
 
         $totalUsers = (clone $userQuery)->count();
         $bannedUsers = (clone $userQuery)->whereNotNull('users.banned_at')->count();
@@ -399,14 +417,7 @@ class Dashboard extends BaseDashboard
      */
     public function getPagedUsers(): LengthAwarePaginator
     {
-        $app = $this->getActiveApplication();
-        $env = $app instanceof TenantApplication ? $app->environment : 'development';
-
-        $query = $app instanceof TenantApplication
-            ? $app->users($env)
-            : ($this->getActiveTenant() instanceof Tenant
-                ? $this->getActiveTenant()->users()->whereDoesntHave('roles', fn (Builder $q) => $q->where('name', 'super_admin'))
-                : User::query()->whereDoesntHave('roles', fn (Builder $q) => $q->where('name', 'super_admin')));
+        $query = $this->scopedUsers();
 
         return $query
             ->when($this->search !== '', function (Builder $query): void {
@@ -426,7 +437,7 @@ class Dashboard extends BaseDashboard
     public function banUser(int $userId, string $reason = 'Suspended by admin'): void
     {
         /** @var User|null $user */
-        $user = User::query()->find($userId);
+        $user = $this->scopedUsers()->find($userId);
 
         if (! $user || $user->hasRole('super_admin')) {
             return;
@@ -444,7 +455,7 @@ class Dashboard extends BaseDashboard
     public function unbanUser(int $userId): void
     {
         /** @var User|null $user */
-        $user = User::query()->find($userId);
+        $user = $this->scopedUsers()->find($userId);
 
         if (! $user) {
             return;
@@ -462,7 +473,7 @@ class Dashboard extends BaseDashboard
     public function verifyUserEmail(int $userId): void
     {
         /** @var User|null $user */
-        $user = User::query()->find($userId);
+        $user = $this->scopedUsers()->find($userId);
 
         if (! $user) {
             return;
@@ -480,7 +491,7 @@ class Dashboard extends BaseDashboard
     public function unverifyUserEmail(int $userId): void
     {
         /** @var User|null $user */
-        $user = User::query()->find($userId);
+        $user = $this->scopedUsers()->find($userId);
 
         if (! $user) {
             return;
@@ -498,7 +509,7 @@ class Dashboard extends BaseDashboard
     public function revokeUserSessions(int $userId): void
     {
         /** @var User|null $user */
-        $user = User::query()->find($userId);
+        $user = $this->scopedUsers()->find($userId);
 
         if (! $user) {
             return;

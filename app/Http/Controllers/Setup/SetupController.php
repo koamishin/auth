@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use Spatie\Permission\Models\Role;
@@ -42,7 +43,7 @@ class SetupController extends Controller
         $validated = $request->validate([
             'instance_name' => ['required', 'string', 'max:100'],
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique(User::class)->where('identity_namespace', User::PORTAL_IDENTITY_NAMESPACE)],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
@@ -69,6 +70,7 @@ class SetupController extends Controller
         }
 
         Auth::login($admin);
+        Auth::guard('portal')->login($admin);
 
         return redirect('/admin');
     }
@@ -76,6 +78,7 @@ class SetupController extends Controller
     protected function isAlreadyInstalled(): bool
     {
         return User::query()
+            ->where('identity_namespace', User::PORTAL_IDENTITY_NAMESPACE)
             ->whereHas('roles', fn ($q) => $q->where('name', 'super_admin'))
             ->exists();
     }

@@ -10,6 +10,7 @@ use App\Http\Responses\ApplicationPasskeyLoginResponse;
 use App\Http\Responses\ApplicationRegisterResponse;
 use App\Http\Responses\ApplicationTwoFactorLoginResponse;
 use App\Http\Responses\ApplicationVerifyEmailResponse;
+use App\Models\TenantApplicationEnvironment;
 use App\Models\User;
 use App\Services\OAuth\ApplicationAuthentication;
 use App\Settings\ApplicationFeaturesSettings;
@@ -87,7 +88,15 @@ class FortifyServiceProvider extends ServiceProvider
     private function configureAuthentication(): void
     {
         Fortify::authenticateUsing(function (Request $request): ?User {
-            $user = User::query()->where('email', $request->input(Fortify::username()))->first();
+            $environment = $request->attributes->get('koamishin.application_environment');
+            $identityNamespace = $environment instanceof TenantApplicationEnvironment
+                ? $environment->identityNamespace()
+                : User::PORTAL_IDENTITY_NAMESPACE;
+
+            $user = User::query()
+                ->where('identity_namespace', $identityNamespace)
+                ->where('email', $request->input(Fortify::username()))
+                ->first();
 
             if ($user && Hash::check($request->input('password'), $user->password)) {
                 if ($user->isBanned()) {

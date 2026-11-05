@@ -41,6 +41,10 @@ function oauthTestEnvironment(User $user, string $name = 'test', string $environ
     ]);
     $tenant->users()->attach($user);
     $application->users()->attach($user, ['environment' => $environment, 'role' => 'member']);
+    $user->forceFill([
+        'identity_namespace' => $configuration->identityNamespace(),
+        'tenant_application_environment_id' => $configuration->getKey(),
+    ])->save();
 
     return [$client, $configuration];
 }

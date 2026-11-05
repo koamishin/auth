@@ -29,6 +29,7 @@ test('submitting setup creates super admin user and configures site name', funct
         ->hasRole('super_admin')->toBeTrue();
 
     expect(auth()->id())->toBe($admin->id);
+    expect(auth('portal')->id())->toBe($admin->id);
 
     $settings = app(ApplicationDetailsSettings::class);
     expect($settings->site_name)->toBe('Koamishin Cloud Auth');
@@ -42,4 +43,30 @@ test('setup wizard redirects away once a super admin exists', function (): void 
     $response = $this->get(route('setup.index'));
 
     $response->assertRedirect(route('home'));
+});
+
+test('application identities do not block portal setup or reserve the administrator email', function (): void {
+    Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+    $applicationUser = User::factory()->create([
+        'email' => 'admin@example.test',
+        'identity_namespace' => 'environment:123',
+    ]);
+    $applicationUser->assignRole('super_admin');
+
+    $this->get(route('setup.index'))->assertOk();
+    $this->post(route('setup.store'), [
+        'instance_name' => 'Koamishin',
+        'name' => 'Portal administrator',
+        'email' => 'admin@example.test',
+        'password' => 'securePassword123',
+        'password_confirmation' => 'securePassword123',
+    ])->assertRedirect('/admin');
+
+    $portalAdmin = User::query()
+        ->where('identity_namespace', User::PORTAL_IDENTITY_NAMESPACE)
+        ->where('email', 'admin@example.test')
+        ->firstOrFail();
+
+    expect($portalAdmin->id)->not->toBe($applicationUser->id)
+        ->and($portalAdmin->hasRole('super_admin'))->toBeTrue();
 });

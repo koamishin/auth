@@ -27,6 +27,7 @@ class ManagementContext
         $application = $environment->application;
 
         $users = $application->users($environment->environment);
+        $users->where('users.identity_namespace', $environment->identityNamespace());
         $users->whereHas('tenants', fn (Builder $query): Builder => $query->whereKey($application->tenant_id));
 
         return $users;

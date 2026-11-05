@@ -48,6 +48,10 @@ function managementApiApplication(string $slug, string $environment = 'developme
 
 function enrollManagementUser(Tenant $tenant, TenantApplication $application, User $user, string $environment): void
 {
+    $config = $application->environments()->where('environment', $environment)->first();
+    if ($config && $user->identity_namespace === User::PORTAL_IDENTITY_NAMESPACE) {
+        $user->forceFill(['identity_namespace' => $config->identityNamespace()])->save();
+    }
     $tenant->users()->attach($user, ['role' => 'member']);
     $application->users()->attach($user, ['role' => 'member', 'environment' => $environment]);
 }
@@ -163,19 +167,22 @@ test('metadata is scoped to an application environment and replaces only supplie
     [$tenant, $application, $development] = managementApiApplication('metadata');
     [$otherTenant, $otherApplication, $otherEnvironment] = managementApiApplication('metadata-other');
     $user = User::factory()->create(['metadata' => ['global' => 'not shared']]);
+    $otherUser = User::factory()->create();
     enrollManagementUser($tenant, $application, $user, 'development');
-    enrollManagementUser($otherTenant, $otherApplication, $user, 'development');
+    enrollManagementUser($otherTenant, $otherApplication, $otherUser, 'development');
     $scopes = ['metadata:read', 'metadata:write'];
     [, $firstToken] = managementApiToken($development, $scopes, $scopes);
     [, $secondToken] = managementApiToken($otherEnvironment, $scopes, $scopes);
     $path = '/api/v1/users/'.$user->id.'/metadata';
+    $otherPath = '/api/v1/users/'.$otherUser->id.'/metadata';
 
     withToken($firstToken)->patchJson($path, [
         'public' => ['language' => 'en'],
         'private' => ['employee_id' => '123'],
     ])->assertOk()->assertJsonPath('data.public.language', 'en')->assertJsonPath('data.private.employee_id', '123');
 
-    withToken($secondToken)->getJson($path)
+    withToken($secondToken)->getJson($path)->assertNotFound();
+    withToken($secondToken)->getJson($otherPath)
         ->assertOk()->assertExactJson(['data' => ['public' => [], 'private' => []]]);
     withToken($firstToken)->patchJson($path, ['public' => (object) []])
         ->assertOk()->assertJsonPath('data.private.employee_id', '123')
@@ -252,8 +259,9 @@ test('management sessions are application-scoped and revoking one also revokes i
     [$tenant, $application, $environment] = managementApiApplication('sessions');
     [$otherTenant, $otherApplication, $otherEnvironment] = managementApiApplication('sessions-other');
     $user = User::factory()->create();
+    $otherUser = User::factory()->create();
     enrollManagementUser($tenant, $application, $user, 'development');
-    enrollManagementUser($otherTenant, $otherApplication, $user, 'development');
+    enrollManagementUser($otherTenant, $otherApplication, $otherUser, 'development');
     $clients = app(ClientRepository::class);
     $client = $clients->createAuthorizationCodeGrantClient('application', ['https://app.example/callback']);
     $otherClient = $clients->createAuthorizationCodeGrantClient('other', ['https://other.example/callback']);
@@ -264,7 +272,7 @@ test('management sessions are application-scoped and revoking one also revokes i
         'scopes' => ['openid'], 'revoked' => false, 'expires_at' => now()->addHour(),
     ]);
     $otherToken = Token::query()->create([
-        'id' => str_repeat('b', 80), 'user_id' => $user->id, 'client_id' => $otherClient->getKey(),
+        'id' => str_repeat('b', 80), 'user_id' => $otherUser->id, 'client_id' => $otherClient->getKey(),
         'scopes' => ['openid'], 'revoked' => false, 'expires_at' => now()->addHour(),
     ]);
     $refreshToken = RefreshToken::query()->create([
@@ -298,8 +306,8 @@ test('session operations fail closed without a unique authorization client', fun
 test('membership management is confined to organization members and one application environment', function (): void {
     [$tenant, , $environment] = managementApiApplication('membership');
     [$otherTenant, $otherApplication, $otherEnvironment] = managementApiApplication('membership-other');
-    $user = User::factory()->create();
-    $stranger = User::factory()->create();
+    $user = User::factory()->create(['identity_namespace' => $environment->identityNamespace()]);
+    $stranger = User::factory()->create(['identity_namespace' => $environment->identityNamespace()]);
     $tenant->users()->attach($user, ['role' => 'member']);
     enrollManagementUser($otherTenant, $otherApplication, $user, 'development');
     $clients = app(ClientRepository::class);
@@ -350,6 +358,31 @@ test('membership management is confined to organization members and one applicat
     expect($otherApplication->users('development')->whereKey($user->id)->exists())->toBeTrue();
     expect($tenant->users()->whereKey($user->id)->exists())->toBeTrue();
     assertDatabaseHas('application_user_metadata', ['tenant_application_environment_id' => $environment->id, 'user_id' => $user->id]);
+});
+
+test('management membership and reads reject users from another identity namespace even when already linked', function (): void {
+    [$tenant, $application, $environment] = managementApiApplication('membership-identity');
+    [, , $otherEnvironment] = managementApiApplication('membership-identity-other');
+    $portal = User::factory()->create();
+    $other = User::factory()->create();
+    $other->forceFill(['identity_namespace' => $otherEnvironment->identityNamespace()])->save();
+    $local = User::factory()->create();
+    $local->forceFill(['identity_namespace' => $environment->identityNamespace()])->save();
+    $tenant->users()->attach([$portal->id, $other->id, $local->id]);
+    $application->users()->attach($portal, ['role' => 'member', 'environment' => 'development']);
+    $application->users()->attach($other, ['role' => 'member', 'environment' => 'development']);
+    [, $token] = managementApiToken($environment, ['users:read', 'memberships:write'], ['users:read', 'memberships:write']);
+
+    foreach ([$portal, $other] as $user) {
+        withToken($token)->getJson('/api/v1/users/'.$user->id)->assertNotFound();
+        withToken($token)->putJson('/api/v1/users/'.$user->id.'/membership')->assertNotFound();
+        withToken($token)->deleteJson('/api/v1/users/'.$user->id.'/membership')->assertNotFound();
+    }
+    withToken($token)->putJson('/api/v1/users/'.$local->id.'/membership')->assertNoContent();
+    withToken($token)->getJson('/api/v1/users')->assertOk()->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.id', (string) $local->id);
+    expect($application->users('development')->whereKey($portal->id)->exists())->toBeTrue();
+    expect($application->users('development')->whereKey($other->id)->exists())->toBeTrue();
 });
 
 test('removing membership refuses an OAuth client shared with another environment', function (): void {

@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\TenantApplicationEnvironment;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -31,7 +32,17 @@ class UserFactory extends Factory
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
             'two_factor_confirmed_at' => null,
+            'identity_namespace' => User::PORTAL_IDENTITY_NAMESPACE,
+            'tenant_application_environment_id' => null,
         ];
+    }
+
+    public function forEnvironment(TenantApplicationEnvironment $environment): static
+    {
+        return $this->state(fn (): array => [
+            'identity_namespace' => $environment->identityNamespace(),
+            'tenant_application_environment_id' => $environment->getKey(),
+        ]);
     }
 
     /**

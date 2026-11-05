@@ -20,6 +20,7 @@ use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -76,6 +77,24 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
     use PasskeyAuthenticatable;
     use TwoFactorAuthenticatable;
 
+    public const PORTAL_IDENTITY_NAMESPACE = 'portal';
+
+    /**
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'identity_namespace' => self::PORTAL_IDENTITY_NAMESPACE,
+    ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (User $user): void {
+            if ($user->tenant_application_environment_id !== null && ($user->identity_namespace === null || $user->identity_namespace === self::PORTAL_IDENTITY_NAMESPACE)) {
+                $user->identity_namespace = 'environment:'.$user->tenant_application_environment_id;
+            }
+        });
+    }
+
     public function canAccessPanel(Panel $panel): bool
     {
         return $this->isSystemAdmin() && ! $this->isBanned();
@@ -83,12 +102,21 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
 
     public function isSystemAdmin(): bool
     {
-        return $this->hasRole('super_admin');
+        return ($this->identity_namespace ?? self::PORTAL_IDENTITY_NAMESPACE) === self::PORTAL_IDENTITY_NAMESPACE
+            && $this->hasRole('super_admin');
     }
 
     public function isApplicationUser(): bool
     {
         return ! $this->isSystemAdmin();
+    }
+
+    /**
+     * @return BelongsTo<TenantApplicationEnvironment, $this>
+     */
+    public function tenantApplicationEnvironment(): BelongsTo
+    {
+        return $this->belongsTo(TenantApplicationEnvironment::class, 'tenant_application_environment_id');
     }
 
     public function canImpersonate(): bool
@@ -145,6 +173,8 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
         'profile_photo_path',
         'banned_at',
         'ban_reason',
+        'identity_namespace',
+        'tenant_application_environment_id',
     ];
 
     /**

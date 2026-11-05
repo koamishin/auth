@@ -156,6 +156,14 @@ function registrationAccessToken(Client $client, string $consentToken, string $f
 /** @return array{string, TestResponse} */
 function registrationLogin(Client $client, User $user, string $password = 'password'): array
 {
+    $environment = TenantApplicationEnvironment::query()->where('oauth_client_id', $client->getKey())->first();
+    if ($environment && $user->identity_namespace === User::PORTAL_IDENTITY_NAMESPACE) {
+        $user->forceFill([
+            'identity_namespace' => $environment->identityNamespace(),
+            'tenant_application_environment_id' => $environment->getKey(),
+        ])->save();
+    }
+
     $flow = registrationFlow($client, signup: false);
     $response = post('/login', ['email' => $user->email, 'password' => $password, 'flow' => $flow]);
     $response->assertRedirect();
@@ -242,9 +250,9 @@ test('restoring an authenticated hosted form resumes its application transaction
 
 test('hosted sign-ins keep parallel users and consent requests isolated', function (): void {
     applicationFeatureSettings(['email_verification_required' => false]);
-    [$client] = registrationTestEnvironment('hosted-parallel');
-    $first = User::factory()->create();
-    $second = User::factory()->create();
+    [$client, $environment] = registrationTestEnvironment('hosted-parallel');
+    $first = User::factory()->forEnvironment($environment)->create();
+    $second = User::factory()->forEnvironment($environment)->create();
     $flowA = registrationFlow($client, signup: false);
     $flowB = registrationFlow($client, signup: false);
 
@@ -359,28 +367,29 @@ test('a pending hosted verification continues when the application disables the 
 test('one application can require verification while another allows the same unverified user', function (): void {
     applicationFeatureSettings(['email_verification_required' => true]);
     Notification::fake();
-    [$clientA] = registrationTestEnvironment('hosted-no-verification', [
+    [$clientA, $environmentA] = registrationTestEnvironment('hosted-no-verification', [
         'allow_signups' => true,
         'email_verification_required' => false,
     ]);
-    [$clientB] = registrationTestEnvironment('hosted-require-verification', [
+    [$clientB, $environmentB] = registrationTestEnvironment('hosted-require-verification', [
         'allow_signups' => true,
         'email_verification_required' => true,
     ]);
-    $user = User::factory()->unverified()->create();
+    $userA = User::factory()->forEnvironment($environmentA)->unverified()->create();
+    $userB = User::factory()->forEnvironment($environmentB)->unverified()->create(['email' => $userA->email]);
 
     $flowA = registrationFlow($clientA, signup: false);
-    post('/login', ['flow' => $flowA, 'hosted' => 1, 'email' => $user->email, 'password' => 'password'])->assertOk();
+    post('/login', ['flow' => $flowA, 'hosted' => 1, 'email' => $userA->email, 'password' => 'password'])->assertOk();
     $consentA = post('/auth/hosted', ['flow' => $flowA, 'hosted' => 1, 'screen' => 'continue'])->assertOk();
     post('/oauth/authorize', ['flow' => $flowA, 'hosted' => 1, 'auth_token' => registrationConsentToken($consentA)])->assertRedirect();
-    Notification::assertNotSentTo($user, VerifyEmail::class);
-    expect($user->fresh()->hasVerifiedEmail())->toBeFalse();
+    Notification::assertNotSentTo($userA, VerifyEmail::class);
+    expect($userA->fresh()->hasVerifiedEmail())->toBeFalse();
 
     $flowB = registrationFlow($clientB, signup: false);
-    post('/login', ['flow' => $flowB, 'hosted' => 1, 'email' => $user->email, 'password' => 'password'])->assertOk();
+    post('/login', ['flow' => $flowB, 'hosted' => 1, 'email' => $userB->email, 'password' => 'password'])->assertOk();
     $verification = post('/auth/hosted', ['flow' => $flowB, 'hosted' => 1, 'screen' => 'continue'])->assertOk();
     expect($verification->viewData('screen'))->toBe('verify');
-    Notification::assertSentToTimes($user, VerifyEmail::class, 1);
+    Notification::assertSentToTimes($userB, VerifyEmail::class, 1);
 });
 
 test('enabling application verification after consent was displayed blocks an unverified grant', function (): void {
@@ -389,7 +398,7 @@ test('enabling application verification after consent was displayed blocks an un
         'allow_signups' => true,
         'email_verification_required' => false,
     ]);
-    $user = User::factory()->unverified()->create();
+    $user = User::factory()->forEnvironment($environment)->unverified()->create();
     $flow = registrationFlow($client, signup: false);
     post('/login', ['flow' => $flow, 'hosted' => 1, 'email' => $user->email, 'password' => 'password'])->assertOk();
     $consent = post('/auth/hosted', ['flow' => $flow, 'hosted' => 1, 'screen' => 'continue'])->assertOk();
@@ -401,8 +410,8 @@ test('enabling application verification after consent was displayed blocks an un
 
 test('hosted two factor authentication keeps its application transaction out of the address', function (): void {
     applicationFeatureSettings(['email_verification_required' => false]);
-    [$client] = registrationTestEnvironment('hosted-mfa');
-    $user = User::factory()->twoFactorConfirmed()->create([
+    [$client, $environment] = registrationTestEnvironment('hosted-mfa');
+    $user = User::factory()->forEnvironment($environment)->twoFactorConfirmed()->create([
         'two_factor_secret' => encrypt('test-secret'),
         'two_factor_recovery_codes' => encrypt(json_encode(['hosted-recovery'])),
     ]);
@@ -465,7 +474,7 @@ test('hosted passkey options accept a session-bound header instead of a flow URL
 test('application login uses its own appearance and feature policies', function (): void {
     applicationFeatureSettings(['email_verification_required' => false]);
     Notification::fake();
-    [$client] = registrationTestEnvironment('custom-login', [
+    [$client, $environment] = registrationTestEnvironment('custom-login', [
         'allow_signups' => true,
         'email_verification_required' => true,
         'passkeys_enabled' => false,
@@ -474,7 +483,7 @@ test('application login uses its own appearance and feature policies', function 
         'login_logo_url' => 'https://assets.example.test/logo.svg',
         'auth_layout' => 'card',
     ]);
-    $user = User::factory()->unverified()->create();
+    $user = User::factory()->forEnvironment($environment)->unverified()->create();
     $flow = registrationFlow($client, signup: false);
     $page = registrationPageProps(get('/login?flow='.$flow)->assertOk());
     expect($page['application'])->toMatchArray([
@@ -637,7 +646,7 @@ test('single sign-on for an MFA user is established after the two-factor challen
     [$clientA, $environmentA] = registrationTestEnvironment('sso-mfa-source', ['allow_signups' => true, 'sso_enabled' => true]);
     [$clientB, $environmentB] = registrationTestEnvironment('sso-mfa-target', ['allow_signups' => true, 'sso_enabled' => true]);
     $environmentB->application->update(['tenant_id' => $environmentA->application->tenant_id]);
-    $user = User::factory()->twoFactorConfirmed()->create([
+    $user = User::factory()->forEnvironment($environmentA)->twoFactorConfirmed()->create([
         'two_factor_secret' => encrypt('test-secret'),
         'two_factor_recovery_codes' => encrypt(json_encode(['recovery-code'])),
     ]);
@@ -799,7 +808,7 @@ test('closing registration after the signup page was opened prevents account cre
 
 test('application login resumes through a full browser navigation while enrollment still requires consent', function (): void {
     [$client, $environment] = registrationTestEnvironment();
-    $user = User::factory()->create(['password' => 'Password-1234!']);
+    $user = User::factory()->forEnvironment($environment)->create(['password' => 'Password-1234!']);
     $flow = registrationFlow($client, signup: false);
     $props = registrationPageProps(get('/login?flow='.$flow)->assertOk());
     expect($props['application']['id'])->toBe((string) $environment->tenant_application_id);
@@ -817,19 +826,13 @@ test('existing users join another open application only after approving and rece
     [$clientB, $environmentB] = registrationTestEnvironment('app-b');
     $flow = registrationFlow($clientA);
     $signup = post('/register', registrationInput() + ['flow' => $flow])->assertRedirect();
-    $user = User::query()->where('email', 'new.signup@example.test')->firstOrFail();
+    $user = User::query()->where('identity_namespace', $environmentA->identityNamespace())->where('email', 'new.signup@example.test')->firstOrFail();
     $user->update(['metadata' => ['legacy_secret' => 'never-share']]);
     ApplicationUserMetadata::query()->create([
         'tenant_application_environment_id' => $environmentA->getKey(),
         'user_id' => $user->getKey(),
         'public_metadata' => ['theme' => 'dark'],
         'private_metadata' => ['internal_secret' => 'app-a-private'],
-    ]);
-    ApplicationUserMetadata::query()->create([
-        'tenant_application_environment_id' => $environmentB->getKey(),
-        'user_id' => $user->getKey(),
-        'public_metadata' => ['theme' => 'light'],
-        'private_metadata' => ['internal_secret' => 'app-b-private'],
     ]);
 
     $consentA = get((string) $signup->headers->get('Location'))->assertOk();
@@ -844,18 +847,29 @@ test('existing users join another open application only after approving and rece
     flushHeaders();
     Auth::forgetGuards();
 
-    [$flowB, $loginB] = registrationLogin($clientB, $user, 'Password-1234!');
+    $userB = User::factory()->forEnvironment($environmentB)->create([
+        'email' => $user->email,
+        'password' => 'Password-1234!',
+    ]);
+    ApplicationUserMetadata::query()->create([
+        'tenant_application_environment_id' => $environmentB->getKey(),
+        'user_id' => $userB->getKey(),
+        'public_metadata' => ['theme' => 'light'],
+        'private_metadata' => ['internal_secret' => 'app-b-private'],
+    ]);
+
+    [$flowB, $loginB] = registrationLogin($clientB, $userB, 'Password-1234!');
     $consentB = get((string) $loginB->headers->get('Location'))->assertOk();
     expect(registrationPageProps($consentB)['joiningApplication'])->toBeTrue();
-    expect($environmentB->application->tenant->users()->whereKey($user->getKey())->exists())->toBeFalse();
-    expect($environmentB->application->users('development')->whereKey($user->getKey())->exists())->toBeFalse();
+    expect($environmentB->application->tenant->users()->whereKey($userB->getKey())->exists())->toBeFalse();
+    expect($environmentB->application->users('development')->whereKey($userB->getKey())->exists())->toBeFalse();
 
     $tokenB = registrationAccessToken($clientB, registrationConsentToken($consentB), $flowB);
-    expect($environmentB->application->tenant->users()->whereKey($user->getKey())->exists())->toBeTrue();
-    expect($environmentB->application->users('development')->whereKey($user->getKey())->exists())->toBeTrue();
+    expect($environmentB->application->tenant->users()->whereKey($userB->getKey())->exists())->toBeTrue();
+    expect($environmentB->application->users('development')->whereKey($userB->getKey())->exists())->toBeTrue();
     Auth::forgetGuards();
     withToken($tokenB)->getJson('/api/oauth/userinfo')->assertOk()
-        ->assertJsonPath('sub', (string) $user->getKey())
+        ->assertJsonPath('sub', (string) $userB->getKey())
         ->assertJsonPath('application_id', (string) $environmentB->tenant_application_id)
         ->assertJsonPath('public_metadata.theme', 'light')
         ->assertJsonMissingPath('private_metadata')
@@ -944,9 +958,9 @@ test('an existing user cannot join an application with closed or missing signup 
 ]);
 
 test('a portal session does not sign in to another application and remains unchanged', function (): void {
-    [$client] = registrationTestEnvironment('separate-login');
+    [$client, $environment] = registrationTestEnvironment('separate-login');
     $administrator = User::factory()->create();
-    $applicationUser = User::factory()->create();
+    $applicationUser = User::factory()->forEnvironment($environment)->create();
     actingAs($administrator, 'web');
 
     $flow = registrationFlow($client, signup: false);
@@ -1002,11 +1016,12 @@ test('signing in to one application does not authenticate a different applicatio
 });
 
 test('application flows isolate consent and cannot be replayed after completion', function (): void {
-    [$clientA] = registrationTestEnvironment('parallel-a');
-    [$clientB] = registrationTestEnvironment('parallel-b');
-    $user = User::factory()->create();
-    [$flowA, $loginA] = registrationLogin($clientA, $user);
-    [$flowB, $loginB] = registrationLogin($clientB, $user);
+    [$clientA, $environmentA] = registrationTestEnvironment('parallel-a');
+    [$clientB, $environmentB] = registrationTestEnvironment('parallel-b');
+    $userA = User::factory()->forEnvironment($environmentA)->create();
+    $userB = User::factory()->forEnvironment($environmentB)->create();
+    [$flowA, $loginA] = registrationLogin($clientA, $userA);
+    [$flowB, $loginB] = registrationLogin($clientB, $userB);
     $consentA = get((string) $loginA->headers->get('Location'))->assertOk();
     $consentB = get((string) $loginB->headers->get('Location'))->assertOk();
 
@@ -1028,8 +1043,8 @@ test('silent authorization cannot reuse a portal session', function (): void {
 });
 
 test('two factor authentication is required before an application flow can continue', function (): void {
-    [$client] = registrationTestEnvironment();
-    $user = User::factory()->twoFactorConfirmed()->create([
+    [$client, $environment] = registrationTestEnvironment();
+    $user = User::factory()->forEnvironment($environment)->twoFactorConfirmed()->create([
         'two_factor_secret' => encrypt('test-secret'),
         'two_factor_recovery_codes' => encrypt(json_encode(['recovery-code'])),
     ]);
@@ -1047,13 +1062,13 @@ test('two factor authentication is required before an application flow can conti
 });
 
 test('two simultaneous two factor challenges remain bound to their own users and applications', function (): void {
-    [$clientA] = registrationTestEnvironment('mfa-a');
-    [$clientB] = registrationTestEnvironment('mfa-b');
-    $first = User::factory()->twoFactorConfirmed()->create([
+    [$clientA, $environmentA] = registrationTestEnvironment('mfa-a');
+    [$clientB, $environmentB] = registrationTestEnvironment('mfa-b');
+    $first = User::factory()->forEnvironment($environmentA)->twoFactorConfirmed()->create([
         'two_factor_secret' => encrypt('secret-a'),
         'two_factor_recovery_codes' => encrypt(json_encode(['recovery-a'])),
     ]);
-    $second = User::factory()->twoFactorConfirmed()->create([
+    $second = User::factory()->forEnvironment($environmentB)->twoFactorConfirmed()->create([
         'two_factor_secret' => encrypt('secret-b'),
         'two_factor_recovery_codes' => encrypt(json_encode(['recovery-b'])),
     ]);
@@ -1256,8 +1271,8 @@ test('an expired application verification link can be used after signing into th
 
 test('turning on verification after consent was displayed prevents an unverified grant', function (): void {
     applicationFeatureSettings(['email_verification_required' => false]);
-    [$client, $environment] = registrationTestEnvironment('verify-late');
-    $user = User::factory()->unverified()->create();
+    [$client, $environment] = registrationTestEnvironment('theme-app');
+    $user = User::factory()->forEnvironment($environment)->unverified()->create();
     [$flow, $login] = registrationLogin($client, $user);
     $consent = get((string) $login->headers->get('Location'))->assertOk();
     applicationFeatureSettings(['email_verification_required' => true]);
@@ -1270,14 +1285,14 @@ test('turning on verification after consent was displayed prevents an unverified
 test('a verification link cannot be used by a different application flow', function (): void {
     applicationFeatureSettings(['email_verification_required' => true]);
     Notification::fake();
-    [$clientA] = registrationTestEnvironment('verify-a');
-    [$clientB] = registrationTestEnvironment('verify-b');
+    [$clientA, $environmentA] = registrationTestEnvironment('verify-a');
+    [$clientB, $environmentB] = registrationTestEnvironment('verify-b');
     $flowA = registrationFlow($clientA);
     post('/register', registrationInput('verify-a@example.test') + ['flow' => $flowA])->assertRedirect();
     $user = User::query()->where('email', 'verify-a@example.test')->firstOrFail();
     $link = Notification::sent($user, VerifyEmail::class)->first()->toMail($user)->actionUrl;
     $flowB = registrationFlow($clientB, signup: false);
-    $otherUser = User::factory()->create();
+    $otherUser = User::factory()->forEnvironment($environmentB)->create();
     post('/login', ['flow' => $flowB, 'email' => $otherUser->email, 'password' => 'password'])->assertRedirect();
 
     get(str_replace('flow='.$flowA, 'flow='.$flowB, $link))->assertForbidden();
@@ -1300,11 +1315,11 @@ test('registration and password reset switches are enforced on their endpoints',
 
 test('disabling two factor setup retains existing account challenges', function (): void {
     applicationFeatureSettings(['two_factor_authentication_enabled' => false]);
-    $user = User::factory()->twoFactorConfirmed()->create([
+    [$client, $environment] = registrationTestEnvironment('mfa-disabled');
+    $user = User::factory()->forEnvironment($environment)->twoFactorConfirmed()->create([
         'two_factor_secret' => encrypt('test-secret'),
         'two_factor_recovery_codes' => encrypt(json_encode(['recovery-code'])),
     ]);
-    [$client] = registrationTestEnvironment('mfa-disabled');
     $flow = registrationFlow($client, signup: false);
 
     post('/login', ['flow' => $flow, 'email' => $user->email, 'password' => 'password'])
@@ -1336,6 +1351,71 @@ test('default user role is applied to password registration', function (): void 
     post('/register', registrationInput('role@example.test'))->assertRedirect();
 
     expect(User::query()->where('email', 'role@example.test')->firstOrFail()->hasRole('member'))->toBeTrue();
+});
+
+test('registration allows identical emails across portal and application environments without collision', function (): void {
+    applicationFeatureSettings(['email_verification_required' => false]);
+    [$clientA, $envA] = registrationTestEnvironment('app-a');
+    [$clientB, $envB] = registrationTestEnvironment('app-b');
+
+    $sharedEmail = 'admin@admin.com';
+
+    $portalResponse = post('/register', [
+        'name' => 'Portal User',
+        'email' => $sharedEmail,
+        'password' => 'password123',
+        'password_confirmation' => 'password123',
+    ]);
+    $portalResponse->assertRedirect();
+    $portalUser = User::query()
+        ->where('identity_namespace', User::PORTAL_IDENTITY_NAMESPACE)
+        ->where('email', $sharedEmail)
+        ->firstOrFail();
+
+    $flowA = registrationFlow($clientA, signup: true);
+    $appAResponse = post('/register', [
+        'flow' => $flowA,
+        'name' => 'App A User',
+        'email' => $sharedEmail,
+        'password' => 'password123',
+        'password_confirmation' => 'password123',
+    ]);
+    $appAResponse->assertRedirect();
+    $appAUser = User::query()
+        ->where('identity_namespace', $envA->identityNamespace())
+        ->where('email', $sharedEmail)
+        ->firstOrFail();
+
+    $flowB = registrationFlow($clientB, signup: true);
+    $appBResponse = post('/register', [
+        'flow' => $flowB,
+        'name' => 'App B User',
+        'email' => $sharedEmail,
+        'password' => 'password123',
+        'password_confirmation' => 'password123',
+    ]);
+    $appBResponse->assertRedirect();
+    $appBUser = User::query()
+        ->where('identity_namespace', $envB->identityNamespace())
+        ->where('email', $sharedEmail)
+        ->firstOrFail();
+
+    expect($portalUser->id)->not->toBe($appAUser->id);
+    expect($appAUser->id)->not->toBe($appBUser->id);
+    expect($portalUser->id)->not->toBe($appBUser->id);
+
+    expect($portalUser->identity_namespace)->toBe(User::PORTAL_IDENTITY_NAMESPACE);
+    expect($appAUser->identity_namespace)->toBe($envA->identityNamespace());
+    expect($appBUser->identity_namespace)->toBe($envB->identityNamespace());
+
+    $duplicateFlowA = registrationFlow($clientA, signup: true);
+    post('/register', [
+        'flow' => $duplicateFlowA,
+        'name' => 'Duplicate App A User',
+        'email' => $sharedEmail,
+        'password' => 'password123',
+        'password_confirmation' => 'password123',
+    ])->assertSessionHasErrors(['email']);
 });
 
 test('the impersonation setting controls whether an administrator may impersonate users', function (): void {

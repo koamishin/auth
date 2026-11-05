@@ -2,6 +2,7 @@
 
 namespace App\Concerns;
 
+use App\Models\TenantApplicationEnvironment;
 use App\Models\User;
 use Illuminate\Validation\Rule;
 
@@ -12,11 +13,11 @@ trait ProfileValidationRules
      *
      * @return array<string, array<int, \Illuminate\Contracts\Validation\Rule|array<mixed>|string>>
      */
-    protected function profileRules(?int $userId = null): array
+    protected function profileRules(?int $userId = null, ?string $identityNamespace = null): array
     {
         return [
             'name' => $this->nameRules(),
-            'email' => $this->emailRules($userId),
+            'email' => $this->emailRules($userId, $identityNamespace),
         ];
     }
 
@@ -35,16 +36,39 @@ trait ProfileValidationRules
      *
      * @return array<int, \Illuminate\Contracts\Validation\Rule|array<mixed>|string>
      */
-    protected function emailRules(?int $userId = null): array
+    protected function emailRules(?int $userId = null, ?string $identityNamespace = null): array
     {
+        $namespace = $identityNamespace ?? $this->resolveIdentityNamespace($userId);
+
+        $uniqueRule = Rule::unique(User::class)->where('identity_namespace', $namespace);
+
+        if ($userId !== null) {
+            $uniqueRule->ignore($userId);
+        }
+
         return [
             'required',
             'string',
             'email',
             'max:255',
-            $userId === null
-                ? Rule::unique(User::class)
-                : Rule::unique(User::class)->ignore($userId),
+            $uniqueRule,
         ];
+    }
+
+    protected function resolveIdentityNamespace(?int $userId = null): string
+    {
+        if ($userId !== null) {
+            $existingUser = User::query()->find($userId);
+            if ($existingUser && is_string($existingUser->identity_namespace)) {
+                return $existingUser->identity_namespace;
+            }
+        }
+
+        $environment = request()?->attributes?->get('koamishin.application_environment');
+        if ($environment instanceof TenantApplicationEnvironment) {
+            return $environment->identityNamespace();
+        }
+
+        return User::PORTAL_IDENTITY_NAMESPACE;
     }
 }
