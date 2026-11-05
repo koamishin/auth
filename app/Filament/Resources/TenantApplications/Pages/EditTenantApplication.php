@@ -9,6 +9,7 @@ use App\Filament\Resources\TenantApplications\TenantApplicationResource;
 use App\Models\TenantApplication;
 use App\Models\TenantApplicationEnvironment;
 use App\Services\OAuth\ApplicationProvisioner;
+use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ViewAction;
 use Filament\Resources\Pages\EditRecord;
@@ -22,6 +23,23 @@ use Laravel\Passport\ClientRepository;
 class EditTenantApplication extends EditRecord
 {
     protected static string $resource = TenantApplicationResource::class;
+
+    protected string $view = 'filament.resources.tenant-applications.pages.edit-application';
+
+    public function selectEnvironment(string $environment): void
+    {
+        if (! in_array($environment, ['development', 'production'], true)) {
+            return;
+        }
+
+        $this->data['environment'] = $environment;
+        $record = $this->getRecord();
+        if ($record instanceof TenantApplication) {
+            foreach (TenantApplicationResource::environmentFormValues($record, $environment) as $name => $value) {
+                $this->data[$name] = $value;
+            }
+        }
+    }
 
     #[\Override]
     protected function mutateFormDataBeforeFill(array $data): array
@@ -200,6 +218,19 @@ class EditTenantApplication extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('openSetupGuide')
+                ->label('Setup Guide')
+                ->icon('heroicon-m-question-mark-circle')
+                ->color('gray')
+                ->slideOver()
+                ->modalWidth('5xl')
+                ->modalHeading(fn (): string => 'Setup Guide — ' . $this->getRecord()->name)
+                ->modalDescription(fn (): string => 'Tailored integration steps and code snippets for the ' . ucfirst($this->data['environment'] ?? $this->getRecord()->environment) . ' environment')
+                ->modalSubmitAction(false)
+                ->modalCancelActionLabel('Close')
+                ->modalContent(fn () => view('filament.resources.tenant-applications.components.quickstart-modal-content', [
+                    'record' => $this->getRecord(),
+                ])),
             ViewAction::make(),
             DeleteAction::make(),
         ];

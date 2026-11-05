@@ -61,8 +61,9 @@ class TenantApplicationResource extends Resource
         return $schema
             ->components([
                 Section::make('Select a project type')
-                    ->description('Choose the application profile and tenancy model.')
-                    ->icon('heroicon-o-squares-2x2')
+                    ->description('Choose how authentication is structured for this application.')
+                    ->icon('heroicon-o-rectangle-stack')
+                    ->visible(fn (string $operation): bool => $operation === 'create')
                     ->components([
                         Select::make('tenant_id')
                             ->label('Organization')
@@ -90,13 +91,13 @@ class TenantApplicationResource extends Resource
                             ->live(),
                     ]),
 
-                Section::make('Authentication')
-                    ->description('Application name and user sign-in options.')
-                    ->icon('heroicon-o-shield-check')
+                Section::make('Application Details')
+                    ->description('Application name, description, and initial sign-in preview.')
+                    ->icon('heroicon-o-identification')
                     ->components([
                         TextInput::make('name')
                             ->label('Application name')
-                            ->helperText('We generated one for you. Change this now, or anytime.')
+                            ->helperText('Branded name displayed on hosted login and registration screens.')
                             ->default('My Application')
                             ->placeholder('e.g. My Application')
                             ->prefixIcon('heroicon-o-tag')
@@ -104,8 +105,16 @@ class TenantApplicationResource extends Resource
                             ->maxLength(255)
                             ->live(debounce: 300),
 
+                        Textarea::make('description')
+                            ->label('Description / Project Purpose')
+                            ->placeholder('Optional notes on what this application is for and who accesses it...')
+                            ->rows(2)
+                            ->maxLength(500)
+                            ->visible(fn (?TenantApplication $record): bool => $record instanceof TenantApplication),
+
                         Section::make('Sign in options')
                             ->description('Email sign-in is available. Configuring sign-in methods here is coming soon.')
+                            ->visible(fn (string $operation): bool => $operation === 'create')
                             ->components([
                                 Toggle::make('auth_email')
                                     ->label('Email')
@@ -203,12 +212,6 @@ class TenantApplicationResource extends Resource
                                 'confidential' => 'Authenticates code exchanges on your backend using your Publishable Key (pk_...) and Secret Key (sk_...).',
                             ])
                             ->columns(2),
-
-                        Textarea::make('description')
-                            ->label('Description / Project Purpose')
-                            ->placeholder('Optional notes on what this application is for and who accesses it...')
-                            ->rows(2)
-                            ->maxLength(500),
                     ]),
 
                 Section::make('Environment & Callbacks')
