@@ -37,7 +37,7 @@ const publicFiles = [
 function getBase() {
     const base =
         process.env.ASTRO_BASE ||
-        (process.env.GITHUB_ACTIONS ? '/koamishin-portal' : '');
+        (process.env.GITHUB_ACTIONS ? '/auth' : '');
     return base.replace(/\/+$/, '');
 }
 
