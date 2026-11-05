@@ -6,6 +6,7 @@ namespace App\Services\Users;
 
 use App\Models\Tenant;
 use App\Models\TenantApplication;
+use App\Models\TenantApplicationEnvironment;
 use App\Models\User;
 use App\Services\Webhooks\WebhookDispatcher;
 use Illuminate\Support\Carbon;
@@ -141,7 +142,7 @@ class LaravelUserImporter
                     ]);
 
                     if ($membership['attached'] !== []) {
-                        if ($configuration instanceof \App\Models\TenantApplicationEnvironment) {
+                        if ($configuration instanceof TenantApplicationEnvironment) {
                             WebhookDispatcher::dispatchForEnvironment($configuration, 'user.created', $user);
                         }
                     }
