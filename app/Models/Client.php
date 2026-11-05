@@ -23,6 +23,7 @@ class Client extends BaseClient
         if (! $environment instanceof TenantApplicationEnvironment) {
             return false;
         }
-        return !$environment->requiresOAuthConsent();
+
+        return ! $environment->requiresOAuthConsent();
     }
 }
