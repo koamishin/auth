@@ -91,9 +91,10 @@ class TenantApplicationResource extends Resource
                             ->live(),
                     ]),
 
-                Section::make(fn (string $operation): string => $operation === 'create' ? 'Authentication' : 'Application Details')
-                    ->description(fn (string $operation): string => $operation === 'create' ? 'Application name and user sign-in options.' : 'Application name, description, and initial sign-in preview.')
-                    ->icon(fn (string $operation): string => $operation === 'create' ? 'heroicon-o-shield-check' : 'heroicon-o-identification')
+                Section::make(fn (string $operation): string => $operation === 'create' ? 'Authentication' : 'General Information')
+                    ->id('general')
+                    ->description(fn (string $operation): string => $operation === 'create' ? 'Application name and user sign-in options.' : 'Application name, description, and core branding identity.')
+                    ->icon(fn (string $operation): string => $operation === 'create' ? 'heroicon-o-shield-check' : 'heroicon-o-adjustments-horizontal')
                     ->components([
                         TextInput::make('name')
                             ->label('Application name')
@@ -154,7 +155,8 @@ class TenantApplicationResource extends Resource
                     ]),
 
                 Section::make('Target Architecture & Framework')
-                    ->description('Choose your application platform and OAuth client security profile.')
+                    ->id('target-architecture')
+                    ->description('Platform preset and OAuth client security profile.')
                     ->icon('heroicon-o-cpu-chip')
                     ->visible(fn (?TenantApplication $record): bool => $record instanceof TenantApplication)
                     ->collapsible()
@@ -262,6 +264,7 @@ class TenantApplicationResource extends Resource
                 Section::make('Hosted login appearance')
                     ->id('hosted-login-appearance')
                     ->description('Customize the Portal-hosted login for the selected environment.')
+                    ->icon('heroicon-o-paint-brush')
                     ->visible(fn (?TenantApplication $record): bool => $record instanceof TenantApplication)
                     ->components([
                         TextInput::make('login_title')->label('Login heading')->maxLength(120),
@@ -278,6 +281,7 @@ class TenantApplicationResource extends Resource
                 Section::make('Application authentication features')
                     ->id('application-authentication-features')
                     ->description('These settings apply only to the selected environment. Portal-wide feature availability still applies.')
+                    ->icon('heroicon-o-shield-check')
                     ->visible(fn (?TenantApplication $record): bool => $record instanceof TenantApplication)
                     ->components([
                         Select::make('email_verification_policy')->label('Email verification')
@@ -299,6 +303,7 @@ class TenantApplicationResource extends Resource
                 Section::make('Social connections')
                     ->id('social-connections')
                     ->description('Choose Portal credentials, disable a provider, or configure credentials for this application environment. Custom secrets are encrypted and never displayed again.')
+                    ->icon('heroicon-o-share')
                     ->visible(fn (?TenantApplication $record): bool => $record instanceof TenantApplication)
                     ->components(array_map(self::socialConnectionFields(...), SocialLoginProvider::cases())),
             ]);

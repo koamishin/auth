@@ -26,6 +26,16 @@ class EditTenantApplication extends EditRecord
 
     protected string $view = 'filament.resources.tenant-applications.pages.edit-application';
 
+    public function getTitle(): string
+    {
+        return 'Settings';
+    }
+
+    public function getHeading(): string
+    {
+        return 'Application Settings';
+    }
+
     public function selectEnvironment(string $environment): void
     {
         if (! in_array($environment, ['development', 'production'], true)) {
