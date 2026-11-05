@@ -91,9 +91,9 @@ class TenantApplicationResource extends Resource
                             ->live(),
                     ]),
 
-                Section::make('Application Details')
-                    ->description('Application name, description, and initial sign-in preview.')
-                    ->icon('heroicon-o-identification')
+                Section::make(fn (string $operation): string => $operation === 'create' ? 'Authentication' : 'Application Details')
+                    ->description(fn (string $operation): string => $operation === 'create' ? 'Application name and user sign-in options.' : 'Application name, description, and initial sign-in preview.')
+                    ->icon(fn (string $operation): string => $operation === 'create' ? 'heroicon-o-shield-check' : 'heroicon-o-identification')
                     ->components([
                         TextInput::make('name')
                             ->label('Application name')
