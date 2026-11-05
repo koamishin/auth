@@ -111,7 +111,6 @@ class LaravelUserImporter
                     }
                     $user = $existingUser;
                 } else {
-                    /** @var User $user */
                     $user = new User;
                     $user->forceFill([
                         'name' => $name,
@@ -142,7 +141,7 @@ class LaravelUserImporter
                     ]);
 
                     if ($membership['attached'] !== []) {
-                        if ($configuration) {
+                        if ($configuration instanceof \App\Models\TenantApplicationEnvironment) {
                             WebhookDispatcher::dispatchForEnvironment($configuration, 'user.created', $user);
                         }
                     }
