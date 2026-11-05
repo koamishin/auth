@@ -37,6 +37,8 @@ const publicFiles = [
     'docs/images/screenshots/app-auth-toggles.png',
     'docs/images/screenshots/app-env-settings.png',
     'docs/images/screenshots/application-keys-guide.png',
+    'docs/images/screenshots/application-overview-active.png',
+    'docs/images/screenshots/application-setup-guide-slideover.png',
     'docs/images/screenshots/centralized-app-a-config.png',
     'docs/images/screenshots/centralized-app-b-config.png',
     'docs/images/screenshots/centralized-app-welcome.png',
