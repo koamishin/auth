@@ -13,6 +13,7 @@ use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ViewAction;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Contracts\View\Factory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
@@ -238,7 +239,7 @@ class EditTenantApplication extends EditRecord
                 ->modalDescription(fn (): string => 'Tailored integration steps and code snippets for the '.ucfirst($this->data['environment'] ?? $this->getRecord()->environment).' environment')
                 ->modalSubmitAction(false)
                 ->modalCancelActionLabel('Close')
-                ->modalContent(fn (): \Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View => view('filament.resources.tenant-applications.components.quickstart-modal-content', [
+                ->modalContent(fn (): Factory|\Illuminate\Contracts\View\View => view('filament.resources.tenant-applications.components.quickstart-modal-content', [
                     'record' => $this->getRecord(),
                 ])),
             ViewAction::make(),
