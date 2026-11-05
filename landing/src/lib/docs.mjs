@@ -34,10 +34,22 @@ const publicFiles = [
     'packages/koamishin-auth-php/LICENSE',
     'docs/images/screenshots/admin-dashboard.png',
     'docs/images/screenshots/admin-login.png',
+    'docs/images/screenshots/app-auth-toggles.png',
+    'docs/images/screenshots/app-env-settings.png',
     'docs/images/screenshots/application-keys-guide.png',
+    'docs/images/screenshots/centralized-app-a-config.png',
+    'docs/images/screenshots/centralized-app-b-config.png',
+    'docs/images/screenshots/centralized-app-welcome.png',
+    'docs/images/screenshots/centralized-apps-overview.png',
+    'docs/images/screenshots/centralized-consumer-dashboard.png',
+    'docs/images/screenshots/centralized-directory-view.png',
+    'docs/images/screenshots/centralized-hosted-login.png',
+    'docs/images/screenshots/centralized-hosted-register.png',
     'docs/images/screenshots/consumer-app-welcome.png',
     'docs/images/screenshots/hosted-login-screen.png',
+    'docs/images/screenshots/hosted-register-screen.png',
     'docs/images/screenshots/new-application-modal.png',
+    'docs/images/screenshots/register-organization.png',
 ];
 
 function getBase() {

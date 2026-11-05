@@ -32,70 +32,141 @@ MAIL_MAILER=log
 
 `MAIL_MAILER=log` is for local testing. Verification messages and their links are written to `storage/logs/laravel.log`; configure a real mail transport for production. Use a separate browser profile for the administrator and the test user so their sessions do not replace each other.
 
-## 1. Configure the applications and signup policy
+## Step 1 — Register applications in the admin panel
 
-In the admin panel, select an organization and create **App A** and **App B** separately:
+In the Koamishin Auth administration panel, select your organization and create **App A** and **App B** separately. Each application represents an independent client with its own framework selection, OAuth client credentials, and environment configuration:
 
-| Setting                   | App A                                            | App B                                            |
-| ------------------------- | ------------------------------------------------ | ------------------------------------------------ |
-| Framework                 | Laravel                                          | Laravel                                          |
-| Environment               | Development                                      | Development                                      |
-| Callback URL              | `http://app-a.localhost:8121/koamishin/callback` | `http://app-b.localhost:8122/koamishin/callback` |
-| Allow self-service signup | On for this walkthrough                          | On for this walkthrough                          |
+| Setting | App A (e.g. Acme Enterprise Auth) | App B (e.g. Billing & Payment Center) |
+| --- | --- | --- |
+| **Framework** | Laravel | Laravel / Next.js / Node.js |
+| **Environment** | Development | Development |
+| **Callback URL** | `https://portal-app-1.test/koamishin/callback` | `http://localhost:3000/api/auth/callback` |
+| **Allow self-service signup** | Enabled | Enabled |
+| **OAuth Consent Screen** | Off (first-party seamless) | Off (first-party seamless) |
+
+Navigate to **Applications** (`/admin/<org>/tenant-applications`) to view the registered applications within your organization:
+
+![Applications Overview in Organization](../images/screenshots/centralized-apps-overview.png)
+
+**Checkpoint:** Both applications appear in the organization overview under Development environments with distinct Client IDs.
+
+---
+
+## Step 2 — Configure callback URLs and credentials
+
+### 2.1 Configure App A callback and signup policy
+
+Open App A's settings (`/admin/<org>/tenant-applications/<id>/edit`) and scroll to **Environment & Callbacks**:
+
+1. Set the active environment to **Development**.
+2. Enable **Allow self-service user signup** to permit new user registration directly through App A.
+3. Set the **Allowed Callback URLs (Redirect URIs)** to App A's exact OAuth callback endpoint (`https://portal-app-1.test/koamishin/callback`).
+
+![App A Environment & Callback Configuration](../images/screenshots/centralized-app-a-config.png)
+
+### 2.2 Configure App B callback and signup policy
+
+Similarly, open App B's settings (`/admin/<org>/tenant-applications/<id>/edit`) and scroll to **Environment & Callbacks**:
+
+1. Confirm the environment is set to **Development**.
+2. Verify **Allow self-service user signup** matches your organization policy.
+3. Configure App B's redirect URI (for example, `http://localhost:3000/api/auth/callback` or your consumer port callback).
+
+![App B Environment & Callback Configuration](../images/screenshots/centralized-app-b-config.png)
+
+### 2.3 Configure the Laravel clients with `.env` keys
 
 Save each development Publishable Key (`pk_test_...`), Secret Key (`sk_test_...`), and numeric application ID. The application's Laravel environment snippet includes `KOAMISHIN_APPLICATION_ID`. Register the exact callback; a different host, port, or path is a different callback. Koamishin Auth validates the client and callback before displaying contextual login or registration.
 
-To change an existing environment's policy, edit the application, choose that environment, and set **Allow self-service signup**. The stored setting is `tenant_application_environments.settings.allow_signups`; only the JSON boolean `true` enables it. Missing or false values keep self-service access closed. Set this policy deliberately for development and production separately.
-
-## 2. Configure the Laravel clients
-
-Use existing projects, or create two new Laravel 13 projects:
-
-```bash
-composer create-project laravel/laravel app-a '^13.0' --no-interaction
-composer create-project laravel/laravel app-b '^13.0' --no-interaction
-```
-
-Install the SDK in each app:
-
-```bash
-composer require koamishin/auth-php
-php artisan vendor:publish --tag=koamishin-config --no-interaction
-```
-
-Configure App A's `.env` with its own credentials and actual numeric application ID:
+Configure App A's `.env`:
 
 ```dotenv
-APP_URL=http://app-a.localhost:8121
+APP_URL=https://portal-app-1.test
 SESSION_COOKIE=app_a_session
 SESSION_DOMAIN=null
 
-KOAMISHIN_PORTAL_URL=http://auth.localhost:8120
+KOAMISHIN_PORTAL_URL=https://koamishin-portal.test
 KOAMISHIN_PUBLISHABLE_KEY=pk_test_app_a_key
 KOAMISHIN_SECRET_KEY=sk_test_app_a_key
-KOAMISHIN_REDIRECT_URI=http://app-a.localhost:8121/koamishin/callback
-KOAMISHIN_APPLICATION_ID=1
+KOAMISHIN_REDIRECT_URI=https://portal-app-1.test/koamishin/callback
+KOAMISHIN_APPLICATION_ID=3
 KOAMISHIN_ENVIRONMENT=development
 ```
 
-Configure App B with its different client and application ID:
+Configure App B's `.env` with its unique client ID, secret, and application ID:
 
 ```dotenv
 APP_URL=http://app-b.localhost:8122
 SESSION_COOKIE=app_b_session
 SESSION_DOMAIN=null
 
-KOAMISHIN_PORTAL_URL=http://auth.localhost:8120
+KOAMISHIN_PORTAL_URL=https://koamishin-portal.test
 KOAMISHIN_PUBLISHABLE_KEY=pk_test_app_b_key
 KOAMISHIN_SECRET_KEY=sk_test_app_b_key
 KOAMISHIN_REDIRECT_URI=http://app-b.localhost:8122/koamishin/callback
-KOAMISHIN_APPLICATION_ID=2
+KOAMISHIN_APPLICATION_ID=1
 KOAMISHIN_ENVIRONMENT=development
 ```
 
 Keep secrets out of version control. Ensure each app has its own `APP_KEY` and a ready session store. Rebuild configuration caches after changing `.env`. The SDK checks the returned application ID and environment before accepting the identity.
 
-## 3. Add registration, login, and callback routes
+---
+
+## Step 3 — Registration flow through App A
+
+### 3.1 Start registration from App A welcome page
+
+Open App A in your browser (`https://portal-app-1.test/`). The application displays the public landing page with **Log in** and **Register** actions:
+
+![App A Welcome Page](../images/screenshots/centralized-app-welcome.png)
+
+Click **Register**. The SDK generates a PKCE code challenge and state token, redirecting to Koamishin Auth with contextual query parameters (`client_id`, `redirect_uri`, `screen_hint=signup`).
+
+### 3.2 Contextual hosted registration on Koamishin Auth
+
+The user lands on the branded Koamishin Auth hosted registration screen displaying App A's name:
+
+![Hosted Registration Screen for App A](../images/screenshots/centralized-hosted-register.png)
+
+Enter user details (Name, Email address, and Password) and submit. Because **Allow self-service signup** is active, Koamishin Auth creates the account scoped to App A's environment, enrolls the user membership, and redirects back with the authorization code.
+
+---
+
+## Step 4 — Successful redirect to App A dashboard
+
+Upon receiving the authorization code, App A exchanges it for tokens, synchronizes the user projection to its local database, and establishes the local session. The user is redirected to the authenticated dashboard:
+
+![App A Authenticated Dashboard](../images/screenshots/centralized-consumer-dashboard.png)
+
+**Checkpoint:** The dashboard displays the authenticated user profile (e.g. Alice Smith) with an active local session tied to App A.
+
+---
+
+## Step 5 — Log in to App B with seamless first-party sign-in
+
+When the user navigates to App B (`http://app-b.localhost:8122/login` or its consumer login), App B redirects to Koamishin Auth:
+
+![Seamless First-Party Sign-In for App B](../images/screenshots/centralized-hosted-login.png)
+
+Key characteristics of centralized authentication across applications:
+
+- **Isolated Sessions:** App A and App B maintain separate session cookies (`app_a_session` vs `app_b_session`).
+- **Seamless First-Party Experience:** Because **Require OAuth consent screen** is disabled by default, the user signs in directly without a third-party consent prompt.
+- **Application Scoping:** If the user already has an account in the organization, signing into App B enrolls them into App B's membership while preserving their existing central identity.
+
+---
+
+## Step 6 — Verify user identities in the User Directory
+
+Return to the Koamishin Auth administration panel and navigate to **Directory & Access → Application Users** (`/admin/<org>/users`):
+
+![Centralized User Directory & Application Memberships](../images/screenshots/centralized-directory-view.png)
+
+**Checkpoint:** The directory displays the registered user (Alice Smith), showing their central user ID, active status, and explicit application memberships across both registered applications.
+
+---
+
+## Integration details: Routes and guards
 
 In each app's `config/auth.php`, add this guard inside the existing `guards` array:
 
@@ -182,38 +253,9 @@ Route::post('/logout', function () {
 
 The callback receives an authorization code, then the server exchanges it for tokens and fetches the permitted claims. User data and metadata are not placed in the callback URL. The route above projects the verified Portal subject before redirecting. Each app should have a unique `koamishin_user_id` column on its local `users` table. This sample expects the `email` scope and a non-empty email claim, and it mirrors central email verification to Laravel's `email_verified_at`. Store only the profile fields and public metadata that app needs; never store a Portal password or access token in that row. If a local account already has the same email, clear the SDK session and require an explicit trusted linking flow instead of matching by email. See the [SDK projection guide](../guides/laravel-sdk.mdx#maintain-a-local-eloquent-user-projection) for the migration and service.
 
-The SDK guard still returns the central `KoamishinUser`. Resolve the local model explicitly when the app needs its own Eloquent relationships. For example, an app's `User::posts()` relation reads from that app's database; it does not fetch or join data from the Portal. Use the Portal management API for centrally owned data.
+The SDK guard still returns the central `KoamishinUser`. Resolve the local model explicitly when the app needs its own Eloquent relationships. For example, an app's `User::posts()` relation reads from that app's [REDACTED]; it does not fetch or join data from the Portal. Use the Portal management API for centrally owned data.
 
 Submit logout through a CSRF-protected POST form; it clears the local app's SDK session without ending the Portal's browser session.
-
-## 4. Try signup in App A and login in App B
-
-If using the existing harness, start it with its `start` action. Otherwise run the Portal and clients on the configured ports, each in its own terminal:
-
-```bash
-# In the Portal checkout, using the intended development database:
-php artisan serve --host=127.0.0.1 --port=8120 --no-interaction
-```
-
-```bash
-# In app-a/:
-php artisan serve --host=127.0.0.1 --port=8121 --no-interaction
-```
-
-```bash
-# In app-b/:
-php artisan serve --host=127.0.0.1 --port=8122 --no-interaction
-```
-
-In the test user's browser profile:
-
-1. Open App A's `/register`. The Portal should show App A's name and development environment on its registration page.
-2. Create a new account and complete the authorization request. With self-service signup enabled, the Portal enrolls the new account in App A's organization and environment and returns the browser to App A's callback and `/dashboard`.
-3. Confirm the user appears in the Portal's central directory and App A's local `users` table with the same `koamishin_user_id`. App A's dashboard should show both the Portal subject and the app's local user ID.
-4. Open App B's `/login` in the same browser profile. The Portal displays App B's login form and requires the user to authenticate again, even when a Portal session exists. If the user is not enrolled in App B, self-service signup must also be enabled there; approving App B's consent request adds that membership before returning to App B.
-5. Compare the dashboards: the Portal user ID should match, while each app has its own local user row and application ID. Each app keeps its own session, app-owned Eloquent relationships, and metadata.
-
-Each application login starts a separate authentication flow. By default, a Portal session or a login to App A does not automatically sign the user into App B. Administrators can opt both applications into SSO within the same organization and environment; authorization consent and application access remain specific to the requesting app.
 
 ## 5. Add custom metadata from a trusted backend
 

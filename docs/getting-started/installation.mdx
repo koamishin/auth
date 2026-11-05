@@ -127,67 +127,94 @@ composer run dev
 
 ## Step 1 — First-run setup
 
-1. Open your browser to:
+### 1.1 Super Administrator setup and login gateway
+
+1. Open your browser to the setup route or administrative gateway:
 
 ```text
 http://localhost:8000/setup
 ```
 
-2. Enter the **Instance Name** (defaults to _Koamishin Auth_) and the **Super Administrator** details: name, email, and password (minimum 8 characters).
+2. Enter the **Instance Name** (defaults to _Koamishin Auth_) and the **Super Administrator** credentials: name, email, and password (minimum 8 characters).
 3. Click **Initialize Portal & Launch**.
 
-You should land on the Filament Administration Panel. On first launch, Koamishin Auth creates a portal-identity super administrator and locks `/setup`.
-
-**After setup, sign in again with the same credentials to inspect the admin gateway:**
+On first launch, Koamishin Auth creates a portal-identity super administrator and secures the setup route. Sign in through the Filament administrative gateway:
 
 ![Filament Administrator Sign In](../images/screenshots/admin-login.png)
 
-**Checkpoint:** You can reach `/admin` and see the admin console.
+**Checkpoint:** Enter your administrator credentials and authenticate into the administration panel.
 
 ---
 
 ## Step 2 — Create an organization and register an application
 
-### 2.1 Sign in to the dashboard
+### 2.1 Access the administration dashboard
 
-Log in with the administrator credentials created in the setup wizard.
+Sign in with your administrator credentials to reach the main organization overview:
 
 ![Filament Administration Dashboard](../images/screenshots/admin-dashboard.png)
 
-**Checkpoint:** The dashboard shows the top workspace selector, sidebar navigation, user directory, and organization applications.
+**Checkpoint:** The dashboard displays the organization workspace switcher, sidebar navigation, user directory overview, and registered applications.
 
-### 2.2 Create an organization
+### 2.2 Register a new organization
 
-1. Open `/admin/new` or use the tenant switcher.
-2. Enter the **Organization Name** (e.g., _Acme Corp_) and **Slug** (e.g., `acme-corp`).
-3. Save the organization.
+1. Navigate to `/admin/new` or select **New Organization** from the workspace dropdown.
+2. Enter the **Organization Name** (e.g., _Acme Corp_) and **Organization Slug** (e.g., `acme-corp`).
+3. Click **Register Organization**.
 
-**Checkpoint:** The workspace selector shows your new organization.
+![Register Organization Form](../images/screenshots/register-organization.png)
 
-### 2.3 Register an application
+**Checkpoint:** The active workspace switches to your newly created organization.
 
-1. Go to **Applications** in the left sidebar.
-2. Click **New Application**.
-3. Fill in the application details:
-    - **Name:** e.g., _Acme Enterprise Auth_
-    - **Framework:** `Laravel`, `Node.js`, `Vue`, or `React`
-    - **Environment:** `Development` or `Production`
-    - **Callback URLs:** the exact redirect URI your consumer app will use, for example `https://portal-app-1.test/koamishin/callback`
-    - **Authentication Features:** allow self-service signups, verified email, or OAuth consent prompts as desired. Consent prompts are **off by default** for seamless first-party sign-in.
+### 2.3 Create a new application
+
+1. In the sidebar navigation under **Applications**, click **Applications**.
+2. Click **New Application** or navigate to `/admin/<org>/tenant-applications/create`.
+3. Choose the project type (e.g., **Consumer**) and enter the **Application name** (e.g., _Acme Enterprise Auth_).
 
 ![Register New Application Modal](../images/screenshots/new-application-modal.png)
 
-4. Click **Create Application**.
+4. Click **Create application** to initialize the client credentials.
 
-**Checkpoint:** The application appears under **Organization Applications**.
+**Checkpoint:** The application record is created and opens into its configuration view.
 
-### 2.4 Copy the keys and setup snippets
+### 2.4 Configure environment and allowed callback URLs
 
-Koamishin Auth generates both a **Publishable Key** and a **Secret Key** for each environment. A browser-only app receives only a publishable key; a confidential backend also receives a secret. Copy everything now—each secret is shown once and cannot be recovered later.
+Scroll to the **Environment & Callbacks** section of the application configuration:
+
+1. Select the active environment (**Development** or **Production**).
+2. Ensure **Allow self-service user signup** is enabled if public registration is permitted.
+3. Add your consumer application redirect URI under **Allowed Callback URLs (Redirect URIs)**, for example: `https://portal-app-1.test/koamishin/callback`.
+
+![Application Environment & Callbacks](../images/screenshots/app-env-settings.png)
+
+**Checkpoint:** The exact callback URL matches what your consumer client will pass during OAuth authorization requests.
+
+### 2.5 Configure authentication features and consent policy
+
+Scroll to the **Application authentication features** section:
+
+1. Set the **Email verification** policy for your application.
+2. Toggle **Allow passkey sign-in** to enable FIDO2 WebAuthn biometric login.
+3. Configure the **Require OAuth consent screen** switch. For seamless first-party internal applications, leave this **OFF** so users sign in without an extra consent authorization prompt.
+
+![Application Authentication Features & Consent Screen Toggle](../images/screenshots/app-auth-toggles.png)
+
+4. Click **Save changes** at the bottom of the form.
+
+**Checkpoint:** Authentication toggles and consent behavior are saved for the target environment.
+
+### 2.6 Copy application credentials and environment snippets
+
+Open the application overview (`/admin/<org>/tenant-applications/<id>`) to inspect your API credentials:
+
+1. Copy the **Publishable Key** (`pk_test_...` or `pk_live_...`).
+2. Copy the **Secret Key** (`sk_test_...` or `sk_live_...`) if connecting a confidential server-side client (Laravel, Node.js).
+3. Copy the numeric **Application ID**.
 
 ![Application Credentials & Setup Guide](../images/screenshots/application-keys-guide.png)
 
-Typical consumer `.env` values look like:
+Insert these values into your consumer application's `.env`:
 
 ```dotenv
 KOAMISHIN_PORTAL_URL=http://localhost:8000
@@ -198,23 +225,33 @@ KOAMISHIN_APPLICATION_ID=1
 KOAMISHIN_ENVIRONMENT=development
 ```
 
-**Checkpoint:** Your consumer app now has an origin URL, callback URL, publishable key, secret key, application ID, and environment name.
+**Checkpoint:** Your consumer application has all environment variables required by the SDK.
 
 ---
 
-## Step 3 — Connect your application and sign in
+## Step 3 — Connect your consumer application and authenticate
 
-Once keys and callbacks are registered, connect any app using the Laravel or JavaScript SDK.
+### 3.1 Consumer application welcome screen
 
-**Consumer app with built-in login/register buttons:**
+Open your consumer application home page. The application displays **Log in** and **Register** buttons wired to the Koamishin Auth SDK routes:
 
 ![Consumer Application Home](../images/screenshots/consumer-app-welcome.png)
 
-Click **Log in** (or **Register**). The browser leaves your app and lands on your Koamishin Auth instance:
+### 3.2 Hosted application sign-in
+
+Click **Log in** on the consumer app. The user is redirected to the branded Koamishin Auth hosted login screen:
 
 ![Hosted Application Sign-In](../images/screenshots/hosted-login-screen.png)
 
-Enter credentials and submit. Because first-party OAuth consent is skipped by default, Koamishin Auth immediately returns the browser to your app with an authorization code and resumes your session.
+Users enter their email and password, or use passwordless authentication via passkey. Because first-party OAuth consent is disabled by default, the user is authenticated and immediately redirected back to the consumer app callback without unnecessary prompts.
+
+### 3.3 Hosted application registration
+
+If self-service signup is enabled, new users can click **Register** (or **Sign up**) on the consumer app to reach the hosted registration form:
+
+![Hosted Application Registration](../images/screenshots/hosted-register-screen.png)
+
+When submitted, Koamishin Auth creates the user account scoped to the application environment, enrolls the membership, and redirects back with the authorization code to complete login.
 
 **Expected outcome:**
 
