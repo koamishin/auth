@@ -228,7 +228,7 @@ class EditTenantApplication extends EditRecord
                 ->modalDescription(fn (): string => 'Tailored integration steps and code snippets for the '.ucfirst($this->data['environment'] ?? $this->getRecord()->environment).' environment')
                 ->modalSubmitAction(false)
                 ->modalCancelActionLabel('Close')
-                ->modalContent(fn () => view('filament.resources.tenant-applications.components.quickstart-modal-content', [
+                ->modalContent(fn (): \Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View => view('filament.resources.tenant-applications.components.quickstart-modal-content', [
                     'record' => $this->getRecord(),
                 ])),
             ViewAction::make(),
