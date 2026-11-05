@@ -197,11 +197,17 @@ The setup wizard will:
 - Automatically sign you into the **Filament Administration Panel** at `/admin`.
 - Lock the `/setup` route to prevent unauthorized re-initialization.
 
+After setup or when returning later, administrators sign in directly through the Filament authentication gateway:
+
+![Filament Administrator Sign In](../images/screenshots/admin-login.png)
+
 ---
 
 ## Step 4: Register an Organization & Application
 
 Once logged into the Filament Admin Panel:
+
+![Filament Administration Dashboard](../images/screenshots/admin-dashboard.png)
 
 ### 1. Register Your First Organization (Tenant)
 
@@ -212,21 +218,36 @@ Once logged into the Filament Admin Panel:
 ### 2. Register an Application
 
 1. In the navigation sidebar under **Applications**, click **New Application**.
-2. Fill out the application details:
-    - **Name**: e.g., _Customer Portal_
+2. Fill out the application details in the modal:
+    - **Name**: e.g., _Acme Enterprise Auth_
     - **Framework**: Select `Laravel`, `Node.js`, `Vue`, or `React`.
     - **Environment**: Choose `Development` or `Production`.
-    - **Callback URLs**: Enter the exact redirect URI where authorization codes will be delivered (e.g. `http://localhost:8001/koamishin/callback`).
+    - **Callback URLs**: Enter the exact redirect URI where authorization codes will be delivered (e.g. `https://portal-app-1.test/koamishin/callback`).
     - **Authentication Features**: Configure whether to allow self-service signups, require verified email, or enforce OAuth consent prompts (off by default for seamless first-party sign-in).
+
+![Register New Application Modal](../images/screenshots/new-application-modal.png)
+
 3. Click **Create Application**.
 
-> 🔑 **Important**: The modal will display your **Publishable Key** (`pk_...`) and **Secret Key** (`sk_...`), plus the underlying OAuth **Client ID** and **Client Secret**. Copy and store the secret keys immediately—they are hashed and cannot be shown again.
+> 🔑 **Important**: The application view will display your **Publishable Key** (`pk_...`) and **Secret Key** (`sk_...`), plus the underlying OAuth **Client ID** and **Client Secret**. It also provides tailored setup snippets ready to copy into your `.env`:
+
+![Application Credentials & Setup Guide](../images/screenshots/application-keys-guide.png)
 
 ---
 
-## Step 5: Verify Your Endpoints
+## Step 5: Connect Your Application & Verify
 
-You can verify that your identity provider is healthy by querying its standard endpoints:
+Once configured, users opening your consumer application's login or register page are redirected directly to your branded sign-in:
+
+![Consumer Application Home](../images/screenshots/consumer-app-welcome.png)
+
+Clicking **Log in** routes the browser to your self-hosted Koamishin Auth instance:
+
+![Hosted Application Sign-In](../images/screenshots/hosted-login-screen.png)
+
+Because first-party OAuth consent prompts are skipped by default, logging in returns the user straight to your application dashboard with an active, authenticated session.
+
+You can also verify that your identity provider is healthy by querying its standard endpoints:
 
 ```bash
 # 1. Healthcheck endpoint

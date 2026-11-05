@@ -8,7 +8,10 @@ export async function getStaticPaths() {
 }
 
 export function GET({ props }) {
+    const isImage = props.source.endsWith('.png');
+    const contentType = isImage ? 'image/png' : 'text/plain; charset=utf-8';
+
     return new Response(props.content, {
-        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+        headers: { 'Content-Type': contentType },
     });
 }

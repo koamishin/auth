@@ -32,6 +32,12 @@ const pages = [
 const publicFiles = [
     'packages/koamishin-auth-js/LICENSE',
     'packages/koamishin-auth-php/LICENSE',
+    'docs/images/screenshots/admin-dashboard.png',
+    'docs/images/screenshots/admin-login.png',
+    'docs/images/screenshots/application-keys-guide.png',
+    'docs/images/screenshots/consumer-app-welcome.png',
+    'docs/images/screenshots/hosted-login-screen.png',
+    'docs/images/screenshots/new-application-modal.png',
 ];
 
 function getBase() {
@@ -120,7 +126,7 @@ export async function getPublicFiles() {
     return Promise.all(
         publicFiles.map(async (source) => ({
             source,
-            content: await readFile(path.join(root, source), 'utf8'),
+            content: await readFile(path.join(root, source)),
         })),
     );
 }
