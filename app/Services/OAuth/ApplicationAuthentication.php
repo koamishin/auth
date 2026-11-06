@@ -383,7 +383,25 @@ class ApplicationAuthentication
     {
         abort_unless($this->allowsSignups($environment) && ! $user->isBanned(), 403);
 
-        DB::transaction(function () use ($environment, $user): void {
+        $this->attachMembership($environment, $user, null);
+    }
+
+    /**
+     * Enroll a user who redeemed an invitation.
+     *
+     * An invitation is the explicit permission to join, so this deliberately
+     * skips the sign-up gate that {@see enroll()} enforces.
+     */
+    public function enrollInvited(TenantApplicationEnvironment $environment, User $user, ?string $role = null): void
+    {
+        abort_if($user->isBanned(), 403);
+
+        $this->attachMembership($environment, $user, $role);
+    }
+
+    private function attachMembership(TenantApplicationEnvironment $environment, User $user, ?string $role): void
+    {
+        DB::transaction(function () use ($environment, $user, $role): void {
             $userQuery = User::query()->whereKey($user->getKey());
             $userQuery->lockForUpdate();
             $lockedUser = $userQuery->firstOrFail();
@@ -391,7 +409,12 @@ class ApplicationAuthentication
             $current = is_string($environment->oauth_client_id)
                 ? $this->access->environmentForClient($environment->oauth_client_id)
                 : null;
-            abort_unless($current?->is($environment) && $this->allowsSignups($current), 403);
+
+            // Enrollment normally requires open sign-ups. A redeemed invitation is
+            // itself the permission to join, so it passes an explicit role instead.
+            abort_unless($current?->is($environment), 403);
+            abort_unless($role !== null || $this->allowsSignups($current), 403);
+
             $tenant = $current->application->tenant;
             $tenant->users()->syncWithoutDetaching([$user->getKey()]);
             if ($user->tenant_application_environment_id === null) {
@@ -401,7 +424,10 @@ class ApplicationAuthentication
                 ])->save();
             }
             $membership = $current->application->users($current->environment)->syncWithoutDetaching([
-                $user->getKey() => ['environment' => $current->environment],
+                $user->getKey() => [
+                    'environment' => $current->environment,
+                    ...($role === null ? [] : ['role' => $role]),
+                ],
             ]);
 
             if ($membership['attached'] !== []) {

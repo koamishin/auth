@@ -6,11 +6,15 @@ namespace App\Filament\Resources\TenantApplications\Pages;
 
 use App\Filament\Resources\TenantApplications\TenantApplicationResource;
 use App\Filament\Resources\Users\UserResource;
+use App\Models\ApplicationInvitation;
 use App\Models\TenantApplication;
+use App\Models\TenantApplicationEnvironment;
 use App\Models\User;
+use App\Services\Auth\ApplicationInvitationService;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Concerns\InteractsWithRecord;
@@ -65,6 +69,128 @@ class ListApplicationUsers extends Page implements HasTable
         $application = $this->getRecord();
 
         return 'Accounts that can sign in to '.$application->name.' in the '.$application->environment.' environment.';
+    }
+
+    /**
+     * Invite an address to this application, or manage the invitations that are
+     * still outstanding.
+     *
+     * @return array<int, Action>
+     */
+    #[	Override]
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('invite')
+                ->label('Invite user')
+                ->icon('heroicon-o-paper-airplane')
+                ->modalHeading(fn (): string => 'Invite someone to '.$this->getRecord()->name)
+                ->modalDescription('They receive an email with a link. Only that address can redeem it.')
+                ->form([
+                    TextInput::make('email')
+                        ->label('Email address')
+                        ->email()
+                        ->required()
+                        ->maxLength(255),
+
+                    Select::make('role')
+                        ->label('Application role')
+                        ->options([
+                            'owner' => 'Owner',
+                            'admin' => 'Admin',
+                            'editor' => 'Editor',
+                            'member' => 'Member',
+                            'viewer' => 'Viewer',
+                        ])
+                        ->default('member')
+                        ->required(),
+                ])
+                ->action(function (array $data): void {
+                    /** @var TenantApplication $application */
+                    $application = $this->getRecord();
+                    $environment = $application->environments()
+                        ->where('environment', $application->environment)
+                        ->firstOrFail();
+
+                    app(ApplicationInvitationService::class)->invite(
+                        $environment,
+                        $data['email'],
+                        $data['role'],
+                        Auth::user() instanceof User ? Auth::user() : null,
+                    );
+
+                    Notification::make()
+                        ->title('Invitation sent')
+                        ->body($data['email'].' can now join this application.')
+                        ->success()
+                        ->send();
+                }),
+        ];
+    }
+
+    /**
+     * Invitations that have not been redeemed yet.
+     *
+     * @return Collection<int, ApplicationInvitation>
+     */
+    public function pendingInvitations(): Collection
+    {
+        /** @var TenantApplication $application */
+        $application = $this->getRecord();
+        $environment = $application->environments()
+            ->where('environment', $application->environment)
+            ->first();
+
+        if (! $environment instanceof TenantApplicationEnvironment) {
+            return collect();
+        }
+
+        return ApplicationInvitation::query()
+            ->where('tenant_application_environment_id', $environment->getKey())
+            ->pending()
+            ->where('expires_at', '>', now())
+            ->latest()
+            ->get();
+    }
+
+    /**
+     * Send a fresh link for an invitation whose email was lost.
+     */
+    public function resendInvitation(int|string $invitationId): void
+    {
+        $invitation = $this->pendingInvitations()->firstWhere('id', $invitationId);
+
+        if (! $invitation instanceof ApplicationInvitation) {
+            return;
+        }
+
+        app(ApplicationInvitationService::class)->resend($invitation);
+
+        Notification::make()
+            ->title('Invitation resent')
+            ->body('A new link was sent to '.$invitation->email.'.')
+            ->success()
+            ->send();
+    }
+
+    /**
+     * Cancel an invitation that has not been redeemed.
+     */
+    public function revokeInvitation(int|string $invitationId): void
+    {
+        $invitation = $this->pendingInvitations()->firstWhere('id', $invitationId);
+
+        if (! $invitation instanceof ApplicationInvitation) {
+            return;
+        }
+
+        $invitation->revoke();
+
+        Notification::make()
+            ->title('Invitation revoked')
+            ->body('The link for '.$invitation->email.' no longer works.')
+            ->warning()
+            ->send();
     }
 
     public function table(Table $table): Table

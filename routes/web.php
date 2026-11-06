@@ -2,6 +2,7 @@
 
 use App\Enums\SocialLoginProvider;
 use App\Filament\Resources\TenantApplications\TenantApplicationResource;
+use App\Http\Controllers\Auth\ApplicationInvitationController;
 use App\Http\Controllers\Auth\EmailCodeSignInController;
 use App\Http\Controllers\Auth\HostedAppearancePreviewController;
 use App\Http\Controllers\Auth\HostedAuthenticationController;
@@ -84,6 +85,17 @@ Route::post('email/verify-code/resend', [VerifyEmailCodeController::class, 'rese
 Route::get('mfa/setup', MfaSetupController::class)
     ->middleware('auth')
     ->name('mfa.setup');
+
+// Redeeming an invitation to join an application.
+Route::get('invitations/{token}', [ApplicationInvitationController::class, 'show'])
+    ->middleware('throttle:30,1')
+    ->name('invitations.show');
+Route::post('invitations/{token}/accept', [ApplicationInvitationController::class, 'accept'])
+    ->middleware('throttle:10,1')
+    ->name('invitations.accept');
+Route::post('invitations/{token}/register', [ApplicationInvitationController::class, 'register'])
+    ->middleware('throttle:10,1')
+    ->name('invitations.register');
 
 Route::get('.well-known/openid-configuration', [OpenIdConnectController::class, 'discovery'])->name('openid.discovery');
 Route::get('oauth/jwks', [OpenIdConnectController::class, 'jwks'])->name('oauth.jwks');
