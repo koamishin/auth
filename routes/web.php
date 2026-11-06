@@ -2,6 +2,7 @@
 
 use App\Enums\SocialLoginProvider;
 use App\Filament\Resources\TenantApplications\TenantApplicationResource;
+use App\Http\Controllers\Auth\HostedAppearancePreviewController;
 use App\Http\Controllers\Auth\HostedAuthenticationController;
 use App\Http\Controllers\Auth\OpenIdConnectController;
 use App\Http\Controllers\Auth\SocialAuthController;
@@ -65,6 +66,9 @@ Route::get('oauth/jwks', [OpenIdConnectController::class, 'jwks'])->name('oauth.
 
 Route::get('setup', [SetupController::class, 'index'])->name('setup.index');
 Route::post('setup', [SetupController::class, 'store'])->name('setup.store');
+
+Route::middleware(['web', 'auth'])->get('admin/{tenant:slug}/tenant-applications/{application}/appearance/preview', HostedAppearancePreviewController::class)
+    ->name('tenant-applications.appearance.preview');
 
 Route::middleware(['web', 'auth'])->post('admin/{tenant:slug}/switch-app/{application}', function (Request $request, Tenant $tenant, TenantApplication $application): RedirectResponse {
     $user = $request->user();

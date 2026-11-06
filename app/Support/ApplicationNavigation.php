@@ -62,7 +62,13 @@ class ApplicationNavigation
                 'items' => [
                     ['label' => 'Settings', 'icon' => 'heroicon-o-cog-6-tooth', 'url' => $url, 'active' => $active, 'fragment' => null],
                     ['label' => 'Environment', 'icon' => 'heroicon-o-globe-alt', 'url' => $url, 'active' => $active, 'fragment' => 'environment-callbacks'],
-                    ['label' => 'Appearance', 'icon' => 'heroicon-o-paint-brush', 'url' => $url, 'active' => $active, 'fragment' => 'hosted-login-appearance'],
+                    [
+                        'label' => 'Appearance',
+                        'icon' => 'heroicon-o-paint-brush',
+                        'url' => TenantApplicationResource::getUrl('appearance', ['tenant' => $tenant, 'record' => $application]),
+                        'active' => request()->routeIs('filament.admin.resources.tenant-applications.appearance'),
+                        'fragment' => null,
+                    ],
                     ['label' => 'Authentication features', 'icon' => 'heroicon-o-shield-check', 'url' => $url, 'active' => $active, 'fragment' => 'application-authentication-features'],
                     ['label' => 'Social connections', 'icon' => 'heroicon-o-share', 'url' => $url, 'active' => $active, 'fragment' => 'social-connections'],
                 ],

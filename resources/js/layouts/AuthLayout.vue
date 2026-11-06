@@ -56,6 +56,14 @@ const hostedTheme = computed(() => {
     return theme;
 });
 
+const hostedBackground = computed(() => {
+    const background = (page.props as AppPageProps).authBackground;
+
+    return background === 'gradient' || background === 'spotlight' || background === 'grid' ? background : null;
+});
+
+const appearancePreview = computed(() => (page.props as AppPageProps).appearancePreview ?? null);
+
 const layoutComponent = computed(() => {
     const layout = page.props.authLayout ?? 'simple';
 
@@ -72,7 +80,7 @@ const layoutComponent = computed(() => {
 
 <template>
     <div
-        :class="
+        :class="[
             hostedTheme
                 ? [
                       'hosted-auth-theme',
@@ -81,8 +89,9 @@ const layoutComponent = computed(() => {
                       'text-foreground',
                       `theme-${hostedTheme}`,
                   ]
-                : undefined
-        "
+                : undefined,
+            hostedBackground ? `auth-bg-${hostedBackground}` : undefined,
+        ]"
     >
         <component
             :is="layoutComponent"
@@ -93,5 +102,17 @@ const layoutComponent = computed(() => {
         >
             <slot />
         </component>
+        <a
+            v-if="appearancePreview"
+            :href="appearancePreview.backUrl"
+            class="fixed inset-x-4 bottom-4 z-50 mx-auto flex max-w-md items-center justify-center gap-2 rounded-full border border-white/10 bg-gray-950/90 px-4 py-2 text-xs font-medium text-white shadow-lg backdrop-blur transition-colors hover:bg-gray-900"
+        >
+            <span class="inline-flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                Previewing <strong>{{ appearancePreview.environment }}</strong> appearance
+            </span>
+            <span class="text-white/60">·</span>
+            <span class="font-semibold">Back to editor</span>
+        </a>
     </div>
 </template>

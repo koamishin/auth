@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Filament\Pages\Tenancy\RegisterTenant;
+use App\Filament\Resources\TenantApplications\Pages\AppearanceTenantApplication;
 use App\Filament\Resources\TenantApplications\Pages\CreateTenantApplication;
 use App\Filament\Resources\TenantApplications\Pages\EditTenantApplication;
 use App\Filament\Resources\TenantApplications\Pages\ListTenantApplications;
@@ -199,8 +200,6 @@ test('application settings keep provider secrets encrypted and scoped to the sel
     Filament::bootCurrentPanel();
 
     Livewire::actingAs($admin)->test(EditTenantApplication::class, ['record' => $application->getKey()])
-        ->set('data.login_title', 'Welcome to Billing')
-        ->set('data.auth_layout', 'card')
         ->set('data.email_verification_policy', 'required')
         ->set('data.passkeys_enabled', false)
         ->set('data.sso_enabled', true)
@@ -213,7 +212,6 @@ test('application settings keep provider secrets encrypted and scoped to the sel
 
     $settings = $development->fresh()->settings;
     expect($settings)->toMatchArray([
-        'login_title' => 'Welcome to Billing', 'auth_layout' => 'card',
         'email_verification_required' => true, 'passkeys_enabled' => false, 'sso_enabled' => true,
     ]);
     expect($settings['social_providers']['github']['client_secret'])->not->toBe('billing-secret');
@@ -223,7 +221,6 @@ test('application settings keep provider secrets encrypted and scoped to the sel
 
     Livewire::actingAs($admin)->test(EditTenantApplication::class, ['record' => $application->getKey()])
         ->assertSet('data.social_github_client_secret', null)
-        ->set('data.login_title', 'Updated heading')
         ->call('save', false)
         ->assertHasNoErrors();
     expect(Crypt::decryptString($development->fresh()->settings['social_providers']['github']['client_secret']))->toBe('billing-secret');
@@ -284,7 +281,7 @@ test('application email verification can be required, disabled, or inherited per
     expect($development->fresh()->requiresEmailVerification())->toBeTrue();
 });
 
-test('hosted appearance themes are validated and saved independently per environment', function (): void {
+test('hosted appearance settings are configured on a dedicated page per environment', function (): void {
     Role::query()->firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
     $admin = User::factory()->create();
     $admin->assignRole('super_admin');
@@ -302,15 +299,32 @@ test('hosted appearance themes are validated and saved independently per environ
     Filament::setTenant($tenant);
     Filament::bootCurrentPanel();
 
-    Livewire::actingAs($admin)->test(EditTenantApplication::class, ['record' => $application->getKey()])
+    Livewire::actingAs($admin)->test(AppearanceTenantApplication::class, ['record' => $application->getKey()])
+        ->assertSee('id="edit-appearance-form"', false)
+        ->assertSee('form="edit-appearance-form"', false)
         ->assertSet('data.auth_color_theme', 'inherit')
+        ->assertSet('data.auth_layout', 'inherit')
+        ->assertSet('data.auth_background', 'inherit')
+        ->set('data.login_title', 'Welcome to Billing')
+        ->set('data.login_description', 'Sign in to your workspace')
+        ->set('data.login_logo_url', 'https://example.com/logo.svg')
+        ->set('data.auth_layout', 'split')
         ->set('data.auth_color_theme', 'rose')
+        ->set('data.auth_background', 'spotlight')
         ->call('save', false)
         ->assertHasNoErrors();
-    expect($development->fresh()->getSetting('auth_color_theme'))->toBe('rose');
+
+    expect($development->fresh()->settings)->toMatchArray([
+        'login_title' => 'Welcome to Billing',
+        'login_description' => 'Sign in to your workspace',
+        'login_logo_url' => 'https://example.com/logo.svg',
+        'auth_layout' => 'split',
+        'auth_color_theme' => 'rose',
+        'auth_background' => 'spotlight',
+    ]);
     expect($production->fresh()->settings)->toBe(['auth_color_theme' => 'ocean', 'custom_setting' => 'keep']);
 
-    Livewire::actingAs($admin)->test(EditTenantApplication::class, ['record' => $application->getKey()])
+    Livewire::actingAs($admin)->test(AppearanceTenantApplication::class, ['record' => $application->getKey()])
         ->assertSet('data.auth_color_theme', 'rose')
         ->set('data.environment', 'production')
         ->assertSet('data.auth_color_theme', 'ocean')
@@ -319,12 +333,66 @@ test('hosted appearance themes are validated and saved independently per environ
         ->assertHasErrors();
     expect($production->fresh()->settings)->toBe(['auth_color_theme' => 'ocean', 'custom_setting' => 'keep']);
 
-    Livewire::actingAs($admin)->test(EditTenantApplication::class, ['record' => $application->getKey()])
+    Livewire::actingAs($admin)->test(AppearanceTenantApplication::class, ['record' => $application->getKey()])
+        ->set('data.login_title', ' ')
+        ->set('data.login_description', ' ')
+        ->set('data.login_logo_url', '')
+        ->set('data.auth_layout', 'inherit')
         ->set('data.auth_color_theme', 'inherit')
+        ->set('data.auth_background', 'inherit')
         ->call('save', false)
         ->assertHasNoErrors();
-    expect($development->fresh()->settings)->not->toHaveKey('auth_color_theme');
+    expect($development->fresh()->settings)->toBe(['allow_signups' => true]);
     expect($production->fresh()->getSetting('auth_color_theme'))->toBe('ocean');
+});
+
+test('hosted appearance preview renders the configured sign-in screen', function (): void {
+    Role::query()->firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+    $admin = User::factory()->create();
+    $admin->assignRole('super_admin');
+    $tenant = Tenant::query()->create(['name' => 'Preview org', 'slug' => 'preview-org']);
+    $application = app(ApplicationProvisioner::class)->create($tenant, [
+        'name' => 'Preview app', 'framework' => 'laravel', 'environment' => 'development',
+        'redirect_uris' => ['http://localhost:8000/callback'],
+    ]);
+    $application->environments()->where('environment', 'production')->sole()
+        ->update(['settings' => ['auth_color_theme' => 'ocean']]);
+
+    actingAs($admin);
+    Filament::setCurrentPanel('admin');
+    Filament::setTenant($tenant);
+    Filament::bootCurrentPanel();
+
+    Livewire::actingAs($admin)->test(AppearanceTenantApplication::class, ['record' => $application->getKey()])
+        ->set('data.login_title', 'Preview sign-in')
+        ->set('data.auth_layout', 'split')
+        ->set('data.auth_color_theme', 'rose')
+        ->set('data.auth_background', 'spotlight')
+        ->call('save', false)
+        ->assertHasNoErrors();
+
+    $preview = function (string $environment) use ($application, $admin) {
+        return $this->actingAs($admin)
+            ->get("/admin/preview-org/tenant-applications/{$application->getKey()}/appearance/preview?environment={$environment}")
+            ->assertOk();
+    };
+
+    $page = $preview('development');
+    $page->assertSee('"authLayout":"split"', false);
+    $page->assertSee('"authColorTheme":"rose"', false);
+    $page->assertSee('"authBackground":"spotlight"', false);
+    $page->assertSee('"loginTitle":"Preview sign-in"', false);
+    $page->assertSee('"name":"Preview app"', false);
+    $page->assertSee('"environment":"development"', false);
+
+    $page = $preview('production');
+    $page->assertSee('"authColorTheme":"ocean"', false);
+    $page->assertSee('"environment":"production"', false);
+
+    $outsider = User::factory()->create();
+    $this->actingAs($outsider)
+        ->get("/admin/preview-org/tenant-applications/{$application->getKey()}/appearance/preview")
+        ->assertForbidden();
 });
 
 test('production provisioning refuses an insecure callback without creating a client', function (): void {

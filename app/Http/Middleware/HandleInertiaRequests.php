@@ -72,6 +72,18 @@ class HandleInertiaRequests extends Middleware
                     ? $theme
                     : 'default';
             },
+            'authBackground' => function () use ($request): ?string {
+                $environment = $request->attributes->get('koamishin.application_environment');
+                if (! $environment instanceof TenantApplicationEnvironment) {
+                    return null;
+                }
+
+                $background = $environment->getSetting('auth_background');
+
+                return is_string($background) && array_key_exists($background, TenantApplicationEnvironment::AUTH_BACKGROUNDS)
+                    ? $background
+                    : null;
+            },
             'notificationsEnabled' => app(ApplicationFeaturesSettings::class)->notifications_enabled,
             'settingsFeatures' => $settingsFeatures,
             'socialProviders' => function () use ($request): array {

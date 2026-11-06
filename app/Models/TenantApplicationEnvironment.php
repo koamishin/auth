@@ -44,6 +44,12 @@ class TenantApplicationEnvironment extends Model
         'claude' => 'Claude',
     ];
 
+    public const AUTH_BACKGROUNDS = [
+        'gradient' => 'Soft gradient',
+        'spotlight' => 'Spotlight',
+        'grid' => 'Subtle grid',
+    ];
+
     protected $fillable = [
         'tenant_application_id',
         'environment',

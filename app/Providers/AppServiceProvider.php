@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Observers\UserObserver;
 use App\Services\OAuth\ApplicationAuthentication;
 use App\Services\OAuth\PassportBridgeClientRepository;
+use BladeUI\Icons\Factory;
 use Carbon\CarbonImmutable;
 use Filament\Panel;
 use Illuminate\Support\Facades\Date;
@@ -42,12 +43,24 @@ class AppServiceProvider extends ServiceProvider
         $this->configureDefaults();
         $this->configureFeatures();
         $this->configurePassport();
+        $this->configureBrandIcons();
 
         \Filament\Resources\Resource::scopeToTenant(false);
 
         Gate::before(fn ($user, $ability): ?true => method_exists($user, 'hasRole') && $user->hasRole('super_admin') ? true : null);
 
         User::observe(UserObserver::class);
+    }
+
+    protected function configureBrandIcons(): void
+    {
+        $this->callAfterResolving(
+            Factory::class,
+            fn (Factory $factory): bool => (bool) $factory->add('kms-brand', [
+                'path' => resource_path('svg/brand'),
+                'prefix' => 'kms',
+            ]),
+        );
     }
 
     protected function configureDefaults(): void

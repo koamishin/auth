@@ -13,5 +13,7 @@ export type AppPageProps<
     sidebarOpen: boolean;
     authLayout: 'simple' | 'card' | 'split';
     authColorTheme?: ColorTheme | null;
+    authBackground?: 'gradient' | 'spotlight' | 'grid' | null;
+    appearancePreview?: { environment: string; backUrl: string } | null;
     [key: string]: unknown;
 };

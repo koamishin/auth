@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\TenantApplications;
 
 use App\Enums\SocialLoginProvider;
+use App\Filament\Resources\TenantApplications\Pages\AppearanceTenantApplication;
 use App\Filament\Resources\TenantApplications\Pages\CreateTenantApplication;
 use App\Filament\Resources\TenantApplications\Pages\EditTenantApplication;
 use App\Filament\Resources\TenantApplications\Pages\ListApplicationUsers;
@@ -59,6 +60,7 @@ class TenantApplicationResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema
+            ->columns(1)
             ->components([
                 Section::make('Select a project type')
                     ->description('Choose how authentication is structured for this application.')
@@ -95,6 +97,8 @@ class TenantApplicationResource extends Resource
                     ->id('general')
                     ->description(fn (string $operation): string => $operation === 'create' ? 'Application name and user sign-in options.' : 'Application name, description, and core branding identity.')
                     ->icon(fn (string $operation): string => $operation === 'create' ? 'heroicon-o-shield-check' : 'heroicon-o-adjustments-horizontal')
+                    ->contained(fn (string $operation): bool => $operation === 'create')
+                    ->columns(fn (string $operation): array => $operation === 'create' ? ['default' => 2] : ['default' => 1])
                     ->components([
                         TextInput::make('name')
                             ->label('Application name')
@@ -156,6 +160,7 @@ class TenantApplicationResource extends Resource
 
                 Section::make('Target Architecture & Framework')
                     ->id('target-architecture')
+                    ->contained(false)
                     ->description('Platform preset and OAuth client security profile.')
                     ->icon('heroicon-o-cpu-chip')
                     ->visible(fn (?TenantApplication $record): bool => $record instanceof TenantApplication)
@@ -173,27 +178,18 @@ class TenantApplicationResource extends Resource
                                 'nodejs' => 'Node.js (Backend)',
                             ])
                             ->icons([
-                                'nextjs' => 'heroicon-o-sparkles',
-                                'react' => 'heroicon-o-cube-transparent',
-                                'vue' => 'heroicon-o-code-bracket',
-                                'vanilla' => 'heroicon-o-globe-alt',
+                                'nextjs' => 'kms-nextjs',
+                                'react' => 'kms-reactjs',
+                                'vue' => 'kms-vuejs',
+                                'vanilla' => 'kms-javascript',
                                 'mobile' => 'heroicon-o-device-phone-mobile',
-                                'laravel' => 'heroicon-o-fire',
-                                'nodejs' => 'heroicon-o-server-stack',
-                            ])
-                            ->colors([
-                                'nextjs' => 'gray',
-                                'react' => 'info',
-                                'vue' => 'success',
-                                'vanilla' => 'primary',
-                                'mobile' => 'info',
-                                'laravel' => 'danger',
-                                'nodejs' => 'warning',
+                                'laravel' => 'kms-laravel',
+                                'nodejs' => 'kms-nodejs',
                             ])
                             ->columns([
-                                'default' => 2,
-                                'sm' => 3,
-                                'lg' => 4,
+                                'default' => 1,
+                                'sm' => 2,
+                                'lg' => 3,
                             ])
                             ->gridDirection('row')
                             ->live()
@@ -213,11 +209,13 @@ class TenantApplicationResource extends Resource
                                 'public' => 'Authenticates with your Publishable Key (pk_...) and mandatory S256 PKCE. Never embed secret keys in browser or mobile apps.',
                                 'confidential' => 'Authenticates code exchanges on your backend using your Publishable Key (pk_...) and Secret Key (sk_...).',
                             ])
-                            ->columns(2),
+                            ->columns(1),
                     ]),
 
                 Section::make('Environment & Callbacks')
                     ->id('environment-callbacks')
+                    ->contained(false)
+                    ->columns(1)
                     ->description('Configure deployment environment and whitelisted redirect callback URLs.')
                     ->icon('heroicon-o-globe-alt')
                     ->visible(fn (?TenantApplication $record): bool => $record instanceof TenantApplication)
@@ -261,25 +259,9 @@ class TenantApplicationResource extends Resource
                             ->placeholder('Add callback URL and press Enter')
                             ->default([]),
                     ]),
-                Section::make('Hosted login appearance')
-                    ->id('hosted-login-appearance')
-                    ->description('Customize the Portal-hosted login for the selected environment.')
-                    ->icon('heroicon-o-paint-brush')
-                    ->visible(fn (?TenantApplication $record): bool => $record instanceof TenantApplication)
-                    ->components([
-                        TextInput::make('login_title')->label('Login heading')->maxLength(120),
-                        TextInput::make('login_description')->label('Login description')->maxLength(255),
-                        TextInput::make('login_logo_url')->label('Logo URL')->url()->rules(['nullable', 'url:https'])->maxLength(2048)
-                            ->helperText('Use an HTTPS image URL. Leave blank to use the Portal logo.'),
-                        Select::make('auth_layout')->label('Login layout')->options([
-                            'inherit' => 'Use Portal default', 'simple' => 'Minimal', 'card' => 'Card', 'split' => 'Split',
-                        ])->default('inherit')->required(),
-                        Select::make('auth_color_theme')->label('Login color theme')
-                            ->options(['inherit' => 'Use default theme', ...TenantApplicationEnvironment::AUTH_COLOR_THEMES])
-                            ->default('inherit')->required(),
-                    ])->columns(2),
                 Section::make('Application authentication features')
                     ->id('application-authentication-features')
+                    ->contained(false)
                     ->description('These settings apply only to the selected environment. Portal-wide feature availability still applies.')
                     ->icon('heroicon-o-shield-check')
                     ->visible(fn (?TenantApplication $record): bool => $record instanceof TenantApplication)
@@ -299,9 +281,10 @@ class TenantApplicationResource extends Resource
                             ->default(false),
                         Toggle::make('sso_enabled')->label('Allow single sign-on')->default(false)
                             ->helperText('Share sign-in with other opted-in applications in this organization and environment for up to eight hours. Each application still checks membership and consent.'),
-                    ])->columns(2),
+                    ])->columns(1),
                 Section::make('Social connections')
                     ->id('social-connections')
+                    ->contained(false)
                     ->description('Choose Portal credentials, disable a provider, or configure credentials for this application environment. Custom secrets are encrypted and never displayed again.')
                     ->icon('heroicon-o-share')
                     ->visible(fn (?TenantApplication $record): bool => $record instanceof TenantApplication)
@@ -331,6 +314,7 @@ class TenantApplicationResource extends Resource
             'login_logo_url' => $config?->getSetting('login_logo_url'),
             'auth_layout' => $config?->getSetting('auth_layout', 'inherit') ?? 'inherit',
             'auth_color_theme' => $config?->getSetting('auth_color_theme', 'inherit') ?? 'inherit',
+            'auth_background' => $config?->getSetting('auth_background', 'inherit') ?? 'inherit',
         ];
         $connections = $config?->getSetting('social_providers', []);
         foreach (SocialLoginProvider::cases() as $provider) {
@@ -348,6 +332,8 @@ class TenantApplicationResource extends Resource
         $prefix = 'social_'.$provider->value;
 
         return Section::make($provider->label())
+            ->icon('kms-'.$provider->value)
+            ->contained(false)
             ->components([
                 Select::make($prefix.'_mode')->label('Connection')->options([
                     'inherit' => 'Use Portal connection', 'disabled' => 'Disabled', 'custom' => 'Use application credentials',
@@ -360,7 +346,7 @@ class TenantApplicationResource extends Resource
                 TextInput::make($prefix.'_callback')->label('Provider callback URL')
                     ->default(rtrim((string) config('app.url'), '/').$provider->defaultRedirectPath())
                     ->disabled()->dehydrated(false)->visible(fn (Get $get): bool => $get($prefix.'_mode') === 'custom'),
-            ])->columns(2);
+            ])->columns(1);
     }
 
     #[\Override]
@@ -489,6 +475,7 @@ class TenantApplicationResource extends Resource
             'create' => CreateTenantApplication::route('/create'),
             'view' => ViewTenantApplication::route('/{record}'),
             'edit' => EditTenantApplication::route('/{record}/edit'),
+            'appearance' => AppearanceTenantApplication::route('/{record}/appearance'),
             'users' => ListApplicationUsers::route('/{record}/users'),
         ];
     }

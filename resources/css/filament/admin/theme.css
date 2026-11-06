@@ -74,28 +74,37 @@
     flex-direction: column;
     gap: 0.125rem;
     min-width: 0;
-    padding-inline: 0.25rem;
+    padding: 0.5rem 0.625rem;
+    border-radius: 0.5rem;
+    background: var(--gray-100);
+}
+
+.dark .fi-app-nav-context {
+    background: rgb(255 255 255 / 0.05);
+}
+
+.fi-app-nav-context::before {
+    color: var(--gray-400);
+    content: 'Application';
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 }
 
 .fi-app-nav-name {
     overflow: hidden;
     color: var(--gray-950);
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     font-weight: 600;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.fi-app-nav-group-button svg {
-    width: 1rem;
-    height: 1rem;
-    flex: none;
-}
-
 .fi-app-nav-groups {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 1rem;
 }
 
 .fi-app-nav-group-button,
@@ -103,17 +112,30 @@
     display: flex;
     align-items: center;
     width: 100%;
-    border-radius: 0.375rem;
-    padding: 0.5rem;
+    border-radius: 0.5rem;
+    padding: 0.4375rem 0.625rem;
     text-align: start;
+    transition:
+        background-color 0.15s ease,
+        color 0.15s ease;
 }
 
 .fi-app-nav-group-button {
     justify-content: space-between;
     gap: 0.5rem;
-    color: var(--gray-700);
-    font-size: 0.8125rem;
+    color: var(--gray-400);
+    font-size: 0.6875rem;
     font-weight: 600;
+    letter-spacing: 0.06em;
+    padding-block: 0.25rem;
+    text-transform: uppercase;
+}
+
+.fi-app-nav-group-button svg {
+    color: var(--gray-400);
+    height: 0.875rem;
+    transition: transform 0.15s ease;
+    width: 0.875rem;
 }
 
 .fi-app-nav-chevron-closed {
@@ -128,26 +150,31 @@
     display: flex;
     flex-direction: column;
     gap: 0.125rem;
-    margin-inline-start: 0.75rem;
-    border-inline-start: 1px solid var(--gray-200);
-    padding-inline-start: 0.375rem;
 }
 
 .fi-app-nav-link {
     color: var(--gray-600);
     font-size: 0.8125rem;
+    font-weight: 500;
+    gap: 0.625rem;
+    position: relative;
 }
 
 .fi-app-nav-icon {
-    display: none;
-    width: 1.5rem;
-    height: 1.5rem;
+    color: var(--gray-400);
+    height: 1rem;
     flex: none;
+    transition: color 0.15s ease;
+    width: 1rem;
 }
 
-.fi-app-nav-group-button:hover,
 .fi-app-nav-link:hover {
     background: var(--gray-100);
+    color: var(--gray-900);
+}
+
+.fi-app-nav-link:hover .fi-app-nav-icon {
+    color: var(--gray-600);
 }
 
 .fi-app-nav-link-active {
@@ -156,33 +183,86 @@
     font-weight: 600;
 }
 
+.fi-app-nav-link-active::before {
+    background: var(--primary-600);
+    border-radius: 999px;
+    content: '';
+    height: 1.125rem;
+    inset-inline-start: -0.125rem;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0.1875rem;
+}
+
+.fi-app-nav-link-active .fi-app-nav-icon {
+    color: var(--primary-600);
+}
+
 .fi-app-nav-group-button:focus-visible,
 .fi-app-nav-link:focus-visible {
     outline: 2px solid var(--primary-500);
     outline-offset: 2px;
 }
 
+.dark .fi-app-nav-context::before {
+    color: var(--gray-500);
+}
+
 .dark .fi-app-nav-name {
     color: var(--gray-100);
 }
 
-.dark .fi-app-nav-items {
-    border-color: var(--gray-700);
+.dark .fi-app-nav-group-button {
+    color: var(--gray-500);
 }
 
-.dark .fi-app-nav-group-button,
+.dark .fi-app-nav-group-button svg {
+    color: var(--gray-500);
+}
+
 .dark .fi-app-nav-link {
     color: var(--gray-300);
 }
 
-.dark .fi-app-nav-group-button:hover,
+.dark .fi-app-nav-icon {
+    color: var(--gray-500);
+}
+
 .dark .fi-app-nav-link:hover {
     background: rgb(255 255 255 / 0.05);
+    color: var(--gray-100);
+}
+
+.dark .fi-app-nav-link:hover .fi-app-nav-icon {
+    color: var(--gray-300);
 }
 
 .dark .fi-app-nav-link-active {
     background: rgb(255 255 255 / 0.08);
     color: var(--primary-400);
+}
+
+.dark .fi-app-nav-link-active::before {
+    background: var(--primary-400);
+}
+
+.dark .fi-app-nav-link-active .fi-app-nav-icon {
+    color: var(--primary-400);
+}
+
+/* Collapsed desktop sidebar: icon-only mode */
+/* Brand logos sourced from the developer-icons set (kms-* icon prefix). */
+.dark svg path[fill='#000']:first-of-type {
+    fill: #fff;
+}
+
+.dark svg stop[stop-color='#fff'] {
+    stop-color: #000;
+}
+
+.dark svg path[fill='#161614'] {
+    fill: #fff;
 }
 
 @media (width >= 64rem) {
@@ -198,18 +278,80 @@
             display: none;
         }
 
-        .fi-app-nav-items {
-            margin-inline-start: 0;
-            border: 0;
-            padding-inline-start: 0;
-        }
-
         .fi-app-nav-link {
+            justify-content: center;
+            padding-inline: 0.5rem;
             width: max-content;
         }
 
+        .fi-app-nav-link-active::before {
+            display: none;
+        }
+
         .fi-app-nav-icon {
-            display: block;
+            height: 1.25rem;
+            width: 1.25rem;
         }
     }
+}
+
+/* ==========================================================================
+   Flat settings layout (application edit page)
+   Filament sections become flat, divider-separated blocks — no cards.
+   ========================================================================== */
+.kms-settings-form .fi-section {
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    margin: 0;
+    padding-block: 2.5rem;
+}
+
+.kms-settings-form .fi-section:first-child {
+    padding-top: 0.5rem;
+}
+
+.kms-settings-form .fi-section + .fi-section {
+    border-top: 1px solid var(--gray-200) !important;
+}
+
+.dark .kms-settings-form .fi-section {
+    background: transparent !important;
+}
+
+.dark .kms-settings-form .fi-section + .fi-section {
+    border-top-color: rgb(255 255 255 / 0.08) !important;
+}
+
+.kms-settings-form .fi-section-header {
+    padding-block: 0;
+}
+
+.kms-settings-form .fi-section-header-title {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.kms-settings-form .fi-section-header-description {
+    margin-top: 0.125rem;
+    max-width: 42rem;
+}
+
+/* Nested sections (social providers) render as flat sub-blocks. */
+.kms-settings-form .fi-section .fi-section {
+    padding-block: 1.25rem;
+}
+
+.kms-settings-form .fi-section .fi-section + .fi-section {
+    border-top: 1px dashed var(--gray-200);
+}
+
+.dark .kms-settings-form .fi-section .fi-section + .fi-section {
+    border-top-color: rgb(255 255 255 / 0.06);
+}
+
+.kms-settings-form .fi-section .fi-section-header-title {
+    font-size: 0.875rem;
+    font-weight: 600;
 }
