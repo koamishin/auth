@@ -93,7 +93,10 @@ class UserResource extends Resource
                         TextInput::make('username')
                             ->label('Username (@)')
                             ->prefix('@')
-                            ->maxLength(50)
+                            ->helperText('4–64 characters. Letters, numbers, hyphens, and underscores only.')
+                            ->minLength(4)
+                            ->maxLength(64)
+                            ->rules(['regex:/^[A-Za-z0-9_-]+$/'])
                             ->unique(ignoreRecord: true, modifyRuleUsing: fn (Unique $rule, ?User $record): Unique => $rule->where('identity_namespace', $record?->getAttribute('identity_namespace') ?? User::PORTAL_IDENTITY_NAMESPACE)),
                         TextInput::make('phone_number')
                             ->label('Phone Number')

@@ -218,7 +218,7 @@ class AuthenticationTenantApplication extends EditRecord
                 ->components([
                     Toggle::make('auth_password_enabled')
                         ->label('Allow password authentication')
-                        ->helperText('Turn off to require a passwordless method such as a passkey. Users with existing passwords will be blocked from password sign-in.')
+                        ->helperText('Turning this off stops new passwords from being created — sign-up and password resets will require another method. Users who already have a password keep signing in with it, so nobody is locked out.')
                         ->default(true)
                         ->rules(['boolean']),
 
@@ -229,7 +229,11 @@ class AuthenticationTenantApplication extends EditRecord
                         ->maxValue(128)
                         ->default(8)
                         ->required()
-                        ->helperText('Applies to new passwords for this application environment.'),
+                        ->helperText('Enforced whenever a password is created or changed in this environment. Always applied on top of the platform default.')
+                        // Hidden while passwords are off, but the value is kept so
+                        // re-enabling passwords restores the previous minimum.
+                        ->dehydratedWhenHidden()
+                        ->visible(fn (Get $get): bool => $get('auth_password_enabled') !== false),
                 ]),
         ];
     }

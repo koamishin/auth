@@ -26,6 +26,8 @@ class CreateNewUser implements CreatesNewUsers
      */
     public function create(array $input): User
     {
+        $this->assertPasswordCreationAllowed('This application does not allow signing up with a password. Continue with a social provider instead.');
+
         Validator::make($input, [
             ...$this->profileRules(),
             'password' => $this->passwordRules(),

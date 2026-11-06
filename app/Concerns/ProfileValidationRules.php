@@ -55,6 +55,35 @@ trait ProfileValidationRules
         ];
     }
 
+    /**
+     * Get the validation rules used to validate usernames.
+     *
+     * Latin letters, digits, hyphens and underscores only, between 4 and 64
+     * characters, and unique within the identity namespace. The disallowed set
+     * (`^$!.#+~`) matches the characters Clerk refuses.
+     *
+     * @return array<int, \Illuminate\Contracts\Validation\Rule|array<mixed>|string>
+     */
+    protected function usernameRules(?int $userId = null, ?string $identityNamespace = null): array
+    {
+        $namespace = $identityNamespace ?? $this->resolveIdentityNamespace($userId);
+
+        $uniqueRule = Rule::unique(User::class)->where('identity_namespace', $namespace);
+
+        if ($userId !== null) {
+            $uniqueRule->ignore($userId);
+        }
+
+        return [
+            'nullable',
+            'string',
+            'min:4',
+            'max:64',
+            'regex:/^[A-Za-z0-9_-]+$/',
+            $uniqueRule,
+        ];
+    }
+
     protected function resolveIdentityNamespace(?int $userId = null): string
     {
         if ($userId !== null) {

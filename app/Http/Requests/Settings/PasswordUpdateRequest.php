@@ -19,6 +19,8 @@ class PasswordUpdateRequest extends FormRequest
      */
     public function rules(): array
     {
+        $this->assertPasswordCreationAllowed('This application does not allow passwords, so one cannot be set here.');
+
         return [
             'current_password' => $this->currentPasswordRules(),
             'password' => $this->passwordRules(),

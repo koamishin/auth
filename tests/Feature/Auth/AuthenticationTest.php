@@ -1,10 +1,12 @@
 <?php
 
+use App\Actions\Fortify\ResetUserPassword;
 use App\Models\Tenant;
 use App\Models\TenantApplicationEnvironment;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Validation\ValidationException;
 use Laravel\Passport\Client;
 use Spatie\Permission\Models\Role;
 
@@ -316,19 +318,32 @@ test('an application can disable email sign-in', function (): void {
     $this->assertGuest();
 });
 
-test('an application can disable password authentication', function (): void {
-    [$client, , $email] = signInPolicyEnvironment('signin-no-password', [
+test('disabling password authentication leaves existing passwords working', function (): void {
+    // Matches Clerk: turning password authentication off stops new passwords from
+    // being created and leaves established passwords able to sign in.
+    [$client, $environment, $email] = signInPolicyEnvironment('signin-no-password', [
         'allow_signups' => true,
         'auth_password_enabled' => false,
+        'oauth_consent_enabled' => true,
     ]);
 
-    $this->post('/login', [
+    $user = User::query()->where('email', $email)->sole();
+
+    $login = $this->post('/login', [
         'flow' => signInPolicyFlow($client),
         'email' => $email,
         'password' => 'app-password',
-    ])->assertSessionHasErrors('password');
+    ])->assertRedirect();
 
-    $this->assertGuest();
+    $consent = $this->get((string) $login->headers->get('Location'))->assertOk();
+    expect($consent->viewData('page')['props']['user']['id'])->toBe($user->id);
+
+    // New passwords cannot be created while the setting is off.
+    expect($environment->fresh()->allowsPasswordAuthentication())->toBeFalse();
+    expect(fn () => app(ResetUserPassword::class)->reset($user, [
+        'password' => 'Brand-New-Password-1!',
+        'password_confirmation' => 'Brand-New-Password-1!',
+    ]))->toThrow(ValidationException::class);
 });
 
 test('an application with email and password sign-in enabled still authenticates', function (): void {

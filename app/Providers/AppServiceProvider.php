@@ -19,6 +19,7 @@ use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
 use Laravel\Passkeys\Actions\GenerateRegistrationOptions;
 use Laravel\Passkeys\Actions\GenerateVerificationOptions;
+use Laravel\Passkeys\Actions\StorePasskey;
 use Laravel\Passport\Bridge\ClientRepository;
 use Laravel\Passport\Passport;
 use Laravel\Pennant\FeatureManager;
@@ -51,6 +52,11 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(
             GenerateVerificationOptions::class,
             \App\Services\Passkeys\GenerateVerificationOptions::class,
+        );
+
+        $this->app->bind(
+            StorePasskey::class,
+            \App\Services\Passkeys\StorePasskey::class,
         );
     }
 

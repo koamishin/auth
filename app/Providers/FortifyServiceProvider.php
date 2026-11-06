@@ -14,6 +14,7 @@ use App\Models\TenantApplicationEnvironment;
 use App\Models\User;
 use App\Services\OAuth\ApplicationAuthentication;
 use App\Settings\ApplicationFeaturesSettings;
+use App\Support\PasswordPolicy;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Auth\StatefulGuard;
@@ -24,7 +25,6 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Laravel\Fortify\Contracts\LoginResponse;
@@ -97,11 +97,9 @@ class FortifyServiceProvider extends ServiceProvider
                     ]);
                 }
 
-                if (! $environment->allowsPasswordAuthentication()) {
-                    throw ValidationException::withMessages([
-                        'password' => __('This application does not allow signing in with a password. Use another sign-in method.'),
-                    ]);
-                }
+                // Disabling password authentication stops new passwords from being
+                // created. Users who already have one keep signing in with it, which
+                // matches how Clerk scopes that setting and avoids locking people out.
             }
 
             $identityNamespace = $environment instanceof TenantApplicationEnvironment
@@ -155,7 +153,7 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::resetPasswordView(fn (Request $request) => Inertia::render('auth/ResetPassword', [
             'email' => $request->email,
             'token' => $request->route('token'),
-            'passwordRules' => Password::defaults()->toPasswordRulesString(),
+            'passwordRules' => PasswordPolicy::rulesForFrontend(),
         ]));
 
         Fortify::requestPasswordResetLinkView(fn (Request $request) => Inertia::render('auth/ForgotPassword', [
@@ -173,7 +171,7 @@ class FortifyServiceProvider extends ServiceProvider
             'application' => app(ApplicationAuthentication::class)->pageContext($request),
             'flow' => app(ApplicationAuthentication::class)->flowId($request),
             'hosted' => app(ApplicationAuthentication::class)->isHosted($request),
-            'passwordRules' => Password::defaults()->toPasswordRulesString(),
+            'passwordRules' => PasswordPolicy::rulesForFrontend(),
         ]));
 
         Fortify::twoFactorChallengeView(fn (Request $request) => Inertia::render('auth/TwoFactorChallenge', [

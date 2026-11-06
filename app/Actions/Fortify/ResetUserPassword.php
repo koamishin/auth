@@ -20,6 +20,8 @@ class ResetUserPassword implements ResetsUserPasswords
      */
     public function reset(User $user, array $input): void
     {
+        $this->assertPasswordCreationAllowed('This application does not allow passwords, so they cannot be reset. Use another sign-in method.');
+
         Validator::make($input, [
             'password' => $this->passwordRules(),
         ])->validate();

@@ -235,6 +235,22 @@ class TenantApplicationEnvironment extends Model
         return $this->getSetting('auth_password_enabled', true) === true;
     }
 
+    /**
+     * Minimum length required for passwords created in this environment.
+     */
+    public function minimumPasswordLength(): int
+    {
+        $length = $this->getSetting('auth_password_min_length', 8);
+
+        if (! is_numeric($length)) {
+            return 8;
+        }
+
+        $length = (int) $length;
+
+        return $length >= 8 && $length <= 128 ? $length : 8;
+    }
+
     public function emailVerificationMethod(): string
     {
         $method = $this->getSetting('email_verification_method', 'link');
