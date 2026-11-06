@@ -9,7 +9,6 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\Auth\EmailCodeService;
 use Illuminate\Auth\Events\Verified;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -41,7 +40,7 @@ class VerifyEmailCodeController extends Controller
             ]);
         }
 
-        if (!$user->hasVerifiedEmail()) {
+        if (! $user->hasVerifiedEmail()) {
             $this->codes->verify($user, (string) $request->input('code'), EmailCodePurpose::Verification);
 
             $user->markEmailAsVerified();
