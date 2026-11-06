@@ -334,6 +334,24 @@ class ApplicationAuthentication
             || $request->header('X-Koamishin-Hosted') === '1';
     }
 
+    /**
+     * Record how the current sign-in was performed.
+     *
+     * Satisfaction of a multi-factor requirement belongs to one sign-in, so a
+     * password sign-in must clear a passkey's satisfaction rather than inherit
+     * it from earlier in the same session.
+     */
+    public function markSignInSatisfiesMultiFactor(Request $request, bool $satisfied): void
+    {
+        if ($satisfied) {
+            $request->session()->put(self::MFA_SATISFIED_BY_PASSKEY, true);
+
+            return;
+        }
+
+        $request->session()->forget(self::MFA_SATISFIED_BY_PASSKEY);
+    }
+
     public function transition(Request $request, string $screen): Response
     {
         $flow = $this->flowId($request);

@@ -74,12 +74,13 @@ final class PasswordPolicy
     }
 
     /**
-     * Whether passwords may be created for the application in context. Disabling
-     * password authentication stops new passwords from being set; it deliberately
-     * does not lock out users who already have one.
+     * Whether passwords may be created for the application in context, or for a
+     * specific application when one is given.
      */
-    public static function allowsPasswordCreation(): bool
+    public static function allowsPasswordCreation(?TenantApplicationEnvironment $environment = null): bool
     {
-        return self::environment()?->allowsPasswordAuthentication() ?? true;
+        $environment ??= self::environment();
+
+        return $environment?->allowsPasswordAuthentication() ?? true;
     }
 }

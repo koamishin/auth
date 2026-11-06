@@ -56,6 +56,32 @@ class ApplicationAccessPolicy
         return $this->reasonFor($environment, $email) === null;
     }
 
+    /**
+     * Whether a hard block rule refuses this address, ignoring the allowlist.
+     *
+     * An invitation is an explicit grant, so it may bypass a narrowing allowlist,
+     * but a block is a deliberate refusal and always wins.
+     */
+    public function isBlockedAddress(TenantApplicationEnvironment $environment, ?string $email): bool
+    {
+        if (! is_string($email) || ! str_contains($email, '@')) {
+            return false;
+        }
+
+        $email = mb_strtolower(trim($email));
+        [$localPart, $domain] = explode('@', $email, 2);
+
+        if ($this->isBlocked($environment, $email, $domain)) {
+            return true;
+        }
+
+        if ($environment->blocksEmailSubaddresses() && str_contains($localPart, '+')) {
+            return true;
+        }
+
+        return $environment->blocksDisposableEmails() && $this->isDisposable($domain);
+    }
+
     private function isBlocked(TenantApplicationEnvironment $environment, string $email, string $domain): bool
     {
         foreach ($environment->accessRules() as $rule) {

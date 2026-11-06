@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ApplicationInvitation;
 use App\Models\TenantApplicationEnvironment;
 use App\Models\User;
+use App\Services\Auth\ApplicationAccessPolicy;
 use App\Services\Auth\ApplicationInvitationService;
 use App\Services\OAuth\ApplicationAuthentication;
 use Illuminate\Http\RedirectResponse;
@@ -139,6 +140,14 @@ class ApplicationInvitationController extends Controller
     private function redeem(ApplicationInvitation $invitation, User $user): void
     {
         $environment = $invitation->environment;
+
+        // An invitation grants access, but it does not override a block rule or an
+        // identifier protection: those are deliberate refusals.
+        if (app(ApplicationAccessPolicy::class)->isBlockedAddress($environment, $invitation->email)) {
+            throw ValidationException::withMessages([
+                'invitation' => 'This email address is not allowed for this application, so the invitation cannot be accepted.',
+            ]);
+        }
 
         app(ApplicationAuthentication::class)->enrollInvited($environment, $user, $invitation->role);
 

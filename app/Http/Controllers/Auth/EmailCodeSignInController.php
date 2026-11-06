@@ -10,6 +10,7 @@ use App\Models\TenantApplicationEnvironment;
 use App\Models\User;
 use App\Services\Auth\ApplicationAccessPolicy;
 use App\Services\Auth\EmailCodeService;
+use App\Services\OAuth\ApplicationAuthentication;
 use Illuminate\Contracts\Auth\StatefulGuard;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -85,6 +86,10 @@ class EmailCodeSignInController extends Controller
         }
 
         $this->codes->verify($user, (string) $request->input('code'), EmailCodePurpose::SignIn);
+
+        // An email code is a single factor, so it must not inherit a passkey's
+        // multi-factor satisfaction from earlier in this session.
+        app(ApplicationAuthentication::class)->markSignInSatisfiesMultiFactor($request, false);
 
         /** @var StatefulGuard $guard */
         $guard = Auth::guard(config('fortify.guard', 'web'));

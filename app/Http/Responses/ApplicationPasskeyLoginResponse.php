@@ -7,17 +7,19 @@ namespace App\Http\Responses;
 use App\Models\User;
 use App\Services\OAuth\ApplicationAuthentication;
 use Filament\Facades\Filament;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Passkeys\Http\Responses\PasskeyLoginResponse;
 use Symfony\Component\HttpFoundation\Response;
 
 class ApplicationPasskeyLoginResponse extends PasskeyLoginResponse
 {
+    /** @param Request $request */
     public function toResponse($request): Response
     {
         // A passkey is a device plus a biometric or PIN, so this sign-in already
         // meets a multi-factor requirement.
-        $request->session()->put(ApplicationAuthentication::MFA_SATISFIED_BY_PASSKEY, true);
+        app(ApplicationAuthentication::class)->markSignInSatisfiesMultiFactor($request, true);
 
         $flow = $request->attributes->get('koamishin.application_flow');
         if (is_array($flow) && $request->wantsJson()) {

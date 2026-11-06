@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Concerns;
 
+use App\Models\TenantApplicationEnvironment;
 use App\Support\PasswordPolicy;
 use Illuminate\Contracts\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
@@ -16,9 +17,9 @@ trait PasswordValidationRules
      *
      * @return array<int, Rule|array<mixed>|string>
      */
-    protected function passwordRules(): array
+    protected function passwordRules(?TenantApplicationEnvironment $environment = null): array
     {
-        return ['required', 'string', PasswordPolicy::forCurrentRequest(), 'confirmed'];
+        return ['required', 'string', PasswordPolicy::rule($environment ?? PasswordPolicy::environment()), 'confirmed'];
     }
 
     /**
@@ -46,9 +47,11 @@ trait PasswordValidationRules
      *
      * @throws ValidationException
      */
-    protected function assertPasswordCreationAllowed(string $message = 'This application does not allow signing in with a password. Use another sign-in method.'): void
-    {
-        if (PasswordPolicy::allowsPasswordCreation()) {
+    protected function assertPasswordCreationAllowed(
+        string $message = 'This application does not allow signing in with a password. Use another sign-in method.',
+        ?TenantApplicationEnvironment $environment = null,
+    ): void {
+        if (PasswordPolicy::allowsPasswordCreation($environment)) {
             return;
         }
 

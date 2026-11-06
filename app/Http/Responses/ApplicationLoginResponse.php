@@ -19,6 +19,10 @@ class ApplicationLoginResponse extends LoginResponse
     /** @param Request $request */
     public function toResponse($request): Response
     {
+        // A password sign-in is not multi-factor on its own, so any passkey
+        // satisfaction from earlier in this session must not carry over.
+        app(ApplicationAuthentication::class)->markSignInSatisfiesMultiFactor($request, false);
+
         if ($resume = app(ApplicationAuthentication::class)->resume($request)) {
             return $resume;
         }

@@ -158,11 +158,17 @@ class SocialAuthController extends Controller
 
         $guard = $request->attributes->get('koamishin.application_guard');
         if ($guard instanceof StatefulGuard) {
+            // A social sign-in is a single factor, so it must not inherit a
+            // passkey's multi-factor satisfaction from earlier in this session.
+            app(ApplicationAuthentication::class)->markSignInSatisfiesMultiFactor($request, false);
+
             $guard->login($user);
             $request->session()->regenerate();
 
             return app(ApplicationAuthentication::class)->resume($request);
         }
+
+        app(ApplicationAuthentication::class)->markSignInSatisfiesMultiFactor($request, false);
 
         Auth::login($user, true);
         $request->session()->regenerate();
