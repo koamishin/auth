@@ -371,7 +371,7 @@ test('hosted appearance preview renders the configured sign-in screen', function
         ->call('save', false)
         ->assertHasNoErrors();
 
-    $preview = (fn(string $environment) => $this->actingAs($admin)
+    $preview = (fn (string $environment) => $this->actingAs($admin)
         ->get("/admin/preview-org/tenant-applications/{$application->getKey()}/appearance/preview?environment={$environment}")
         ->assertOk());
 
