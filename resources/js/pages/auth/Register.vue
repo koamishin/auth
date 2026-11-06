@@ -20,6 +20,8 @@ const props = defineProps<{
     } | null;
     flow?: string | null;
     hosted?: boolean;
+    passwordRules?: string | null;
+    collectsNameParts?: boolean;
 }>();
 </script>
 
@@ -67,7 +69,36 @@ const props = defineProps<{
             <input v-if="flow" type="hidden" name="flow" :value="flow" />
             <input v-if="hosted" type="hidden" name="hosted" value="1" />
             <div class="grid gap-6">
-                <div class="grid gap-2">
+                <!-- Applications can collect a first and last name instead of one field. -->
+                <div v-if="collectsNameParts" class="grid gap-6 sm:grid-cols-2">
+                    <div class="grid gap-2">
+                        <Label for="first_name">First name</Label>
+                        <Input
+                            id="first_name"
+                            type="text"
+                            required
+                            autofocus
+                            :tabindex="1"
+                            autocomplete="given-name"
+                            name="first_name"
+                        />
+                        <InputError :message="errors.first_name" />
+                    </div>
+
+                    <div class="grid gap-2">
+                        <Label for="last_name">Last name</Label>
+                        <Input
+                            id="last_name"
+                            type="text"
+                            :tabindex="2"
+                            autocomplete="family-name"
+                            name="last_name"
+                        />
+                        <InputError :message="errors.last_name" />
+                    </div>
+                </div>
+
+                <div v-else class="grid gap-2">
                     <Label for="name">Name</Label>
                     <Input
                         id="name"

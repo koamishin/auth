@@ -6,6 +6,8 @@ use App\Features\FeatureRegistry;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
+use App\Models\TenantApplicationEnvironment;
+use App\Support\ApplicationContext;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,7 +27,17 @@ class ProfileController extends Controller
         return Inertia::render('settings/Profile', [
             'mustVerifyEmail' => $user instanceof MustVerifyEmail,
             'status' => $request->session()->get('status'),
+            'collectsNameParts' => $this->environment($request)?->collectsNameParts() ?? false,
+            'allowsAccountDeletion' => $this->environment($request)?->allowsAccountDeletion() ?? true,
         ]);
+    }
+
+    /**
+     * The application environment the request is being served for, if any.
+     */
+    private function environment(Request $request): ?TenantApplicationEnvironment
+    {
+        return ApplicationContext::environment($request);
     }
 
     public function update(ProfileUpdateRequest $profileUpdateRequest): RedirectResponse
@@ -36,13 +48,23 @@ class ProfileController extends Controller
             return to_route('profile.edit')->with('error', 'Profile editing is not available for your role');
         }
 
-        $profileUpdateRequest->user()->fill($profileUpdateRequest->validated());
+        $data = $profileUpdateRequest->validated();
 
-        if ($profileUpdateRequest->user()->isDirty('email')) {
-            $profileUpdateRequest->user()->email_verified_at = null;
+        // Applications that collect a first and last name keep the display name
+        // in step with them.
+        $displayName = $profileUpdateRequest->displayNameFrom($data, $user->name);
+
+        if (is_string($displayName) && $displayName !== '') {
+            $data['name'] = $displayName;
         }
 
-        $profileUpdateRequest->user()->save();
+        $user->fill($data);
+
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
+        }
+
+        $user->save();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Profile updated.')]);
 
@@ -95,6 +117,13 @@ class ProfileController extends Controller
     public function destroy(ProfileDeleteRequest $profileDeleteRequest): RedirectResponse
     {
         $user = $profileDeleteRequest->user();
+
+        // An application can forbid its own users from deleting their accounts.
+        $environment = $profileDeleteRequest->attributes->get('koamishin.application_environment');
+
+        if ($environment instanceof TenantApplicationEnvironment && ! $environment->allowsAccountDeletion()) {
+            return to_route('profile.edit')->with('error', 'This application does not allow accounts to be deleted.');
+        }
 
         if (! FeatureRegistry::isFeatureAvailableForUser($user, 'settings_account_deletion')) {
             return to_route('profile.edit')->with('error', 'Account deletion is not available for your role');

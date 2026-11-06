@@ -60,7 +60,9 @@ class CreateNewUser implements CreatesNewUsers
                 : null;
 
             $user = User::query()->create([
-                'name' => $input['name'],
+                'name' => $this->displayNameFrom($input, $input['name'] ?? null) ?? '',
+                'first_name' => $input['first_name'] ?? null,
+                'last_name' => $input['last_name'] ?? null,
                 'email' => $input['email'],
                 'password' => $input['password'],
                 'identity_namespace' => $identityNamespace,

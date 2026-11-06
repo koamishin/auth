@@ -431,6 +431,23 @@ class AuthenticationTenantApplication extends EditRecord
     private function userModelTab(): array
     {
         return [
+            Section::make('User permissions')
+                ->description('Control what users of this application are allowed to change about themselves.')
+                ->contained(false)
+                ->components([
+                    Toggle::make('allow_name_parts')
+                        ->label('Collect a first and last name')
+                        ->helperText('Sign-up and profile forms ask for a first and last name. The display name is kept in step with them.')
+                        ->default(false)
+                        ->rules(['boolean']),
+
+                    Toggle::make('allow_account_deletion')
+                        ->label('Allow users to delete their accounts')
+                        ->helperText('Turn off to keep accounts on the application permanently. Administrators can still delete a user.')
+                        ->default(true)
+                        ->rules(['boolean']),
+                ]),
+
             Section::make('Metadata attributes')
                 ->description('Define the custom attributes this application stores about each user. Public attributes are returned in tokens and the management API; private attributes are readable by your backend only.')
                 ->contained(false)
@@ -498,6 +515,8 @@ class AuthenticationTenantApplication extends EditRecord
             'block_disposable_emails' => false,
             'require_mfa' => false,
             'passkeys_satisfy_mfa' => true,
+            'allow_name_parts' => false,
+            'allow_account_deletion' => true,
             'auth_password_enabled' => true,
             'passkeys_enabled' => true,
             'passkey_platform_authenticators' => true,

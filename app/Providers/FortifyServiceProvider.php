@@ -225,6 +225,7 @@ class FortifyServiceProvider extends ServiceProvider
             'flow' => app(ApplicationAuthentication::class)->flowId($request),
             'hosted' => app(ApplicationAuthentication::class)->isHosted($request),
             'passwordRules' => PasswordPolicy::rulesForFrontend(),
+            'collectsNameParts' => $this->environment($request)?->collectsNameParts() ?? false,
         ]));
 
         Fortify::twoFactorChallengeView(fn (Request $request) => Inertia::render('auth/TwoFactorChallenge', [

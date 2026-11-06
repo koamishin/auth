@@ -264,6 +264,23 @@ class TenantApplicationEnvironment extends Model
         return $this->getSetting('block_email_subaddresses', false) === true;
     }
 
+    /**
+     * Whether users of this application may delete their own accounts.
+     */
+    public function allowsAccountDeletion(): bool
+    {
+        return $this->getSetting('allow_account_deletion', true) === true;
+    }
+
+    /**
+     * Whether this application collects a first and last name rather than a
+     * single display name.
+     */
+    public function collectsNameParts(): bool
+    {
+        return $this->getSetting('allow_name_parts', false) === true;
+    }
+
     public function blocksDisposableEmails(): bool
     {
         return $this->getSetting('block_disposable_emails', false) === true;

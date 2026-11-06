@@ -289,6 +289,8 @@ class TenantApplicationResource extends Resource
             'access_rules' => $config?->accessRules() ?? [],
             'require_mfa' => $config?->getSetting('require_mfa', false) === true,
             'passkeys_satisfy_mfa' => $config?->getSetting('passkeys_satisfy_mfa', true) === true,
+            'allow_name_parts' => $config?->getSetting('allow_name_parts', false) === true,
+            'allow_account_deletion' => $config?->getSetting('allow_account_deletion', true) === true,
             'auth_password_enabled' => $config?->getSetting('auth_password_enabled', true) === true,
             'auth_password_min_length' => (int) $config?->getSetting('auth_password_min_length', 8),
             'passkey_platform_authenticators' => $config?->getSetting('passkey_platform_authenticators', true) === true,
