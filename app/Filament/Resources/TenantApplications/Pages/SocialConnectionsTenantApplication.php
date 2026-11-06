@@ -106,11 +106,11 @@ class SocialConnectionsTenantApplication extends EditRecord
                     ->inline()
                     ->required(),
 
-                ...array_map(self::socialConnectionSection(...), SocialLoginProvider::cases()),
+                ...array_map($this->socialConnectionSection(...), SocialLoginProvider::cases()),
             ]);
     }
 
-    private static function socialConnectionSection(SocialLoginProvider $provider): Section
+    private function socialConnectionSection(SocialLoginProvider $provider): Section
     {
         $prefix = 'social_'.$provider->value;
 
