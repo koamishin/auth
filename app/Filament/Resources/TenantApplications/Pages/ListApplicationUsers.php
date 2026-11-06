@@ -129,7 +129,7 @@ class ListApplicationUsers extends Page implements HasTable
                 TextColumn::make('auth_methods')
                     ->label('Auth methods')
                     ->badge()
-                    ->state(fn (User $record): array => self::authMethodLabels($record))
+                    ->state(fn (User $record): array => $this->authMethodLabels($record))
                     ->color(fn (string $state): string => match ($state) {
                         'Passkey' => 'success',
                         '2FA' => 'info',
@@ -355,7 +355,7 @@ class ListApplicationUsers extends Page implements HasTable
     /**
      * @return list<string>
      */
-    private static function authMethodLabels(User $user): array
+    private function authMethodLabels(User $user): array
     {
         $methods = [];
 
