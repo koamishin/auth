@@ -60,7 +60,7 @@ trait ProfileValidationRules
         $parts = array_filter([
             is_string($input['first_name'] ?? null) ? trim($input['first_name']) : null,
             is_string($input['last_name'] ?? null) ? trim($input['last_name']) : null,
-        ], fn (?string $part): bool => filled($part));
+        ], filled(...));
 
         if ($parts === []) {
             return $fallback;
