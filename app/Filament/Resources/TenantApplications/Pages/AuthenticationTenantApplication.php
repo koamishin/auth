@@ -227,7 +227,7 @@ class AuthenticationTenantApplication extends EditRecord
                 ->icon('heroicon-o-clock')
                 ->contained(false)
                 ->components(array_map(
-                    fn (string $note): Text => Text::make($note),
+                    Text::make(...),
                     $notes,
                 )),
         ];
