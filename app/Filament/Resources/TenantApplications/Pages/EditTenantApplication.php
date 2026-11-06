@@ -79,17 +79,11 @@ class EditTenantApplication extends EditRecord
         if (! is_bool($data['allow_signups'] ?? null)) {
             throw ValidationException::withMessages(['allow_signups' => 'Choose whether self-service signup is allowed.']);
         }
-        $verificationPolicy = $data['email_verification_policy'] ?? null;
-        if (! in_array($verificationPolicy, ['inherit', 'required', 'disabled'], true)) {
-            throw ValidationException::withMessages(['email_verification_policy' => 'Choose a valid email verification policy.']);
-        }
-        foreach (['passkeys_enabled', 'sso_enabled'] as $feature) {
-            if (! is_bool($data[$feature] ?? null)) {
-                throw ValidationException::withMessages([$feature => 'Choose whether this feature is enabled.']);
-            }
+        if (! is_bool($data['sso_enabled'] ?? null)) {
+            throw ValidationException::withMessages(['sso_enabled' => 'Choose whether single sign-on is enabled.']);
         }
 
-        return DB::transaction(function () use ($record, $data, $verificationPolicy, $clientType): Model {
+        return DB::transaction(function () use ($record, $data, $clientType): Model {
             $configuration = $record->environments()->where('environment', $data['environment'])->firstOrFail();
             $client = $configuration->oauthClient;
 
@@ -124,14 +118,7 @@ class EditTenantApplication extends EditRecord
             }
             $settings = $configuration->settings ?? [];
             $settings['allow_signups'] = $data['allow_signups'];
-            if ($verificationPolicy === 'inherit') {
-                unset($settings['email_verification_required']);
-            } else {
-                $settings['email_verification_required'] = $verificationPolicy === 'required';
-            }
-            unset($data['email_verification_policy']);
             foreach ([
-                'passkeys_enabled' => true,
                 'oauth_consent_enabled' => false,
                 'sso_enabled' => false,
             ] as $key => $default) {

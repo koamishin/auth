@@ -1453,3 +1453,29 @@ class EnforceApplicationRegistrationCsrf extends PreventRequestForgery
         return false;
     }
 }
+
+test('hosted registration is refused when the application disables email sign-up', function (): void {
+    applicationFeatureSettings(['email_verification_required' => false]);
+    [$client, $environment] = registrationTestEnvironment('no-email-signup');
+    $environment->update(['settings' => [...$environment->settings, 'auth_email_signup' => false]]);
+
+    $flow = registrationFlow($client, signup: true);
+
+    $this->post('/register', registrationInput('blocked.signup@example.test') + ['flow' => $flow, 'hosted' => 1])
+        ->assertSessionHasErrors('email');
+
+    expect(User::query()->where('email', 'blocked.signup@example.test')->exists())->toBeFalse();
+});
+
+test('hosted registration still works when email sign-up is enabled', function (): void {
+    applicationFeatureSettings(['email_verification_required' => false]);
+    [$client, $environment] = registrationTestEnvironment('email-signup-allowed');
+    $environment->update(['settings' => [...$environment->settings, 'auth_email_signup' => true]]);
+
+    $flow = registrationFlow($client, signup: true);
+
+    $this->post('/register', registrationInput('allowed.signup@example.test') + ['flow' => $flow, 'hosted' => 1])
+        ->assertOk();
+
+    expect(User::query()->where('email', 'allowed.signup@example.test')->exists())->toBeTrue();
+});

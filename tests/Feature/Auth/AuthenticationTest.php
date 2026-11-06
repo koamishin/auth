@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Tenant;
+use App\Models\TenantApplicationEnvironment;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
@@ -227,4 +228,124 @@ test('users are rate limited', function (): void {
     ]);
 
     $response->assertTooManyRequests();
+});
+
+/**
+ * Build an application environment with an enrolled user so sign-in policies can
+ * be exercised through the hosted OAuth flow.
+ *
+ * @param  array<string, mixed>  $settings
+ * @return array{0: Client, 1: TenantApplicationEnvironment, 2: string}
+ */
+function signInPolicyEnvironment(string $slug, array $settings): array
+{
+    $client = new Client;
+    $client->forceFill([
+        'name' => $slug,
+        'secret' => 'signin-secret',
+        'redirect_uris' => ['https://'.$slug.'.internal/callback'],
+        'grant_types' => ['authorization_code', 'refresh_token'],
+        'revoked' => false,
+    ])->save();
+
+    $tenant = Tenant::query()->create(['name' => $slug, 'slug' => $slug, 'is_active' => true]);
+    $application = $tenant->applications()->create([
+        'name' => $slug,
+        'framework' => 'laravel',
+        'environment' => 'development',
+        'redirect_uris' => $client->getAttribute('redirect_uris'),
+        'oauth_client_id' => $client->getKey(),
+    ]);
+
+    $environment = $application->environments()->create([
+        'environment' => 'development',
+        'oauth_client_id' => $client->getKey(),
+        'redirect_uris' => $client->getAttribute('redirect_uris'),
+        'settings' => $settings,
+    ]);
+
+    $email = $slug.'@signin-policy.test';
+    $user = User::factory()->create([
+        'email' => $email,
+        'password' => Hash::make('app-password'),
+        'identity_namespace' => $environment->identityNamespace(),
+        'tenant_application_environment_id' => $environment->getKey(),
+    ]);
+    $tenant->users()->attach($user, ['role' => 'member']);
+    $application->users('development')->attach($user, ['role' => 'member', 'environment' => 'development']);
+
+    return [$client, $environment, $email];
+}
+
+function signInPolicyFlow(Client $client): string
+{
+    $verifier = str_repeat('b', 64);
+    $challenge = rtrim(strtr(base64_encode(hash('sha256', $verifier, true)), '+/', '-_'), '=');
+
+    $start = test()->get('/oauth/authorize?'.http_build_query([
+        'client_id' => $client->getKey(),
+        'redirect_uri' => 'https://'.$client->name.'.internal/callback',
+        'response_type' => 'code',
+        'state' => 'policy',
+        'scope' => 'openid profile email',
+        'code_challenge' => $challenge,
+        'code_challenge_method' => 'S256',
+    ]))->assertOk();
+
+    $flow = $start->viewData('flow');
+
+    if (! is_string($flow) || $flow === '') {
+        throw new LogicException('The application authentication response did not contain a transaction.');
+    }
+
+    return $flow;
+}
+
+test('an application can disable email sign-in', function (): void {
+    [$client, , $email] = signInPolicyEnvironment('signin-no-email', [
+        'allow_signups' => true,
+        'auth_email_signin' => false,
+    ]);
+
+    $this->post('/login', [
+        'flow' => signInPolicyFlow($client),
+        'email' => $email,
+        'password' => 'app-password',
+    ])->assertSessionHasErrors('email');
+
+    $this->assertGuest();
+});
+
+test('an application can disable password authentication', function (): void {
+    [$client, , $email] = signInPolicyEnvironment('signin-no-password', [
+        'allow_signups' => true,
+        'auth_password_enabled' => false,
+    ]);
+
+    $this->post('/login', [
+        'flow' => signInPolicyFlow($client),
+        'email' => $email,
+        'password' => 'app-password',
+    ])->assertSessionHasErrors('password');
+
+    $this->assertGuest();
+});
+
+test('an application with email and password sign-in enabled still authenticates', function (): void {
+    [$client, , $email] = signInPolicyEnvironment('signin-allowed', [
+        'allow_signups' => true,
+        'oauth_consent_enabled' => true,
+    ]);
+
+    $user = User::query()->where('email', $email)->sole();
+
+    $login = $this->post('/login', [
+        'flow' => signInPolicyFlow($client),
+        'email' => $email,
+        'password' => 'app-password',
+    ])->assertRedirect();
+
+    // The hosted flow signs the user into the application's own guard.
+    $consent = $this->get((string) $login->headers->get('Location'))->assertOk();
+    expect($consent->viewData('page')['props']['user']['id'])->toBe($user->id);
 });

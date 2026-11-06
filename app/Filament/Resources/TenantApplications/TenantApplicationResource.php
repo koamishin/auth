@@ -6,6 +6,7 @@ namespace App\Filament\Resources\TenantApplications;
 
 use App\Enums\SocialLoginProvider;
 use App\Filament\Resources\TenantApplications\Pages\AppearanceTenantApplication;
+use App\Filament\Resources\TenantApplications\Pages\AuthenticationTenantApplication;
 use App\Filament\Resources\TenantApplications\Pages\CreateTenantApplication;
 use App\Filament\Resources\TenantApplications\Pages\EditTenantApplication;
 use App\Filament\Resources\TenantApplications\Pages\ListApplicationUsers;
@@ -260,22 +261,13 @@ class TenantApplicationResource extends Resource
                             ->placeholder('Add callback URL and press Enter')
                             ->default([]),
                     ]),
-                Section::make('Application authentication features')
-                    ->id('application-authentication-features')
+                Section::make('Sign-in behaviour')
+                    ->id('sign-in-behaviour')
                     ->contained(false)
-                    ->description('These settings apply only to the selected environment. Portal-wide feature availability still applies.')
+                    ->description('OAuth consent and single sign-on apply only to the selected environment. Identifiers, verification, and passkeys are configured under Authentication.')
                     ->icon('heroicon-o-shield-check')
                     ->visible(fn (?TenantApplication $record): bool => $record instanceof TenantApplication)
                     ->components([
-                        Select::make('email_verification_policy')->label('Email verification')
-                            ->options([
-                                'inherit' => 'Use Portal default',
-                                'required' => 'Required for this application',
-                                'disabled' => 'Not required for this application',
-                            ])
-                            ->helperText('Choose whether this application requires verified email, or use the Portal default.')
-                            ->default('inherit')->required(),
-                        Toggle::make('passkeys_enabled')->label('Allow passkey sign-in')->default(true),
                         Toggle::make('oauth_consent_enabled')
                             ->label('Require OAuth consent screen')
                             ->helperText('Ask users to confirm granting access to their profile and scopes. Leave off for seamless first-party login without a permission prompt.')
@@ -303,6 +295,20 @@ class TenantApplicationResource extends Resource
             'passkeys_enabled' => $config?->getSetting('passkeys_enabled', true) === true,
             'oauth_consent_enabled' => $config?->getSetting('oauth_consent_enabled', false) === true,
             'sso_enabled' => $config?->getSetting('sso_enabled', false) === true,
+            'auth_email_signup' => $config?->getSetting('auth_email_signup', true) === true,
+            'auth_email_signin' => $config?->getSetting('auth_email_signin', true) === true,
+            'email_verification_method' => $config?->getSetting('email_verification_method', 'link') ?? 'link',
+            'auth_password_enabled' => $config?->getSetting('auth_password_enabled', true) === true,
+            'auth_password_min_length' => (int) $config?->getSetting('auth_password_min_length', 8),
+            'passkey_platform_authenticators' => $config?->getSetting('passkey_platform_authenticators', true) === true,
+            'passkey_require_user_verification' => $config?->getSetting('passkey_require_user_verification', true) === true,
+            'user_metadata_attributes' => $config?->userMetadataAttributes() ?? [],
+            'user_metadata_defaults' => $config?->getSetting('user_metadata_defaults', []) ?? [],
+            'auth_phone_signup' => false,
+            'auth_phone_signin' => false,
+            'auth_phone_verification' => false,
+            'auth_username_signup' => false,
+            'auth_username_signin' => false,
             'login_title' => $config?->getSetting('login_title'),
             'login_description' => $config?->getSetting('login_description'),
             'login_logo_url' => $config?->getSetting('login_logo_url'),
@@ -448,6 +454,7 @@ class TenantApplicationResource extends Resource
             'edit' => EditTenantApplication::route('/{record}/edit'),
             'appearance' => AppearanceTenantApplication::route('/{record}/appearance'),
             'social-connections' => SocialConnectionsTenantApplication::route('/{record}/social-connections'),
+            'authentication' => AuthenticationTenantApplication::route('/{record}/authentication'),
             'users' => ListApplicationUsers::route('/{record}/users'),
         ];
     }

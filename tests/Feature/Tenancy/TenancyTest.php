@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Filament\Pages\Tenancy\RegisterTenant;
 use App\Filament\Resources\TenantApplications\Pages\AppearanceTenantApplication;
+use App\Filament\Resources\TenantApplications\Pages\AuthenticationTenantApplication;
 use App\Filament\Resources\TenantApplications\Pages\CreateTenantApplication;
 use App\Filament\Resources\TenantApplications\Pages\EditTenantApplication;
 use App\Filament\Resources\TenantApplications\Pages\ListTenantApplications;
@@ -201,16 +202,11 @@ test('application settings keep provider secrets encrypted and scoped to the sel
     Filament::bootCurrentPanel();
 
     Livewire::actingAs($admin)->test(EditTenantApplication::class, ['record' => $application->getKey()])
-        ->set('data.email_verification_policy', 'required')
-        ->set('data.passkeys_enabled', false)
         ->set('data.sso_enabled', true)
         ->call('save', false)
         ->assertHasNoErrors();
 
-    $settings = $development->fresh()->settings;
-    expect($settings)->toMatchArray([
-        'email_verification_required' => true, 'passkeys_enabled' => false, 'sso_enabled' => true,
-    ]);
+    expect($development->fresh()->settings)->toMatchArray(['sso_enabled' => true]);
     expect($production->fresh()->getSetting('sso_enabled', false))->toBeFalse();
 });
 
@@ -291,7 +287,7 @@ test('application email verification can be required, disabled, or inherited per
     Filament::setTenant($tenant);
     Filament::bootCurrentPanel();
 
-    Livewire::actingAs($admin)->test(EditTenantApplication::class, ['record' => $application->getKey()])
+    Livewire::actingAs($admin)->test(AuthenticationTenantApplication::class, ['record' => $application->getKey()])
         ->assertSet('data.email_verification_policy', 'inherit')
         ->set('data.email_verification_policy', 'disabled')
         ->call('save', false)
@@ -300,19 +296,19 @@ test('application email verification can be required, disabled, or inherited per
     expect($development->fresh()->getSetting('email_verification_required'))->toBeFalse();
     expect($development->fresh()->requiresEmailVerification())->toBeFalse();
     expect($production->fresh()->requiresEmailVerification())->toBeTrue();
-    Livewire::actingAs($admin)->test(EditTenantApplication::class, ['record' => $application->getKey()])
+    Livewire::actingAs($admin)->test(AuthenticationTenantApplication::class, ['record' => $application->getKey()])
         ->assertSet('data.email_verification_policy', 'disabled')
         ->set('data.environment', 'production')
         ->assertSet('data.email_verification_policy', 'inherit');
 
-    Livewire::actingAs($admin)->test(EditTenantApplication::class, ['record' => $application->getKey()])
+    Livewire::actingAs($admin)->test(AuthenticationTenantApplication::class, ['record' => $application->getKey()])
         ->assertSet('data.email_verification_policy', 'disabled')
         ->set('data.email_verification_policy', 'required')
         ->call('save', false)
         ->assertHasNoErrors();
     expect($development->fresh()->getSetting('email_verification_required'))->toBeTrue();
 
-    Livewire::actingAs($admin)->test(EditTenantApplication::class, ['record' => $application->getKey()])
+    Livewire::actingAs($admin)->test(AuthenticationTenantApplication::class, ['record' => $application->getKey()])
         ->assertSet('data.email_verification_policy', 'required')
         ->set('data.email_verification_policy', 'inherit')
         ->call('save', false)
@@ -320,6 +316,130 @@ test('application email verification can be required, disabled, or inherited per
     expect(array_key_exists('email_verification_required', $development->fresh()->settings ?? []))->toBeFalse();
     expect($development->fresh()->requiresEmailVerification())->toBeTrue();
 });
+
+test('authentication settings are configured on a dedicated page and scope per environment', function (): void {
+    Role::query()->firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+    $admin = User::factory()->create();
+    $admin->assignRole('super_admin');
+    $tenant = Tenant::query()->create(['name' => 'Auth org', 'slug' => 'auth-org']);
+    $application = app(ApplicationProvisioner::class)->create($tenant, [
+        'name' => 'Auth app', 'framework' => 'laravel', 'environment' => 'development',
+        'redirect_uris' => ['http://localhost:8000/callback'],
+    ]);
+    $development = $application->environments()->where('environment', 'development')->sole();
+    $production = $application->environments()->where('environment', 'production')->sole();
+
+    actingAs($admin);
+    Filament::setCurrentPanel('admin');
+    Filament::setTenant($tenant);
+    Filament::bootCurrentPanel();
+
+    Livewire::actingAs($admin)->test(AuthenticationTenantApplication::class, ['record' => $application->getKey()])
+        ->assertSee('id="edit-authentication-form"', false)
+        ->assertSee('form="edit-authentication-form"', false)
+        ->assertSet('data.auth_email_signup', true)
+        ->assertSet('data.auth_email_signin', true)
+        ->assertSet('data.auth_password_enabled', true)
+        ->assertSet('data.passkeys_enabled', true)
+        ->set('data.auth_email_signup', false)
+        ->set('data.auth_email_signin', false)
+        ->set('data.auth_password_enabled', false)
+        ->set('data.auth_password_min_length', 12)
+        ->set('data.passkeys_enabled', false)
+        ->set('data.passkey_platform_authenticators', false)
+        ->set('data.passkey_require_user_verification', false)
+        ->set('data.user_metadata_attributes', [
+            ['key' => 'plan', 'type' => 'string', 'visibility' => 'public'],
+            ['key' => 'seats', 'type' => 'number', 'visibility' => 'private'],
+        ])
+        ->set('data.user_metadata_defaults', ['plan' => 'free'])
+        ->call('save', false)
+        ->assertHasNoErrors();
+
+    expect($development->fresh()->settings)->toMatchArray([
+        'auth_email_signup' => false,
+        'auth_email_signin' => false,
+        'auth_password_enabled' => false,
+        'auth_password_min_length' => 12,
+        'passkeys_enabled' => false,
+        'passkey_platform_authenticators' => false,
+        'passkey_require_user_verification' => false,
+        'user_metadata_attributes' => [
+            ['key' => 'plan', 'type' => 'string', 'visibility' => 'public'],
+            ['key' => 'seats', 'type' => 'number', 'visibility' => 'private'],
+        ],
+        'user_metadata_defaults' => ['plan' => 'free'],
+    ]);
+
+    $environment = $development->fresh();
+    expect($environment->allowsEmailSignup())->toBeFalse();
+    expect($environment->allowsEmailSignin())->toBeFalse();
+    expect($environment->allowsPasswordAuthentication())->toBeFalse();
+    expect($environment->allowsPasskeys())->toBeFalse();
+    expect($environment->allowsPlatformAuthenticators())->toBeFalse();
+    expect($environment->requiresPasskeyUserVerification())->toBeFalse();
+    expect($environment->userMetadataAttributes())->toHaveCount(2);
+
+    // The other environment is untouched.
+    expect($production->fresh()->allowsEmailSignup())->toBeTrue();
+    expect($production->fresh()->allowsPasswordAuthentication())->toBeTrue();
+    expect($production->fresh()->userMetadataAttributes())->toBe([]);
+
+    // Defaults are not persisted, so the settings stay minimal.
+    Livewire::actingAs($admin)->test(AuthenticationTenantApplication::class, ['record' => $application->getKey()])
+        ->set('data.auth_email_signup', true)
+        ->set('data.auth_email_signin', true)
+        ->set('data.auth_password_enabled', true)
+        ->set('data.auth_password_min_length', 8)
+        ->set('data.passkeys_enabled', true)
+        ->set('data.passkey_platform_authenticators', true)
+        ->set('data.passkey_require_user_verification', true)
+        ->set('data.user_metadata_attributes', [])
+        ->set('data.user_metadata_defaults', [])
+        ->call('save', false)
+        ->assertHasNoErrors();
+
+    expect($development->fresh()->settings ?? [])->not->toHaveKey('auth_email_signup');
+    expect($development->fresh()->settings ?? [])->not->toHaveKey('auth_password_min_length');
+    expect($development->fresh()->settings ?? [])->not->toHaveKey('user_metadata_attributes');
+});
+
+test('authentication metadata attributes reject invalid definitions', function (array $attributes, string $message): void {
+    Role::query()->firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+    $admin = User::factory()->create();
+    $admin->assignRole('super_admin');
+    $tenant = Tenant::query()->create(['name' => 'Auth org', 'slug' => 'auth-org']);
+    $application = app(ApplicationProvisioner::class)->create($tenant, [
+        'name' => 'Auth app', 'framework' => 'laravel', 'environment' => 'development',
+        'redirect_uris' => ['http://localhost:8000/callback'],
+    ]);
+
+    actingAs($admin);
+    Filament::setCurrentPanel('admin');
+    Filament::setTenant($tenant);
+    Filament::bootCurrentPanel();
+
+    Livewire::actingAs($admin)->test(AuthenticationTenantApplication::class, ['record' => $application->getKey()])
+        ->set('data.user_metadata_attributes', $attributes)
+        ->call('save', false)
+        ->assertHasErrors();
+
+    expect($application->environments()->where('environment', 'development')->sole()->fresh()->settings ?? [])
+        ->not->toHaveKey('user_metadata_attributes');
+})->with([
+    'duplicate key' => [
+        [['key' => 'plan', 'type' => 'string', 'visibility' => 'public'], ['key' => 'plan', 'type' => 'number', 'visibility' => 'private']],
+        'duplicate',
+    ],
+    'invalid type' => [
+        [['key' => 'plan', 'type' => 'object', 'visibility' => 'public']],
+        'type',
+    ],
+    'invalid visibility' => [
+        [['key' => 'plan', 'type' => 'string', 'visibility' => 'secret']],
+        'visibility',
+    ],
+]);
 
 test('hosted appearance settings are configured on a dedicated page per environment', function (): void {
     Role::query()->firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);

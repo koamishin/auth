@@ -64,6 +64,8 @@ class ManagementMetadataController extends Controller
         $environment = $this->context->environment($request);
         $user = $this->context->user($environment, $userId);
 
+        $this->validateAgainstApplicationSchema($environment, $fields);
+
         $metadata = DB::transaction(function () use ($environment, $user, $fields): ApplicationUserMetadata {
             $userQuery = User::query()->whereKey($user->getKey());
             $userQuery->lockForUpdate();
@@ -94,6 +96,20 @@ class ManagementMetadataController extends Controller
         WebhookDispatcher::dispatchForEnvironment($environment, 'user.updated', $user);
 
         return $this->response($metadata);
+    }
+
+    /**
+     * Reject metadata that does not match the application's declared attributes.
+     *
+     * @param  array<string, mixed>  $fields
+     */
+    private function validateAgainstApplicationSchema(TenantApplicationEnvironment $environment, array $fields): void
+    {
+        $errors = $environment->validateMetadata($fields);
+
+        if ($errors !== []) {
+            throw ValidationException::withMessages(['metadata' => array_values($errors)]);
+        }
     }
 
     /** @return Builder<ApplicationUserMetadata> */

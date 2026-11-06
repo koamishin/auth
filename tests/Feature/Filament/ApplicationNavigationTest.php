@@ -77,7 +77,7 @@ test('navigation contains only real application destinations with route based ac
     $items = collect($navigation['groups'])->flatMap(fn (array $group): array => $group['items'])->keyBy('label');
 
     expect($navigation['application']->is($application))->toBeTrue();
-    expect($items->keys()->all())->toBe(['Overview', 'API keys', 'Users', 'Settings', 'Environment', 'Appearance', 'Authentication features', 'Social connections']);
+    expect($items->keys()->all())->toBe(['Overview', 'API keys', 'Users', 'Settings', 'Environment', 'Appearance', 'Authentication', 'Social connections']);
     expect($items['Overview'])->toBe([
         'label' => 'Overview',
         'icon' => 'heroicon-o-squares-2x2',
@@ -88,6 +88,8 @@ test('navigation contains only real application destinations with route based ac
     expect($items['API keys']['fragment'])->toBe('api-keys');
     expect($items['Environment']['url'])->toBe(TenantApplicationResource::getUrl('edit', ['tenant' => $tenant, 'record' => $application]));
     expect($items['Environment']['active'])->toBeTrue();
+    expect($items['Authentication']['url'])->toBe(TenantApplicationResource::getUrl('authentication', ['tenant' => $tenant, 'record' => $application]));
+    expect($items['Authentication']['fragment'])->toBeNull();
     expect($items['Social connections']['url'])->toBe(TenantApplicationResource::getUrl('social-connections', ['tenant' => $tenant, 'record' => $application]));
     expect($items['Social connections']['fragment'])->toBeNull();
     expect($items['Appearance']['url'])->toBe(TenantApplicationResource::getUrl('appearance', ['tenant' => $tenant, 'record' => $application]));
@@ -111,6 +113,10 @@ test('context uses only application record routes and rejects invalid or foreign
     expect(ApplicationNavigation::forTenant($tenant)['application']->is($routed))->toBeTrue();
 
     navigationRoute('filament.admin.resources.tenant-applications.social-connections', $routed);
+    expect(ApplicationNavigation::currentApplication($tenant)->is($routed))->toBeTrue();
+    expect(ApplicationNavigation::forTenant($tenant)['application']->is($routed))->toBeTrue();
+
+    navigationRoute('filament.admin.resources.tenant-applications.authentication', $routed);
     expect(ApplicationNavigation::currentApplication($tenant)->is($routed))->toBeTrue();
     expect(ApplicationNavigation::forTenant($tenant)['application']->is($routed))->toBeTrue();
 
@@ -210,15 +216,20 @@ test('view and edit destinations render their fragment targets and switching per
 
     $this->get(TenantApplicationResource::getUrl('edit', ['tenant' => $tenant, 'record' => $second]))
         ->assertOk()
-        ->assertSee('id="environment-callbacks"', false)
-        ->assertSee('id="application-authentication-features"', false);
+        ->assertSee('id="environment-callbacks"', false);
 
-    // Hosted login appearance and social connections live on their own pages and
-    // keep the application sidebar.
+    // Hosted login appearance, authentication, and social connections live on
+    // their own pages and keep the application sidebar.
     $this->get(TenantApplicationResource::getUrl('appearance', ['tenant' => $tenant, 'record' => $second]))
         ->assertOk()
         ->assertSee('Second application')
         ->assertSee('id="edit-appearance-form"', false)
+        ->assertSee('class="fi-app-nav"', false);
+
+    $this->get(TenantApplicationResource::getUrl('authentication', ['tenant' => $tenant, 'record' => $second]))
+        ->assertOk()
+        ->assertSee('Second application')
+        ->assertSee('id="edit-authentication-form"', false)
         ->assertSee('class="fi-app-nav"', false);
 
     $this->get(TenantApplicationResource::getUrl('social-connections', ['tenant' => $tenant, 'record' => $second]))
@@ -245,7 +256,7 @@ test('application record pages render the application navigation alongside the w
 
     $sidebar = navigationSidebar($response);
     expect($sidebar)
-        ->toContain('Opened directly', 'Overview', 'API keys', 'Users', 'Settings', 'Environment', 'Appearance', 'Authentication features', 'Social connections')
+        ->toContain('Opened directly', 'Overview', 'API keys', 'Users', 'Settings', 'Environment', 'Appearance', 'Authentication', 'Social connections')
         ->toContain('href="'.$editUrl.'#environment-callbacks"')
         ->not->toContain('href="'.$staleEditUrl.'#environment-callbacks"')
         ->not->toContain('fi-dd-', 'Search settings', 'type="search"');
@@ -284,7 +295,7 @@ test('application record pages render the application navigation alongside the w
         ->toContain('href="'.route('filament.admin.resources.tenant-applications.index', ['tenant' => $tenant]).'"')
         ->toContain('href="'.OAuthClientResource::getUrl('index', ['tenant' => $tenant]).'"')
         ->toContain('href="'.route('filament.admin.resources.users.index', ['tenant' => $tenant]).'"');
-})->with(['view', 'edit', 'appearance', 'social-connections', 'users']);
+})->with(['view', 'edit', 'appearance', 'social-connections', 'authentication', 'users']);
 
 test('workspace pages render both collapsible groups with tenant links and the active group', function (string $route, string $activeGroup): void {
     $tenant = navigationTenant('navigation');

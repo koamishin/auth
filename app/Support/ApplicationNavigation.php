@@ -71,7 +71,7 @@ class ApplicationNavigation
                         'active' => request()->routeIs('filament.admin.resources.tenant-applications.appearance'),
                         'fragment' => null,
                     ],
-                    ['label' => 'Authentication features', 'icon' => 'heroicon-o-shield-check', 'url' => $url, 'active' => $active, 'fragment' => 'application-authentication-features'],
+                    ['label' => 'Authentication', 'icon' => 'heroicon-o-shield-check', 'url' => TenantApplicationResource::getUrl('authentication', ['tenant' => $tenant, 'record' => $application]), 'active' => request()->routeIs('filament.admin.resources.tenant-applications.authentication'), 'fragment' => null],
                     [
                         'label' => 'Social connections',
                         'icon' => 'heroicon-o-share',
@@ -169,6 +169,7 @@ class ApplicationNavigation
             'filament.admin.resources.tenant-applications.edit',
             'filament.admin.resources.tenant-applications.appearance',
             'filament.admin.resources.tenant-applications.social-connections',
+            'filament.admin.resources.tenant-applications.authentication',
             'filament.admin.resources.tenant-applications.users',
         );
     }

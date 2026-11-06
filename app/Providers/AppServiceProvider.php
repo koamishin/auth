@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
+use Laravel\Passkeys\Actions\GenerateRegistrationOptions;
+use Laravel\Passkeys\Actions\GenerateVerificationOptions;
 use Laravel\Passport\Bridge\ClientRepository;
 use Laravel\Passport\Passport;
 use Laravel\Pennant\FeatureManager;
@@ -33,6 +35,23 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->bind(ClientRepository::class, PassportBridgeClientRepository::class);
         $this->registerFilamentPlugins();
+        $this->registerPasskeyOptions();
+    }
+
+    /**
+     * Apply per-application biometric preferences to passkey ceremonies.
+     */
+    protected function registerPasskeyOptions(): void
+    {
+        $this->app->bind(
+            GenerateRegistrationOptions::class,
+            \App\Services\Passkeys\GenerateRegistrationOptions::class,
+        );
+
+        $this->app->bind(
+            GenerateVerificationOptions::class,
+            \App\Services\Passkeys\GenerateVerificationOptions::class,
+        );
     }
 
     /**

@@ -50,6 +50,37 @@ class TenantApplicationEnvironment extends Model
         'grid' => 'Subtle grid',
     ];
 
+    /**
+     * Verification channels a user can complete an email challenge with.
+     *
+     * @var array<string, string>
+     */
+    public const EMAIL_VERIFICATION_METHODS = [
+        'link' => 'Email verification link',
+    ];
+
+    /**
+     * Supported metadata attribute types for the application user model.
+     *
+     * @var array<string, string>
+     */
+    public const METADATA_ATTRIBUTE_TYPES = [
+        'string' => 'Text',
+        'number' => 'Number',
+        'boolean' => 'True / false',
+        'date' => 'Date',
+    ];
+
+    /**
+     * Visibility scopes for user metadata attributes.
+     *
+     * @var array<string, string>
+     */
+    public const METADATA_ATTRIBUTE_VISIBILITIES = [
+        'public' => 'Public — returned in tokens and the API',
+        'private' => 'Private — readable by the application backend only',
+    ];
+
     protected $fillable = [
         'tenant_application_id',
         'environment',
@@ -187,6 +218,142 @@ class TenantApplicationEnvironment extends Model
     public function requiresOAuthConsent(): bool
     {
         return $this->getSetting('oauth_consent_enabled', false) === true;
+    }
+
+    public function allowsEmailSignup(): bool
+    {
+        return $this->getSetting('auth_email_signup', true) === true;
+    }
+
+    public function allowsEmailSignin(): bool
+    {
+        return $this->getSetting('auth_email_signin', true) === true;
+    }
+
+    public function allowsPasswordAuthentication(): bool
+    {
+        return $this->getSetting('auth_password_enabled', true) === true;
+    }
+
+    public function emailVerificationMethod(): string
+    {
+        $method = $this->getSetting('email_verification_method', 'link');
+
+        return is_string($method) && array_key_exists($method, self::EMAIL_VERIFICATION_METHODS) ? $method : 'link';
+    }
+
+    /**
+     * Whether built-in authenticators (Touch ID, Face ID, Windows Hello) may be
+     * used to create passkeys for this environment.
+     */
+    public function allowsPlatformAuthenticators(): bool
+    {
+        return $this->getSetting('passkey_platform_authenticators', true) === true;
+    }
+
+    /**
+     * Whether passkey ceremonies must verify the user (biometric or PIN) rather
+     * than merely test for the authenticator's presence.
+     */
+    public function requiresPasskeyUserVerification(): bool
+    {
+        return $this->getSetting('passkey_require_user_verification', true) === true;
+    }
+
+    /**
+     * Custom metadata attributes defined for the application user model.
+     *
+     * @return list<array{key: string, type: string, visibility: string}>
+     */
+    public function userMetadataAttributes(): array
+    {
+        $attributes = $this->getSetting('user_metadata_attributes', []);
+
+        if (! is_array($attributes)) {
+            return [];
+        }
+
+        $normalized = [];
+
+        foreach ($attributes as $attribute) {
+            if (! is_array($attribute) || ! is_string($attribute['key'] ?? null) || trim($attribute['key']) === '') {
+                continue;
+            }
+
+            $type = $attribute['type'] ?? 'string';
+            $visibility = $attribute['visibility'] ?? 'public';
+
+            $normalized[] = [
+                'key' => trim($attribute['key']),
+                'type' => is_string($type) && array_key_exists($type, self::METADATA_ATTRIBUTE_TYPES) ? $type : 'string',
+                'visibility' => is_string($visibility) && array_key_exists($visibility, self::METADATA_ATTRIBUTE_VISIBILITIES) ? $visibility : 'public',
+            ];
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * Validate metadata fields against the application's attribute definitions.
+     *
+     * @param  array<string, mixed>  $fields
+     * @return array<string, string> Field name mapped to a validation message.
+     */
+    public function validateMetadata(array $fields): array
+    {
+        $attributes = collect($this->userMetadataAttributes())->keyBy('key');
+
+        if ($attributes->isEmpty()) {
+            return [];
+        }
+
+        $errors = [];
+
+        foreach ($fields as $scope => $values) {
+            if (! in_array($scope, ['public', 'private'], true)) {
+                continue;
+            }
+
+            if (is_object($values)) {
+                $values = get_object_vars($values);
+            }
+
+            if (! is_array($values)) {
+                continue;
+            }
+
+            foreach ($values as $key => $value) {
+                $attribute = $attributes->get($key);
+
+                if ($attribute === null) {
+                    $errors[$scope.'.'.$key] = "The attribute [{$key}] is not defined for this application.";
+
+                    continue;
+                }
+
+                if ($attribute['visibility'] !== $scope) {
+                    $errors[$scope.'.'.$key] = "The attribute [{$key}] is defined as {$attribute['visibility']} metadata.";
+
+                    continue;
+                }
+
+                if (! $this->metadataValueMatchesType($value, $attribute['type'])) {
+                    $errors[$scope.'.'.$key] = "The attribute [{$key}] must be a {$attribute['type']} value.";
+                }
+            }
+        }
+
+        return $errors;
+    }
+
+    private function metadataValueMatchesType(mixed $value, string $type): bool
+    {
+        return match ($type) {
+            'number' => is_int($value) || is_float($value),
+            'boolean' => is_bool($value),
+            'date' => is_string($value) && strtotime($value) !== false,
+            default => is_string($value),
+        };
     }
 
     public function identityNamespace(): string

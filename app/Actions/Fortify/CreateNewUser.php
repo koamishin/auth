@@ -11,6 +11,7 @@ use App\Services\OAuth\ApplicationAuthentication;
 use App\Settings\ApplicationFeaturesSettings;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
 use Spatie\Permission\Models\Role;
 
@@ -32,6 +33,12 @@ class CreateNewUser implements CreatesNewUsers
 
         return DB::transaction(function () use ($input): User {
             $environment = request()?->attributes?->get('koamishin.application_environment');
+
+            if ($environment instanceof TenantApplicationEnvironment && ! $environment->allowsEmailSignup()) {
+                throw ValidationException::withMessages([
+                    'email' => 'This application does not allow signing up with an email address.',
+                ]);
+            }
             $identityNamespace = $environment instanceof TenantApplicationEnvironment
                 ? $environment->identityNamespace()
                 : User::PORTAL_IDENTITY_NAMESPACE;

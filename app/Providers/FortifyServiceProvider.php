@@ -89,6 +89,21 @@ class FortifyServiceProvider extends ServiceProvider
     {
         Fortify::authenticateUsing(function (Request $request): ?User {
             $environment = $request->attributes->get('koamishin.application_environment');
+
+            if ($environment instanceof TenantApplicationEnvironment) {
+                if (! $environment->allowsEmailSignin()) {
+                    throw ValidationException::withMessages([
+                        Fortify::username() => __('This application does not allow signing in with an email address.'),
+                    ]);
+                }
+
+                if (! $environment->allowsPasswordAuthentication()) {
+                    throw ValidationException::withMessages([
+                        'password' => __('This application does not allow signing in with a password. Use another sign-in method.'),
+                    ]);
+                }
+            }
+
             $identityNamespace = $environment instanceof TenantApplicationEnvironment
                 ? $environment->identityNamespace()
                 : User::PORTAL_IDENTITY_NAMESPACE;

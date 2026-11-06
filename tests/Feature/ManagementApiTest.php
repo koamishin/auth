@@ -439,3 +439,54 @@ test('revoking an OAuth grant rejects its real refresh token', function (): void
         'client_secret' => $client->plainSecret, 'refresh_token' => $grant->json('refresh_token'),
     ])->assertStatus(400)->assertJsonPath('error', 'invalid_grant');
 });
+
+test('metadata writes are validated against the application attribute schema', function (): void {
+    [$tenant, $application, $environment] = managementApiApplication('metadata-schema');
+    $environment->update(['settings' => [
+        ...$environment->settings,
+        'user_metadata_attributes' => [
+            ['key' => 'plan', 'type' => 'string', 'visibility' => 'public'],
+            ['key' => 'seats', 'type' => 'number', 'visibility' => 'private'],
+            ['key' => 'trial', 'type' => 'boolean', 'visibility' => 'public'],
+        ],
+    ]]);
+
+    $user = User::factory()->create();
+    enrollManagementUser($tenant, $application, $user, 'development');
+    $scopes = ['metadata:read', 'metadata:write'];
+    [, $token] = managementApiToken($environment, $scopes, $scopes);
+    $path = '/api/v1/users/'.$user->id.'/metadata';
+
+    // Declared attributes with matching types are accepted.
+    withToken($token)->patchJson($path, [
+        'public' => ['plan' => 'pro', 'trial' => true],
+        'private' => ['seats' => 12],
+    ])->assertOk()->assertJsonPath('data.public.plan', 'pro')->assertJsonPath('data.private.seats', 12);
+
+    // An undeclared attribute is rejected.
+    withToken($token)->patchJson($path, ['public' => ['unknown' => 'value']])->assertStatus(422);
+
+    // A type mismatch is rejected.
+    withToken($token)->patchJson($path, ['private' => ['seats' => 'twelve']])->assertStatus(422);
+
+    // Visibility is enforced.
+    withToken($token)->patchJson($path, ['public' => ['seats' => 3]])->assertStatus(422);
+
+    // Rejected writes leave the previously accepted values untouched.
+    $stored = ApplicationUserMetadata::query()->where('user_id', $user->getKey())->sole();
+    expect($stored->public_metadata->plan)->toBe('pro');
+    expect($stored->private_metadata->seats)->toBe(12);
+    expect($user->refresh()->metadata)->toBeNull();
+});
+
+test('metadata writes are unconstrained when the application declares no attributes', function (): void {
+    [$tenant, $application, $environment] = managementApiApplication('metadata-unconstrained');
+    $user = User::factory()->create();
+    enrollManagementUser($tenant, $application, $user, 'development');
+    $scopes = ['metadata:read', 'metadata:write'];
+    [, $token] = managementApiToken($environment, $scopes, $scopes);
+
+    withToken($token)->patchJson('/api/v1/users/'.$user->id.'/metadata', [
+        'public' => ['anything' => 'goes'],
+    ])->assertOk()->assertJsonPath('data.public.anything', 'goes');
+});
