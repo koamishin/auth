@@ -86,7 +86,7 @@ test('the platform minimum is never lowered by an application setting', function
     // Outside production the fallback floor is 8, so an application asking for 8
     // must not push it lower, and a higher value must win.
     expect(PasswordPolicy::minimum($environment))->toBe(8);
-    expect(PasswordPolicy::minimum(null))->toBe(PasswordPolicy::FALLBACK_MINIMUM);
+    expect(PasswordPolicy::minimum())->toBe(PasswordPolicy::FALLBACK_MINIMUM);
 
     $environment->update(['settings' => [...$environment->settings, 'auth_password_min_length' => 20]]);
     expect(PasswordPolicy::minimum($environment->refresh()))->toBe(20);
