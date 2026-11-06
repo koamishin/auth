@@ -192,7 +192,7 @@ class AppearanceTenantApplication extends EditRecord
     private function syncSettings(array $current, array $values): array
     {
         foreach ($values as $key => $value) {
-            if ($value === null || $value === '' || $value === 'inherit') {
+            if (in_array($value, [null, '', 'inherit'], true)) {
                 unset($current[$key]);
             } else {
                 $current[$key] = $value;

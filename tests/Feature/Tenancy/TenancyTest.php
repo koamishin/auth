@@ -371,11 +371,9 @@ test('hosted appearance preview renders the configured sign-in screen', function
         ->call('save', false)
         ->assertHasNoErrors();
 
-    $preview = function (string $environment) use ($application, $admin) {
-        return $this->actingAs($admin)
-            ->get("/admin/preview-org/tenant-applications/{$application->getKey()}/appearance/preview?environment={$environment}")
-            ->assertOk();
-    };
+    $preview = (fn(string $environment) => $this->actingAs($admin)
+        ->get("/admin/preview-org/tenant-applications/{$application->getKey()}/appearance/preview?environment={$environment}")
+        ->assertOk());
 
     $page = $preview('development');
     $page->assertSee('"authLayout":"split"', false);
