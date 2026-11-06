@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, router, usePage } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
 import InputError from '@/components/InputError.vue';
 import SignInWithPasskeyButton from '@/components/SignInWithPasskeyButton.vue';
 import SocialLoginButtons from '@/components/SocialLoginButtons.vue';
@@ -13,6 +14,7 @@ import AuthBase from '@/layouts/AuthLayout.vue';
 import { register } from '@/routes';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
+import emailCode from '@/routes/auth/email-code';
 import { store as hostedStore } from '@/routes/hosted';
 import type { AppPageProps } from '@/types';
 
@@ -31,6 +33,8 @@ const props = defineProps<{
     status?: string;
     canResetPassword: boolean;
     canRegister: boolean;
+    emailCodeSignin?: boolean;
+    emailCodeLength?: number;
 }>();
 
 const page =
@@ -38,6 +42,90 @@ const page =
 const passkeysEnabled = props.application
     ? props.application.passkeysEnabled
     : (page.props.settingsFeatures?.passkeys ?? true);
+
+// Passwordless sign-in with an emailed code, when the application allows it.
+const codeSigninAvailable = computed(() => props.emailCodeSignin === true);
+const codeLength = computed(() => props.emailCodeLength ?? 6);
+const useCode = ref(false);
+const codeRequested = ref(false);
+const codeEmail = ref('');
+const code = ref('');
+const codeProcessing = ref(false);
+const codeError = ref<string | null>(null);
+
+const hostedHeaders = computed((): Record<string, string> =>
+    props.hosted && props.flow
+        ? {
+              'X-Koamishin-Flow': props.flow,
+              'X-Koamishin-Hosted': '1',
+              'X-Koamishin-Screen': 'login',
+          }
+        : {},
+);
+
+function switchToCode() {
+    useCode.value = true;
+    codeError.value = null;
+    codeEmail.value = '';
+    code.value = '';
+    codeRequested.value = false;
+}
+
+function switchToPassword() {
+    useCode.value = false;
+    codeError.value = null;
+}
+
+function editCodeEmail() {
+    codeRequested.value = false;
+    code.value = '';
+    codeError.value = null;
+}
+
+function requestCode() {
+    codeProcessing.value = true;
+    codeError.value = null;
+
+    router.post(
+        emailCode.send.url(),
+        { email: codeEmail.value, ...(props.flow ? { flow: props.flow } : {}) },
+        {
+            headers: hostedHeaders.value,
+            onSuccess: () => {
+                codeRequested.value = true;
+            },
+            onError: (errors) => {
+                codeError.value = errors.email ?? 'Enter a valid email address.';
+            },
+            onFinish: () => {
+                codeProcessing.value = false;
+            },
+        },
+    );
+}
+
+function submitCode() {
+    codeProcessing.value = true;
+    codeError.value = null;
+
+    router.post(
+        emailCode.verify.url(),
+        {
+            email: codeEmail.value,
+            code: code.value,
+            ...(props.flow ? { flow: props.flow } : {}),
+        },
+        {
+            headers: hostedHeaders.value,
+            onError: (errors) => {
+                codeError.value = errors.code ?? errors.email ?? 'That code is not correct.';
+            },
+            onFinish: () => {
+                codeProcessing.value = false;
+            },
+        },
+    );
+}
 </script>
 
 <template>
@@ -74,6 +162,7 @@ const passkeysEnabled = props.application
         </div>
 
         <Form
+            v-if="!useCode"
             v-bind="store.form()"
             :headers="
                 hosted && flow
@@ -184,6 +273,103 @@ const passkeysEnabled = props.application
                 >
             </div>
         </Form>
+
+        <!-- Passwordless sign-in with an emailed one-time code. -->
+        <div v-if="useCode" class="flex flex-col gap-6">
+            <div v-if="!codeRequested" class="grid gap-6">
+                <div class="grid gap-2">
+                    <Label for="code-email">Email address</Label>
+                    <Input
+                        id="code-email"
+                        v-model="codeEmail"
+                        type="email"
+                        required
+                        autofocus
+                        autocomplete="email"
+                        placeholder="email@example.com"
+                        @keydown.enter.prevent="requestCode"
+                    />
+                    <InputError :message="codeError ?? undefined" />
+                </div>
+
+                <Button
+                    type="button"
+                    :disabled="codeProcessing || !codeEmail"
+                    @click="requestCode"
+                >
+                    <Spinner v-if="codeProcessing" />
+                    Email me a code
+                </Button>
+            </div>
+
+            <div v-else class="grid gap-6">
+                <p class="text-center text-sm text-muted-foreground">
+                    We sent a code to
+                    <span class="font-medium text-foreground">{{ codeEmail }}</span>.
+                </p>
+
+                <div class="grid gap-2">
+                    <Label for="code">Sign-in code</Label>
+                    <Input
+                        id="code"
+                        v-model="code"
+                        inputmode="numeric"
+                        autocomplete="one-time-code"
+                        :maxlength="codeLength"
+                        autofocus
+                        class="text-center font-mono text-lg tracking-[0.4em]"
+                        :placeholder="'0'.repeat(codeLength)"
+                        @keydown.enter.prevent="submitCode"
+                    />
+                    <InputError :message="codeError ?? undefined" />
+                </div>
+
+                <Button
+                    type="button"
+                    :disabled="codeProcessing || code.length < codeLength"
+                    @click="submitCode"
+                >
+                    <Spinner v-if="codeProcessing" />
+                    Verify and sign in
+                </Button>
+
+                <div class="flex items-center justify-center gap-4 text-sm">
+                    <button
+                        type="button"
+                        class="underline underline-offset-4"
+                        @click="requestCode"
+                    >
+                        Send a new code
+                    </button>
+                    <button
+                        type="button"
+                        class="underline underline-offset-4"
+                        @click="editCodeEmail"
+                    >
+                        Change email
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="codeSigninAvailable" class="text-center text-sm">
+            <button
+                v-if="!useCode"
+                type="button"
+                class="underline underline-offset-4"
+                @click="switchToCode"
+            >
+                Sign in with an email code instead
+            </button>
+            <button
+                v-else
+                type="button"
+                class="underline underline-offset-4"
+                @click="switchToPassword"
+            >
+                Use a password instead
+            </button>
+        </div>
 
         <SignInWithPasskeyButton
             v-if="passkeysEnabled"

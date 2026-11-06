@@ -42,7 +42,7 @@ class EnsureOAuthApplicationAccess
     /** @param Closure(Request): Response $next */
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->is('auth/hosted', 'login', 'register', 'two-factor-challenge', 'passkeys/login', 'passkeys/login/options', 'auth/*/redirect', 'email/verify', 'email/verify/*', 'email/verification-notification')) {
+        if ($request->is('auth/hosted', 'login', 'register', 'two-factor-challenge', 'passkeys/login', 'passkeys/login/options', 'auth/*/redirect', 'auth/email-code', 'auth/email-code/verify', 'email/verify', 'email/verify/*', 'email/verify-code', 'email/verify-code/resend', 'email/verification-notification')) {
             $flow = $request->input('flow');
             $expiredVerificationLink = $request->is('email/verify/*') && is_string($flow) && ! $this->authentication->hasFlow($request, $flow);
             $clientId = $request->query('client_id');

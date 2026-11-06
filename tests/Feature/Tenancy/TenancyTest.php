@@ -317,6 +317,70 @@ test('application email verification can be required, disabled, or inherited per
     expect($development->fresh()->requiresEmailVerification())->toBeTrue();
 });
 
+test('email channel settings are configured per environment and round trip', function (): void {
+    Role::query()->firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+    $admin = User::factory()->create();
+    $admin->assignRole('super_admin');
+    $tenant = Tenant::query()->create(['name' => 'Email org', 'slug' => 'email-org']);
+    $application = app(ApplicationProvisioner::class)->create($tenant, [
+        'name' => 'Email app', 'framework' => 'laravel', 'environment' => 'development',
+        'redirect_uris' => ['http://localhost:8000/callback'],
+    ]);
+    $development = $application->environments()->where('environment', 'development')->sole();
+    $production = $application->environments()->where('environment', 'production')->sole();
+
+    actingAs($admin);
+    Filament::setCurrentPanel('admin');
+    Filament::setTenant($tenant);
+    Filament::bootCurrentPanel();
+
+    $page = fn () => Livewire::actingAs($admin)->test(AuthenticationTenantApplication::class, ['record' => $application->getKey()]);
+
+    // Defaults: links, ten minutes, device bound, code sign-in off.
+    $page()->assertSet('data.email_verification_method', 'link')
+        ->assertSet('data.email_verification_link_ttl', 10)
+        ->assertSet('data.email_verification_bind_device', true)
+        ->assertSet('data.auth_email_code_signin', false);
+
+    $page()->set('data.email_verification_policy', 'required')
+        ->set('data.email_verification_method', 'code')
+        ->set('data.email_verification_link_ttl', 30)
+        ->set('data.email_verification_bind_device', false)
+        ->set('data.auth_email_code_signin', true)
+        ->call('save', false)
+        ->assertHasNoErrors();
+
+    $environment = $development->fresh();
+    expect($environment->emailVerificationMethod())->toBe('code');
+    expect($environment->usesEmailVerificationLink())->toBeFalse();
+    expect($environment->emailVerificationLinkTtl())->toBe(30);
+    expect($environment->bindsVerificationLinksToDevice())->toBeFalse();
+    expect($environment->allowsEmailCodeSignin())->toBeTrue();
+
+    // The other environment keeps its own defaults.
+    expect($production->fresh()->emailVerificationMethod())->toBe('link');
+    expect($production->fresh()->allowsEmailCodeSignin())->toBeFalse();
+
+    // Values survive being hidden by switching back to the link method.
+    $page()->set('data.email_verification_method', 'link')
+        ->call('save', false)
+        ->assertHasNoErrors();
+
+    expect($development->fresh()->emailVerificationLinkTtl())->toBe(30);
+    expect($development->fresh()->bindsVerificationLinksToDevice())->toBeFalse();
+
+    // Defaults are not persisted, keeping the stored settings minimal.
+    $page()->set('data.email_verification_link_ttl', 10)
+        ->set('data.email_verification_bind_device', true)
+        ->set('data.email_verification_method', 'link')
+        ->call('save', false)
+        ->assertHasNoErrors();
+
+    expect($development->fresh()->settings ?? [])->not->toHaveKey('email_verification_link_ttl');
+    expect($development->fresh()->settings ?? [])->not->toHaveKey('email_verification_bind_device');
+    expect($development->fresh()->settings ?? [])->not->toHaveKey('email_verification_method');
+});
+
 test('authentication settings are configured on a dedicated page and scope per environment', function (): void {
     Role::query()->firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
     $admin = User::factory()->create();

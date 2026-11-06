@@ -2,10 +2,12 @@
 
 use App\Enums\SocialLoginProvider;
 use App\Filament\Resources\TenantApplications\TenantApplicationResource;
+use App\Http\Controllers\Auth\EmailCodeSignInController;
 use App\Http\Controllers\Auth\HostedAppearancePreviewController;
 use App\Http\Controllers\Auth\HostedAuthenticationController;
 use App\Http\Controllers\Auth\OpenIdConnectController;
 use App\Http\Controllers\Auth\SocialAuthController;
+use App\Http\Controllers\Auth\VerifyEmailCodeController;
 use App\Http\Controllers\ImpersonateController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Setup\SetupController;
@@ -60,6 +62,22 @@ Route::get('auth/{provider}/callback', [SocialAuthController::class, 'callback']
 
 Route::get('auth/hosted', [HostedAuthenticationController::class, 'restore'])->name('hosted.restore');
 Route::post('auth/hosted', HostedAuthenticationController::class)->name('hosted.store');
+
+// Passwordless sign-in with a one-time email code.
+Route::post('auth/email-code', [EmailCodeSignInController::class, 'send'])
+    ->middleware('throttle:6,1')
+    ->name('auth.email-code.send');
+Route::post('auth/email-code/verify', [EmailCodeSignInController::class, 'verify'])
+    ->middleware('throttle:10,1')
+    ->name('auth.email-code.verify');
+
+// Email verification by one-time code.
+Route::post('email/verify-code', [VerifyEmailCodeController::class, 'store'])
+    ->middleware(['auth', 'throttle:10,1'])
+    ->name('verification.code.store');
+Route::post('email/verify-code/resend', [VerifyEmailCodeController::class, 'resend'])
+    ->middleware(['auth', 'throttle:3,1'])
+    ->name('verification.code.resend');
 
 Route::get('.well-known/openid-configuration', [OpenIdConnectController::class, 'discovery'])->name('openid.discovery');
 Route::get('oauth/jwks', [OpenIdConnectController::class, 'jwks'])->name('oauth.jwks');

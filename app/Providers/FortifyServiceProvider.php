@@ -12,9 +12,11 @@ use App\Http\Responses\ApplicationTwoFactorLoginResponse;
 use App\Http\Responses\ApplicationVerifyEmailResponse;
 use App\Models\TenantApplicationEnvironment;
 use App\Models\User;
+use App\Services\Auth\EmailCodeService;
 use App\Services\OAuth\ApplicationAuthentication;
 use App\Settings\ApplicationFeaturesSettings;
 use App\Support\PasswordPolicy;
+use App\Support\VerificationDevice;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Auth\StatefulGuard;
@@ -73,13 +75,37 @@ class FortifyServiceProvider extends ServiceProvider
             $applicationFlow = request()->attributes->get('koamishin.application_flow');
             $hosted = $authentication->isHosted(request()) && is_array($applicationFlow);
 
-            return URL::temporarySignedRoute('verification.verify', now()->addMinutes(config('auth.verification.expire', 60)), array_filter([
+            // Applications choose how long their links live; the platform default
+            // applies everywhere else.
+            $expiresIn = max(5, $this->verificationLinkTtl());
+
+            return URL::temporarySignedRoute('verification.verify', now()->addMinutes($expiresIn), array_filter([
                 'id' => $user->getKey(),
                 'hash' => sha1($user->getEmailForVerification()),
                 'flow' => $hosted ? null : $flow,
                 'client_id' => $hosted ? $applicationFlow['client_id'] : null,
+                'device' => app(VerificationDevice::class)->fingerprint(request(), create: true),
             ], fn ($value): bool => $value !== null));
         });
+    }
+
+    /**
+     * Minutes a verification link stays valid for the environment in context.
+     */
+    private function verificationLinkTtl(): int
+    {
+        return $this->environment(request())?->emailVerificationLinkTtl()
+            ?? TenantApplicationEnvironment::DEFAULT_VERIFICATION_LINK_TTL;
+    }
+
+    /**
+     * The application environment the request is being served for, if any.
+     */
+    private function environment(Request $request): ?TenantApplicationEnvironment
+    {
+        $environment = $request->attributes->get('koamishin.application_environment');
+
+        return $environment instanceof TenantApplicationEnvironment ? $environment : null;
     }
 
     /**
@@ -148,6 +174,8 @@ class FortifyServiceProvider extends ServiceProvider
             'application' => app(ApplicationAuthentication::class)->pageContext($request),
             'flow' => app(ApplicationAuthentication::class)->flowId($request),
             'hosted' => app(ApplicationAuthentication::class)->isHosted($request),
+            'emailCodeSignin' => $this->environment($request)?->allowsEmailCodeSignin() ?? false,
+            'emailCodeLength' => EmailCodeService::CODE_LENGTH,
         ]));
 
         Fortify::resetPasswordView(fn (Request $request) => Inertia::render('auth/ResetPassword', [
@@ -165,6 +193,8 @@ class FortifyServiceProvider extends ServiceProvider
             'flow' => app(ApplicationAuthentication::class)->flowId($request),
             'hosted' => app(ApplicationAuthentication::class)->isHosted($request),
             'application' => app(ApplicationAuthentication::class)->pageContext($request),
+            'verificationMethod' => $this->environment($request)?->emailVerificationMethod() ?? 'link',
+            'emailCodeLength' => EmailCodeService::CODE_LENGTH,
         ]));
 
         Fortify::registerView(fn (Request $request) => Inertia::render('auth/Register', [

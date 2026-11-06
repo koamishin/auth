@@ -57,7 +57,11 @@ class TenantApplicationEnvironment extends Model
      */
     public const EMAIL_VERIFICATION_METHODS = [
         'link' => 'Email verification link',
+        'code' => 'Email verification code',
     ];
+
+    /** How long a verification link stays valid, in minutes. */
+    public const DEFAULT_VERIFICATION_LINK_TTL = 10;
 
     /**
      * Supported metadata attribute types for the application user model.
@@ -256,6 +260,46 @@ class TenantApplicationEnvironment extends Model
         $method = $this->getSetting('email_verification_method', 'link');
 
         return is_string($method) && array_key_exists($method, self::EMAIL_VERIFICATION_METHODS) ? $method : 'link';
+    }
+
+    /**
+     * Whether a verification link (rather than a code) is used.
+     */
+    public function usesEmailVerificationLink(): bool
+    {
+        return $this->emailVerificationMethod() === 'link';
+    }
+
+    /**
+     * How long a verification link stays valid, in minutes.
+     */
+    public function emailVerificationLinkTtl(): int
+    {
+        $ttl = $this->getSetting('email_verification_link_ttl', self::DEFAULT_VERIFICATION_LINK_TTL);
+
+        if (! is_numeric($ttl)) {
+            return self::DEFAULT_VERIFICATION_LINK_TTL;
+        }
+
+        $ttl = (int) $ttl;
+
+        return $ttl >= 5 && $ttl <= 1440 ? $ttl : self::DEFAULT_VERIFICATION_LINK_TTL;
+    }
+
+    /**
+     * Whether users may sign in with a one-time code sent to their email.
+     */
+    public function allowsEmailCodeSignin(): bool
+    {
+        return $this->getSetting('auth_email_code_signin', false) === true;
+    }
+
+    /**
+     * Whether a verification link must be opened on the device that requested it.
+     */
+    public function bindsVerificationLinksToDevice(): bool
+    {
+        return $this->getSetting('email_verification_bind_device', true) === true;
     }
 
     /**

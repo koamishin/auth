@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\EmailCodePurpose;
+use App\Services\Auth\EmailCodeService;
 use App\Services\OAuth\ApplicationAuthentication;
 use App\Settings\ApplicationFeaturesSettings;
 use Database\Factories\UserFactory;
@@ -138,7 +140,15 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
             return;
         }
 
-        $this->notify(new VerifyEmail);
+        // Applications can verify with a link or with a one-time code. The link
+        // carries a device fingerprint so it can only be used where it was asked
+        // for; codes are issued and checked by the email code service.
+        if ($environment instanceof TenantApplicationEnvironment && ! $environment->usesEmailVerificationLink()) {
+            app(EmailCodeService::class)->send($this, EmailCodePurpose::Verification);
+        } else {
+            $this->notify(new VerifyEmail);
+        }
+
         $flow = app(ApplicationAuthentication::class)->flowId(request());
         if ($flow !== null) {
             request()->session()->put('koamishin.verification_sent.'.$flow, true);

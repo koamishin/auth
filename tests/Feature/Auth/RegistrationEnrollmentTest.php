@@ -10,6 +10,7 @@ use App\Models\TenantApplicationEnvironment;
 use App\Models\User;
 use App\Settings\ApplicationFeaturesSettings;
 use App\Settings\SocialLoginSettings;
+use App\Support\VerificationDevice;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Auth\SessionGuard;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -310,9 +311,19 @@ test('hosted validation errors stay with the originating application', function 
     expect($response->json('url'))->toBe('/auth/hosted');
 });
 
+/**
+ * Simulate a browser that keeps its device cookie, which is what makes a
+ * verification link usable on the device that requested it.
+ */
+function useVerificationDevice(string $token = 'test-verification-device-token'): void
+{
+    test()->withCookie(VerificationDevice::COOKIE, $token);
+}
+
 test('hosted verification uses a signed application reference without a flow URL', function (): void {
     applicationFeatureSettings(['email_verification_required' => true]);
     Notification::fake();
+    useVerificationDevice();
     [$client] = registrationTestEnvironment('hosted-verification');
     $flow = registrationFlow($client);
 
@@ -1188,6 +1199,7 @@ test('prompt login does not destroy the portal session or the application flow',
 test('required verification resumes the originating application after the signed email link', function (): void {
     applicationFeatureSettings(['email_verification_required' => true]);
     Notification::fake();
+    useVerificationDevice();
     [$client] = registrationTestEnvironment('verify-required');
     $flow = registrationFlow($client);
 
@@ -1260,7 +1272,14 @@ test('turning off verification lets a pending application flow continue', functi
 test('an expired application verification link can be used after signing into the portal', function (): void {
     applicationFeatureSettings(['email_verification_required' => true]);
     Notification::fake();
-    [$client] = registrationTestEnvironment('verify-expired');
+    useVerificationDevice();
+
+    // A longer link lifetime than the flow, so the flow expiry is what this test
+    // exercises rather than the signed URL expiring underneath it.
+    [$client] = registrationTestEnvironment('verify-expired', [
+        'allow_signups' => true,
+        'email_verification_link_ttl' => 60,
+    ]);
     $flow = registrationFlow($client);
     post('/register', registrationInput('expired-link@example.test') + ['flow' => $flow])->assertRedirect();
     $user = User::query()->where('email', 'expired-link@example.test')->firstOrFail();

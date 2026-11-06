@@ -145,10 +145,31 @@ class AuthenticationTenantApplication extends EditRecord
                     ToggleButtons::make('email_verification_method')
                         ->label('Verification method')
                         ->options(TenantApplicationEnvironment::EMAIL_VERIFICATION_METHODS)
-                        ->helperText('Additional channels, such as one-time codes, are not available yet.')
+                        ->helperText('Codes are single-use, expire after 10 minutes, and can only be requested again after 30 seconds.')
                         ->default('link')
                         ->inline()
+                        ->live()
                         ->visible(fn (Get $get): bool => $get('email_verification_policy') !== 'disabled'),
+
+                    TextInput::make('email_verification_link_ttl')
+                        ->label('Link lifetime (minutes)')
+                        ->numeric()
+                        ->minValue(5)
+                        ->maxValue(1440)
+                        ->default(TenantApplicationEnvironment::DEFAULT_VERIFICATION_LINK_TTL)
+                        ->helperText('How long a verification link stays valid.')
+                        // Kept in form state while hidden so switching method or policy
+                        // back does not silently reset the configured value.
+                        ->dehydratedWhenHidden()
+                        ->visible(fn (Get $get): bool => $get('email_verification_policy') !== 'disabled' && $get('email_verification_method') === 'link'),
+
+                    Toggle::make('email_verification_bind_device')
+                        ->label('Require the same device and browser')
+                        ->helperText('The link only works on the device and browser that requested it, so an intercepted link cannot verify the address elsewhere.')
+                        ->default(true)
+                        ->rules(['boolean'])
+                        ->dehydratedWhenHidden()
+                        ->visible(fn (Get $get): bool => $get('email_verification_policy') !== 'disabled' && $get('email_verification_method') === 'link'),
                 ]),
 
             Section::make('Sign-in with email')
@@ -159,6 +180,12 @@ class AuthenticationTenantApplication extends EditRecord
                         ->label('Allow email sign-in')
                         ->helperText('Turn off when users must sign in with a passkey or another method.')
                         ->default(true)
+                        ->rules(['boolean']),
+
+                    Toggle::make('auth_email_code_signin')
+                        ->label('Allow sign-in with an email code')
+                        ->helperText('Users can request a one-time code instead of typing a password. The sign-in screen offers this as an alternative.')
+                        ->default(false)
                         ->rules(['boolean']),
                 ]),
         ];
@@ -343,6 +370,8 @@ class AuthenticationTenantApplication extends EditRecord
         foreach ([
             'auth_email_signup' => true,
             'auth_email_signin' => true,
+            'auth_email_code_signin' => false,
+            'email_verification_bind_device' => true,
             'auth_password_enabled' => true,
             'passkeys_enabled' => true,
             'passkey_platform_authenticators' => true,
@@ -374,6 +403,17 @@ class AuthenticationTenantApplication extends EditRecord
             $settings['email_verification_method'] = $verificationMethod;
         }
 
+        $linkTtl = (int) ($data['email_verification_link_ttl'] ?? TenantApplicationEnvironment::DEFAULT_VERIFICATION_LINK_TTL);
+        if ($linkTtl < 5 || $linkTtl > 1440) {
+            throw ValidationException::withMessages(['email_verification_link_ttl' => 'Choose a link lifetime between 5 and 1440 minutes.']);
+        }
+
+        if ($linkTtl === TenantApplicationEnvironment::DEFAULT_VERIFICATION_LINK_TTL) {
+            unset($settings['email_verification_link_ttl']);
+        } else {
+            $settings['email_verification_link_ttl'] = $linkTtl;
+        }
+
         $minLength = (int) ($data['auth_password_min_length'] ?? 8);
         if ($minLength < 8 || $minLength > 128) {
             throw ValidationException::withMessages(['auth_password_min_length' => 'Choose a minimum length between 8 and 128.']);
@@ -402,6 +442,7 @@ class AuthenticationTenantApplication extends EditRecord
         unset(
             $data['email_verification_policy'],
             $data['email_verification_method'],
+            $data['email_verification_link_ttl'],
             $data['auth_password_min_length'],
             $data['user_metadata_attributes'],
             $data['user_metadata_defaults'],
