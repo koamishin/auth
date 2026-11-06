@@ -174,7 +174,7 @@ test('editing an application saves signup policy only for the selected environme
     Livewire::actingAs($admin)
         ->test(EditTenantApplication::class, ['record' => $application->getKey()])
         ->assertSetStrict('data.allow_signups', false)
-        ->set('data.environment', 'production')
+        ->call('selectEnvironment', 'production')
         ->assertSetStrict('data.allow_signups', true)
         ->set('data.allow_signups', false)
         ->set('data.redirect_uris', ['https://app.example.test/callback'])
@@ -298,7 +298,7 @@ test('application email verification can be required, disabled, or inherited per
     expect($production->fresh()->requiresEmailVerification())->toBeTrue();
     Livewire::actingAs($admin)->test(AuthenticationTenantApplication::class, ['record' => $application->getKey()])
         ->assertSet('data.email_verification_policy', 'disabled')
-        ->set('data.environment', 'production')
+        ->call('selectEnvironment', 'production')
         ->assertSet('data.email_verification_policy', 'inherit');
 
     Livewire::actingAs($admin)->test(AuthenticationTenantApplication::class, ['record' => $application->getKey()])
@@ -486,7 +486,7 @@ test('hosted appearance settings are configured on a dedicated page per environm
 
     Livewire::actingAs($admin)->test(AppearanceTenantApplication::class, ['record' => $application->getKey()])
         ->assertSet('data.auth_color_theme', 'rose')
-        ->set('data.environment', 'production')
+        ->call('selectEnvironment', 'production')
         ->assertSet('data.auth_color_theme', 'ocean')
         ->set('data.auth_color_theme', 'not-a-theme')
         ->call('save', false)

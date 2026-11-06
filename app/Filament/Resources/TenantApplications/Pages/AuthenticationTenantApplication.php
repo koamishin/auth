@@ -9,6 +9,7 @@ use App\Models\TenantApplication;
 use App\Models\TenantApplicationEnvironment;
 use Filament\Actions\Action;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
@@ -19,7 +20,6 @@ use Filament\Resources\Pages\EditRecord;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Utilities\Get;
-use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\ValidationException;
@@ -77,26 +77,10 @@ class AuthenticationTenantApplication extends EditRecord
         return $schema
             ->columns(1)
             ->components([
-                ToggleButtons::make('environment')
-                    ->label('Environment')
-                    ->options([
-                        'development' => 'Development',
-                        'production' => 'Production',
-                    ])
-                    ->colors([
-                        'development' => 'warning',
-                        'production' => 'success',
-                    ])
+                // The environment is chosen from the page header (and the topbar
+                // context selector); it stays in the form state so it dehydrates.
+                Hidden::make('environment')
                     ->default('development')
-                    ->live()
-                    ->afterStateUpdated(function (?string $state, Set $set, ?TenantApplication $record): void {
-                        if ($record instanceof TenantApplication) {
-                            foreach (TenantApplicationResource::environmentFormValues($record, $state) as $name => $value) {
-                                $set($name, $value);
-                            }
-                        }
-                    })
-                    ->inline()
                     ->required(),
 
                 Tabs::make('Authentication')

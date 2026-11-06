@@ -184,6 +184,7 @@
             <x-filament::dropdown.list>
                 <form method="POST" action="{{ route('filament.admin.toggle-environment', ['tenant' => $currentTenant, 'application' => $currentApp, 'environment' => 'development']) }}">
                     @csrf
+                    <input type="hidden" name="redirect" value="{{ url()->current() }}">
                 <x-filament::dropdown.list.item
                     tag="button"
                     type="submit"
@@ -202,6 +203,7 @@
 
                 <form method="POST" action="{{ route('filament.admin.toggle-environment', ['tenant' => $currentTenant, 'application' => $currentApp, 'environment' => 'production']) }}">
                     @csrf
+                    <input type="hidden" name="redirect" value="{{ url()->current() }}">
                 <x-filament::dropdown.list.item
                     tag="button"
                     type="submit"

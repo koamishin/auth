@@ -32,26 +32,6 @@
                     </div>
                 </div>
 
-                <div role="group" aria-label="Active environment switcher" class="inline-flex rounded-lg bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 p-0.5">
-                    <button
-                        type="button"
-                        wire:click="selectEnvironment('development')"
-                        aria-pressed="{{ $isProd ? 'false' : 'true' }}"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all {{ ! $isProd ? 'bg-white dark:bg-gray-800 text-amber-700 dark:text-amber-300 shadow-xs' : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white' }}"
-                    >
-                        <span class="w-1.5 h-1.5 rounded-full {{ $isProd ? 'bg-amber-400/50' : 'bg-amber-500' }}"></span>
-                        Development
-                    </button>
-                    <button
-                        type="button"
-                        wire:click="selectEnvironment('production')"
-                        aria-pressed="{{ $isProd ? 'true' : 'false' }}"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all {{ $isProd ? 'bg-white dark:bg-gray-800 text-emerald-700 dark:text-emerald-300 shadow-xs' : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white' }}"
-                    >
-                        <span class="w-1.5 h-1.5 rounded-full {{ $isProd ? 'bg-emerald-500' : 'bg-emerald-400/50' }}"></span>
-                        Production
-                    </button>
-                </div>
             </div>
 
             {{-- Enabled capability summary --}}
@@ -68,11 +48,6 @@
         </header>
 
         <main class="pt-6">
-            <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">
-                Changes apply to the <strong class="text-gray-700 dark:text-gray-200">{{ strtolower($activeEnv) }}</strong> environment only.
-                <button type="button" wire:click="selectEnvironment('{{ $isProd ? 'development' : 'production' }}')" class="font-semibold text-primary-600 dark:text-primary-400 hover:underline">Switch to {{ $isProd ? 'Development' : 'Production' }}</button>
-            </p>
-
             <form wire:submit="save" id="edit-authentication-form" class="kms-settings-form">
                 {{ $this->form }}
             </form>

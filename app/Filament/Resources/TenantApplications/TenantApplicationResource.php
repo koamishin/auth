@@ -22,6 +22,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
@@ -33,7 +34,6 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
-use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\Layout\View;
 use Filament\Tables\Columns\TextColumn;
@@ -214,39 +214,19 @@ class TenantApplicationResource extends Resource
                             ->columns(1),
                     ]),
 
-                Section::make('Environment & Callbacks')
+                Section::make('Callbacks & sign-up')
                     ->id('environment-callbacks')
                     ->contained(false)
                     ->columns(1)
-                    ->description('Configure deployment environment and whitelisted redirect callback URLs.')
+                    ->description('Whitelisted redirect callback URLs and self-service signup for the environment selected above.')
                     ->icon('heroicon-o-globe-alt')
                     ->visible(fn (?TenantApplication $record): bool => $record instanceof TenantApplication)
                     ->collapsible()
                     ->components([
-                        ToggleButtons::make('environment')
-                            ->label('Environment')
-                            ->options([
-                                'development' => 'Development (Localhost / Sandbox)',
-                                'production' => 'Production (Live / Strict HTTPS)',
-                            ])
-                            ->colors([
-                                'development' => 'warning',
-                                'production' => 'success',
-                            ])
-                            ->icons([
-                                'development' => 'heroicon-o-wrench-screwdriver',
-                                'production' => 'heroicon-o-check-badge',
-                            ])
+                        // The environment is chosen from the page header (and the topbar
+                        // context selector); it stays in the form state so it dehydrates.
+                        Hidden::make('environment')
                             ->default('development')
-                            ->live()
-                            ->afterStateUpdated(function (?string $state, Set $set, ?TenantApplication $record): void {
-                                if ($record instanceof TenantApplication) {
-                                    foreach (self::environmentFormValues($record, $state) as $name => $value) {
-                                        $set($name, $value);
-                                    }
-                                }
-                            })
-                            ->inline()
                             ->required(),
 
                         Toggle::make('allow_signups')

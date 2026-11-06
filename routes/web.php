@@ -101,10 +101,19 @@ Route::middleware(['web', 'auth'])->post('admin/{tenant:slug}/toggle-env/{applic
         'redirect_uris' => $configuration->redirect_uris,
     ]);
 
-    return redirect()->to(TenantApplicationResource::getUrl('view', [
+    // Keep the user on the page they were configuring when switching
+    // environments; fall back to the application overview otherwise.
+    $redirect = $request->input('redirect');
+    $fallback = TenantApplicationResource::getUrl('view', [
         'record' => $application,
         'tenant' => $tenant,
-    ]));
+    ]);
+
+    if (! is_string($redirect) || $redirect === '' || ! str_starts_with($redirect, url('/'))) {
+        $redirect = $fallback;
+    }
+
+    return redirect()->to($redirect);
 })->name('filament.admin.toggle-environment');
 
 require __DIR__.'/settings.php';
