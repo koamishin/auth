@@ -7,6 +7,7 @@ use App\Filament\Resources\TenantApplications\Pages\AppearanceTenantApplication;
 use App\Filament\Resources\TenantApplications\Pages\CreateTenantApplication;
 use App\Filament\Resources\TenantApplications\Pages\EditTenantApplication;
 use App\Filament\Resources\TenantApplications\Pages\ListTenantApplications;
+use App\Filament\Resources\TenantApplications\Pages\SocialConnectionsTenantApplication;
 use App\Filament\Resources\TenantApplications\Pages\ViewTenantApplication;
 use App\Models\Tenant;
 use App\Models\TenantApplication;
@@ -203,33 +204,72 @@ test('application settings keep provider secrets encrypted and scoped to the sel
         ->set('data.email_verification_policy', 'required')
         ->set('data.passkeys_enabled', false)
         ->set('data.sso_enabled', true)
-        ->set('data.social_github_mode', 'custom')
-        ->set('data.social_github_client_id', 'billing-client')
-        ->set('data.social_github_client_secret', 'billing-secret')
         ->call('save', false)
-        ->assertHasNoErrors()
-        ->assertSet('data.social_github_client_secret', null);
+        ->assertHasNoErrors();
 
     $settings = $development->fresh()->settings;
     expect($settings)->toMatchArray([
         'email_verification_required' => true, 'passkeys_enabled' => false, 'sso_enabled' => true,
     ]);
+    expect($production->fresh()->getSetting('sso_enabled', false))->toBeFalse();
+});
+
+test('social connections are configured on a dedicated page and keep provider secrets encrypted', function (): void {
+    Role::query()->firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+    $admin = User::factory()->create();
+    $admin->assignRole('super_admin');
+    $tenant = Tenant::query()->create(['name' => 'Connections org', 'slug' => 'connections-org']);
+    $application = app(ApplicationProvisioner::class)->create($tenant, [
+        'name' => 'Connections app', 'framework' => 'laravel', 'environment' => 'development',
+        'redirect_uris' => ['http://localhost:8000/callback'],
+    ]);
+    $development = $application->environments()->where('environment', 'development')->sole();
+    $production = $application->environments()->where('environment', 'production')->sole();
+    actingAs($admin);
+    Filament::setCurrentPanel('admin');
+    Filament::setTenant($tenant);
+    Filament::bootCurrentPanel();
+
+    Livewire::actingAs($admin)->test(SocialConnectionsTenantApplication::class, ['record' => $application->getKey()])
+        ->assertSee('id="edit-social-connections-form"', false)
+        ->assertSee('form="edit-social-connections-form"', false)
+        ->assertSet('data.social_github_mode', 'inherit')
+        ->set('data.social_github_mode', 'custom')
+        ->set('data.social_github_client_id', 'billing-client')
+        ->set('data.social_github_client_secret', 'billing-secret')
+        ->set('data.social_google_mode', 'disabled')
+        ->call('save', false)
+        ->assertHasNoErrors()
+        ->assertSet('data.social_github_client_secret', null);
+
+    $settings = $development->fresh()->settings;
+    expect($settings['social_providers']['github']['client_id'])->toBe('billing-client');
     expect($settings['social_providers']['github']['client_secret'])->not->toBe('billing-secret');
     expect(Crypt::decryptString($settings['social_providers']['github']['client_secret']))->toBe('billing-secret');
     expect(json_encode($settings))->not->toContain('billing-secret');
-    expect($production->fresh()->getSetting('sso_enabled', false))->toBeFalse();
+    expect($settings['social_providers']['google'])->toBe(['mode' => 'disabled']);
+    expect($production->fresh()->settings ?? [])->not->toHaveKey('social_providers');
 
-    Livewire::actingAs($admin)->test(EditTenantApplication::class, ['record' => $application->getKey()])
+    // Saving again without re-entering the secret keeps the stored one.
+    Livewire::actingAs($admin)->test(SocialConnectionsTenantApplication::class, ['record' => $application->getKey()])
         ->assertSet('data.social_github_client_secret', null)
         ->call('save', false)
         ->assertHasNoErrors();
     expect(Crypt::decryptString($development->fresh()->settings['social_providers']['github']['client_secret']))->toBe('billing-secret');
 
-    Livewire::actingAs($admin)->test(EditTenantApplication::class, ['record' => $application->getKey()])
+    // Changing the client ID without a new secret is rejected.
+    Livewire::actingAs($admin)->test(SocialConnectionsTenantApplication::class, ['record' => $application->getKey()])
         ->set('data.social_github_client_id', 'changed-client')
         ->call('save', false)
         ->assertHasErrors();
     expect($development->fresh()->settings['social_providers']['github']['client_id'])->toBe('billing-client');
+
+    // Returning a provider to the Portal connection removes the override.
+    Livewire::actingAs($admin)->test(SocialConnectionsTenantApplication::class, ['record' => $application->getKey()])
+        ->set('data.social_github_mode', 'inherit')
+        ->call('save', false)
+        ->assertHasNoErrors();
+    expect($development->fresh()->settings['social_providers'])->toBe(['google' => ['mode' => 'disabled']]);
 });
 
 test('application email verification can be required, disabled, or inherited per environment', function (): void {

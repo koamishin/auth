@@ -10,6 +10,7 @@ use App\Filament\Resources\TenantApplications\Pages\CreateTenantApplication;
 use App\Filament\Resources\TenantApplications\Pages\EditTenantApplication;
 use App\Filament\Resources\TenantApplications\Pages\ListApplicationUsers;
 use App\Filament\Resources\TenantApplications\Pages\ListTenantApplications;
+use App\Filament\Resources\TenantApplications\Pages\SocialConnectionsTenantApplication;
 use App\Filament\Resources\TenantApplications\Pages\ViewTenantApplication;
 use App\Models\TenantApplication;
 use App\Models\TenantApplicationEnvironment;
@@ -282,13 +283,6 @@ class TenantApplicationResource extends Resource
                         Toggle::make('sso_enabled')->label('Allow single sign-on')->default(false)
                             ->helperText('Share sign-in with other opted-in applications in this organization and environment for up to eight hours. Each application still checks membership and consent.'),
                     ])->columns(1),
-                Section::make('Social connections')
-                    ->id('social-connections')
-                    ->contained(false)
-                    ->description('Choose Portal credentials, disable a provider, or configure credentials for this application environment. Custom secrets are encrypted and never displayed again.')
-                    ->icon('heroicon-o-share')
-                    ->visible(fn (?TenantApplication $record): bool => $record instanceof TenantApplication)
-                    ->components(array_map(self::socialConnectionFields(...), SocialLoginProvider::cases())),
             ]);
     }
 
@@ -327,29 +321,6 @@ class TenantApplicationResource extends Resource
         return $values;
     }
 
-    private static function socialConnectionFields(SocialLoginProvider $provider): Section
-    {
-        $prefix = 'social_'.$provider->value;
-
-        return Section::make($provider->label())
-            ->icon('kms-'.$provider->value)
-            ->contained(false)
-            ->components([
-                Select::make($prefix.'_mode')->label('Connection')->options([
-                    'inherit' => 'Use Portal connection', 'disabled' => 'Disabled', 'custom' => 'Use application credentials',
-                ])->default('inherit')->required()->live(),
-                TextInput::make($prefix.'_client_id')->label('Client ID')->maxLength(255)
-                    ->visible(fn (Get $get): bool => $get($prefix.'_mode') === 'custom'),
-                TextInput::make($prefix.'_client_secret')->label('Client secret')->password()->maxLength(2048)
-                    ->helperText('Leave blank to keep the current secret. Changing the client ID requires a new secret.')
-                    ->visible(fn (Get $get): bool => $get($prefix.'_mode') === 'custom'),
-                TextInput::make($prefix.'_callback')->label('Provider callback URL')
-                    ->default(rtrim((string) config('app.url'), '/').$provider->defaultRedirectPath())
-                    ->disabled()->dehydrated(false)->visible(fn (Get $get): bool => $get($prefix.'_mode') === 'custom'),
-            ])->columns(1);
-    }
-
-    #[\Override]
     public static function infolist(Schema $schema): Schema
     {
         return $schema
@@ -476,6 +447,7 @@ class TenantApplicationResource extends Resource
             'view' => ViewTenantApplication::route('/{record}'),
             'edit' => EditTenantApplication::route('/{record}/edit'),
             'appearance' => AppearanceTenantApplication::route('/{record}/appearance'),
+            'social-connections' => SocialConnectionsTenantApplication::route('/{record}/social-connections'),
             'users' => ListApplicationUsers::route('/{record}/users'),
         ];
     }

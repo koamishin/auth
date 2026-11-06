@@ -72,7 +72,13 @@ class ApplicationNavigation
                         'fragment' => null,
                     ],
                     ['label' => 'Authentication features', 'icon' => 'heroicon-o-shield-check', 'url' => $url, 'active' => $active, 'fragment' => 'application-authentication-features'],
-                    ['label' => 'Social connections', 'icon' => 'heroicon-o-share', 'url' => $url, 'active' => $active, 'fragment' => 'social-connections'],
+                    [
+                        'label' => 'Social connections',
+                        'icon' => 'heroicon-o-share',
+                        'url' => TenantApplicationResource::getUrl('social-connections', ['tenant' => $tenant, 'record' => $application]),
+                        'active' => request()->routeIs('filament.admin.resources.tenant-applications.social-connections'),
+                        'fragment' => null,
+                    ],
                 ],
             ];
         }
@@ -162,6 +168,7 @@ class ApplicationNavigation
             'filament.admin.resources.tenant-applications.view',
             'filament.admin.resources.tenant-applications.edit',
             'filament.admin.resources.tenant-applications.appearance',
+            'filament.admin.resources.tenant-applications.social-connections',
             'filament.admin.resources.tenant-applications.users',
         );
     }

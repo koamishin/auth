@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\TenantApplications\Pages;
 
-use App\Enums\SocialLoginProvider;
 use App\Filament\Resources\TenantApplications\TenantApplicationResource;
 use App\Models\TenantApplication;
 use App\Models\TenantApplicationEnvironment;
@@ -15,7 +14,6 @@ use Filament\Actions\ViewAction;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Laravel\Passport\Client;
@@ -58,19 +56,6 @@ class EditTenantApplication extends EditRecord
         $record = $this->getRecord();
         if ($record instanceof TenantApplication) {
             $data = [...$data, ...TenantApplicationResource::environmentFormValues($record, $record->environment)];
-        }
-
-        return $data;
-    }
-
-    #[\Override]
-    protected function mutateFormDataBeforeSave(array $data): array
-    {
-        foreach (SocialLoginProvider::cases() as $provider) {
-            $key = 'social_'.$provider->value.'_client_secret';
-            if (is_string($data[$key] ?? null) && $data[$key] !== '') {
-                $data[$key] = Crypt::encryptString($data[$key]);
-            }
         }
 
         return $data;
@@ -159,40 +144,6 @@ class EditTenantApplication extends EditRecord
                 unset($data[$key]);
             }
 
-            $connections = is_array($settings['social_providers'] ?? null) ? $settings['social_providers'] : [];
-            foreach (SocialLoginProvider::cases() as $provider) {
-                $prefix = 'social_'.$provider->value;
-                $mode = $data[$prefix.'_mode'] ?? 'inherit';
-                if (! in_array($mode, ['inherit', 'disabled', 'custom'], true)) {
-                    throw ValidationException::withMessages([$prefix.'_mode' => 'Select a valid social connection.']);
-                }
-
-                if ($mode === 'inherit') {
-                    unset($connections[$provider->value]);
-                } elseif ($mode === 'disabled') {
-                    $connections[$provider->value] = ['mode' => 'disabled'];
-                } else {
-                    $old = $connections[$provider->value] ?? [];
-                    $clientId = $data[$prefix.'_client_id'] ?? null;
-                    $secret = $data[$prefix.'_client_secret'] ?? null;
-                    if (! is_string($clientId) || trim($clientId) === '') {
-                        throw ValidationException::withMessages([$prefix.'_client_id' => 'Enter the provider client ID.']);
-                    }
-                    if (! is_string($secret) || $secret === '') {
-                        $secret = is_array($old) && ($old['client_id'] ?? null) === $clientId ? ($old['client_secret'] ?? null) : null;
-                    }
-                    if (! is_string($secret) || $secret === '') {
-                        throw ValidationException::withMessages([$prefix.'_client_secret' => 'Enter the provider client secret.']);
-                    }
-                    $connections[$provider->value] = ['mode' => 'custom', 'client_id' => $clientId, 'client_secret' => $secret];
-                }
-                unset($data[$prefix.'_mode'], $data[$prefix.'_client_id'], $data[$prefix.'_client_secret']);
-            }
-            if ($connections === []) {
-                unset($settings['social_providers']);
-            } else {
-                $settings['social_providers'] = $connections;
-            }
             $envUpdates = [
                 'oauth_client_id' => $client instanceof Client ? (string) $client->getKey() : null,
                 'redirect_uris' => $data['redirect_uris'],
@@ -208,13 +159,6 @@ class EditTenantApplication extends EditRecord
 
             return $record;
         });
-    }
-
-    protected function afterSave(): void
-    {
-        foreach (SocialLoginProvider::cases() as $provider) {
-            $this->data['social_'.$provider->value.'_client_secret'] = null;
-        }
     }
 
     #[\Override]
