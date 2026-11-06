@@ -39,7 +39,7 @@ class MfaSetupViewResponse implements Responsable
             'requiresConfirmation' => (bool) config('fortify.features')
                 && Features::optionEnabled(Features::twoFactorAuthentication(), 'confirm'),
             'continueUrl' => $this->continueUrl($request),
-            'enrolled' => $user instanceof User ? $user->hasEnrolledSecondFactor() : false,
+            'enrolled' => $user instanceof User && $user->hasEnrolledSecondFactor(),
         ])->toResponse($request);
     }
 
