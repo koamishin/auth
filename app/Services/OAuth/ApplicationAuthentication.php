@@ -374,7 +374,9 @@ class ApplicationAuthentication
 
     public function allowsSignups(TenantApplicationEnvironment $environment): bool
     {
-        return $environment->getSetting('allow_signups', false) === true;
+        // Access mode is the single source of truth: invite-only and waitlist
+        // applications do not accept self-service sign-ups.
+        return $environment->allowsPublicSignup();
     }
 
     public function enroll(TenantApplicationEnvironment $environment, User $user): void

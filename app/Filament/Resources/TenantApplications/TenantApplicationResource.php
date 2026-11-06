@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\TenantApplications;
 
+use App\Enums\AccessMode;
 use App\Enums\SocialLoginProvider;
 use App\Filament\Resources\TenantApplications\Pages\AppearanceTenantApplication;
 use App\Filament\Resources\TenantApplications\Pages\AuthenticationTenantApplication;
@@ -282,6 +283,10 @@ class TenantApplicationResource extends Resource
             'email_verification_link_ttl' => (int) $config?->getSetting('email_verification_link_ttl', TenantApplicationEnvironment::DEFAULT_VERIFICATION_LINK_TTL),
             'email_verification_bind_device' => $config?->getSetting('email_verification_bind_device', true) === true,
             'auth_email_code_signin' => $config?->getSetting('auth_email_code_signin', false) === true,
+            'access_mode' => $config?->accessMode()->value ?? AccessMode::InviteOnly->value,
+            'block_email_subaddresses' => $config?->getSetting('block_email_subaddresses', false) === true,
+            'block_disposable_emails' => $config?->getSetting('block_disposable_emails', false) === true,
+            'access_rules' => $config?->accessRules() ?? [],
             'require_mfa' => $config?->getSetting('require_mfa', false) === true,
             'passkeys_satisfy_mfa' => $config?->getSetting('passkeys_satisfy_mfa', true) === true,
             'auth_password_enabled' => $config?->getSetting('auth_password_enabled', true) === true,

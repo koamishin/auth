@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\TenantApplications\Pages;
 
+use App\Enums\AccessMode;
 use App\Filament\Resources\TenantApplications\TenantApplicationResource;
 use App\Models\TenantApplication;
 use App\Models\TenantApplicationEnvironment;
@@ -106,6 +107,9 @@ class AuthenticationTenantApplication extends EditRecord
                         Tabs\Tab::make('Biometric')
                             ->icon('heroicon-o-identification')
                             ->schema($this->biometricTab()),
+                        Tabs\Tab::make('Access')
+                            ->icon('heroicon-o-lock-closed')
+                            ->schema($this->accessTab()),
                         Tabs\Tab::make('Multi-factor')
                             ->icon('heroicon-o-shield-exclamation')
                             ->schema($this->multiFactorTab()),
@@ -310,6 +314,85 @@ class AuthenticationTenantApplication extends EditRecord
     }
 
     /** @return array<int, Section> */
+    private function accessTab(): array
+    {
+        return [
+            Section::make('Access mode')
+                ->description('Decide how people gain access to this application.')
+                ->contained(false)
+                ->components([
+                    ToggleButtons::make('access_mode')
+                        ->label('Who can sign up')
+                        ->options(collect(AccessMode::cases())->mapWithKeys(
+                            fn (AccessMode $mode): array => [$mode->value => $mode->label()],
+                        )->all())
+                        ->default(AccessMode::InviteOnly->value)
+                        ->required()
+                        ->live(),
+
+                    Text::make('Open: anyone can create their own account.')
+                        ->visible(fn (Get $get): bool => $get('access_mode') === AccessMode::Open->value),
+
+                    Text::make('Invite-only: existing members keep signing in, and new accounts must be added by an administrator.')
+                        ->visible(fn (Get $get): bool => $get('access_mode') === AccessMode::InviteOnly->value),
+
+                    Text::make('Waitlist: sign-ups are closed. A waitlist screen for interested users is not built yet.')
+                        ->visible(fn (Get $get): bool => $get('access_mode') === AccessMode::Waitlist->value),
+                ]),
+
+            Section::make('Identifier restrictions')
+                ->description('Refuse or restrict the email addresses that can be used with this application.')
+                ->contained(false)
+                ->components([
+                    Toggle::make('block_email_subaddresses')
+                        ->label('Block email subaddresses')
+                        ->helperText('Refuse addresses such as name+tag@example.com, which are often used to create many accounts from one mailbox.')
+                        ->default(false)
+                        ->rules(['boolean']),
+
+                    Toggle::make('block_disposable_emails')
+                        ->label('Block disposable email addresses')
+                        ->helperText('Refuse throwaway providers such as mailinator.com and yopmail.com.')
+                        ->default(false)
+                        ->rules(['boolean']),
+                ]),
+
+            Section::make('Allowlist and blocklist')
+                ->description('Block rules always win. If any allow rule exists, only matching addresses may be used.')
+                ->contained(false)
+                ->components([
+                    Repeater::make('access_rules')
+                        ->hiddenLabel()
+                        ->addActionLabel('Add rule')
+                        ->defaultItems(0)
+                        ->itemLabel(fn (array $state): ?string => filled($state['value'] ?? null)
+                            ? ucfirst((string) ($state['type'] ?? '')).' '.($state['value'] ?? '')
+                            : null)
+                        ->components([
+                            Select::make('type')
+                                ->label('Rule')
+                                ->options(['allow' => 'Allow', 'block' => 'Block'])
+                                ->default('block')
+                                ->required(),
+
+                            Select::make('kind')
+                                ->label('Matches')
+                                ->options(['email' => 'Exact email address', 'domain' => 'Email domain'])
+                                ->default('domain')
+                                ->required(),
+
+                            TextInput::make('value')
+                                ->label('Value')
+                                ->placeholder('e.g. example.com or person@example.com')
+                                ->required()
+                                ->maxLength(255),
+                        ])
+                        ->columns(3),
+                ]),
+        ];
+    }
+
+    /** @return array<int, Section> */
     private function multiFactorTab(): array
     {
         return [
@@ -411,6 +494,8 @@ class AuthenticationTenantApplication extends EditRecord
             'auth_email_signin' => true,
             'auth_email_code_signin' => false,
             'email_verification_bind_device' => true,
+            'block_email_subaddresses' => false,
+            'block_disposable_emails' => false,
             'require_mfa' => false,
             'passkeys_satisfy_mfa' => true,
             'auth_password_enabled' => true,
@@ -466,6 +551,32 @@ class AuthenticationTenantApplication extends EditRecord
             $settings['auth_password_min_length'] = $minLength;
         }
 
+        $accessMode = $data['access_mode'] ?? null;
+        if (! is_string($accessMode) || ! AccessMode::tryFrom($accessMode) instanceof AccessMode) {
+            throw ValidationException::withMessages(['access_mode' => 'Choose a valid access mode.']);
+        }
+
+        $settings['access_mode'] = $accessMode;
+
+        // Keep the legacy flag in step so anything still reading it agrees with
+        // the access mode the administrator chose.
+        if (AccessMode::from($accessMode)->allowsPublicSignup()) {
+            $settings['allow_signups'] = true;
+        } else {
+            unset($settings['allow_signups']);
+        }
+
+        unset($data['access_mode']);
+
+        $accessRules = $this->normalizeAccessRules($data['access_rules'] ?? []);
+        if ($accessRules === []) {
+            unset($settings['access_rules']);
+        } else {
+            $settings['access_rules'] = $accessRules;
+        }
+
+        unset($data['access_rules']);
+
         $attributes = $this->normalizeAttributes($data['user_metadata_attributes'] ?? []);
         if ($attributes === []) {
             unset($settings['user_metadata_attributes']);
@@ -492,6 +603,64 @@ class AuthenticationTenantApplication extends EditRecord
         $configuration->update(['settings' => $settings]);
 
         return $record;
+    }
+
+    /**
+     * Validate and normalise allow and block rules.
+     *
+     * @param  array<int, array<string, mixed>>  $rules
+     * @return list<array{type: string, kind: string, value: string}>
+     */
+    private function normalizeAccessRules(array $rules): array
+    {
+        $normalized = [];
+        $seen = [];
+
+        foreach ($rules as $rule) {
+            if (! is_array($rule)) {
+                continue;
+            }
+
+            $type = $rule['type'] ?? null;
+            $kind = $rule['kind'] ?? null;
+            $value = is_string($rule['value'] ?? null) ? trim($rule['value']) : '';
+
+            if ($value === '') {
+                continue;
+            }
+
+            if (! in_array($type, ['allow', 'block'], true)) {
+                throw ValidationException::withMessages(['access_rules' => 'Each rule must allow or block.']);
+            }
+
+            if (! in_array($kind, ['email', 'domain'], true)) {
+                throw ValidationException::withMessages(['access_rules' => 'Each rule must match an email address or a domain.']);
+            }
+
+            if ($kind === 'email' && filter_var($value, FILTER_VALIDATE_EMAIL) === false) {
+                throw ValidationException::withMessages(['access_rules' => "[{$value}] is not a valid email address."]);
+            }
+
+            if ($kind === 'domain' && preg_match('/^[a-z0-9.-]+\.[a-z]{2,}$/i', ltrim($value, '@')) !== 1) {
+                throw ValidationException::withMessages(['access_rules' => "[{$value}] is not a valid domain."]);
+            }
+
+            $normalizedValue = $kind === 'email'
+                ? mb_strtolower($value)
+                : mb_strtolower(ltrim($value, '@'));
+
+            $key = $type.'|'.$kind.'|'.$normalizedValue;
+
+            if (isset($seen[$key])) {
+                throw ValidationException::withMessages(['access_rules' => "The rule for [{$value}] is defined more than once."]);
+            }
+
+            $seen[$key] = true;
+
+            $normalized[] = ['type' => $type, 'kind' => $kind, 'value' => $normalizedValue];
+        }
+
+        return $normalized;
     }
 
     /**

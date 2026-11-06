@@ -12,6 +12,7 @@ use App\Http\Responses\ApplicationTwoFactorLoginResponse;
 use App\Http\Responses\ApplicationVerifyEmailResponse;
 use App\Models\TenantApplicationEnvironment;
 use App\Models\User;
+use App\Services\Auth\ApplicationAccessPolicy;
 use App\Services\Auth\EmailCodeService;
 use App\Services\OAuth\ApplicationAuthentication;
 use App\Settings\ApplicationFeaturesSettings;
@@ -99,6 +100,20 @@ class FortifyServiceProvider extends ServiceProvider
     }
 
     /**
+     * Why the submitted identifier is refused for this application, if at all.
+     */
+    private function accessReason(Request $request): ?string
+    {
+        $environment = $this->environment($request);
+
+        if (! $environment instanceof TenantApplicationEnvironment) {
+            return null;
+        }
+
+        return app(ApplicationAccessPolicy::class)->reasonFor($environment, $request->input(Fortify::username()));
+    }
+
+    /**
      * The application environment the request is being served for, if any.
      */
     private function environment(Request $request): ?TenantApplicationEnvironment
@@ -126,6 +141,14 @@ class FortifyServiceProvider extends ServiceProvider
                 // Disabling password authentication stops new passwords from being
                 // created. Users who already have one keep signing in with it, which
                 // matches how Clerk scopes that setting and avoids locking people out.
+            }
+
+            // An allowlist or blocklist applies to sign-in as well, so an address
+            // that is refused at sign-up cannot slip in later.
+            $reason = $this->accessReason($request);
+
+            if ($reason !== null) {
+                throw ValidationException::withMessages([Fortify::username() => $reason]);
             }
 
             $identityNamespace = $environment instanceof TenantApplicationEnvironment

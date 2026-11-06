@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\AccessMode;
 use App\Settings\ApplicationFeaturesSettings;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -227,6 +228,91 @@ class TenantApplicationEnvironment extends Model
     public function allowsEmailSignup(): bool
     {
         return $this->getSetting('auth_email_signup', true) === true;
+    }
+
+    /**
+     * How users may gain access to this application.
+     *
+     * Falls back to the older boolean setting so applications created before
+     * access modes existed keep behaving exactly as they did.
+     */
+    public function accessMode(): AccessMode
+    {
+        $mode = $this->getSetting('access_mode');
+
+        if (is_string($mode)) {
+            $resolved = AccessMode::tryFrom($mode);
+
+            if ($resolved instanceof AccessMode) {
+                return $resolved;
+            }
+        }
+
+        return AccessMode::fromLegacySignups($this->getSetting('allow_signups', false) === true);
+    }
+
+    /**
+     * Whether someone may create their own account here.
+     */
+    public function allowsPublicSignup(): bool
+    {
+        return $this->accessMode()->allowsPublicSignup();
+    }
+
+    public function blocksEmailSubaddresses(): bool
+    {
+        return $this->getSetting('block_email_subaddresses', false) === true;
+    }
+
+    public function blocksDisposableEmails(): bool
+    {
+        return $this->getSetting('block_disposable_emails', false) === true;
+    }
+
+    /**
+     * Allow and block rules for identifiers, as `{type, kind, value}` entries.
+     *
+     * @return list<array{type: string, kind: string, value: string}>
+     */
+    public function accessRules(): array
+    {
+        $rules = $this->getSetting('access_rules', []);
+
+        if (! is_array($rules)) {
+            return [];
+        }
+
+        $normalized = [];
+
+        foreach ($rules as $rule) {
+            if (! is_array($rule)) {
+                continue;
+            }
+
+            $type = $rule['type'] ?? null;
+            $kind = $rule['kind'] ?? null;
+            $value = $rule['value'] ?? null;
+
+            if (! is_string($type) || ! in_array($type, ['allow', 'block'], true)) {
+                continue;
+            }
+
+            if (! is_string($kind) || ! in_array($kind, ['email', 'domain'], true)) {
+                continue;
+            }
+
+            if (! is_string($value) || trim($value) === '') {
+                continue;
+            }
+
+            $normalized[] = [
+                'type' => $type,
+                'kind' => $kind,
+                'value' => $kind === 'email' ? mb_strtolower(trim($value)) : mb_strtolower(ltrim(trim($value), '@')),
+            ];
+        }
+
+        return $normalized;
     }
 
     public function allowsEmailSignin(): bool

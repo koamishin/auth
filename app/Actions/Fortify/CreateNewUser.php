@@ -7,6 +7,7 @@ use App\Concerns\ProfileValidationRules;
 use App\Enums\RoleEnums;
 use App\Models\TenantApplicationEnvironment;
 use App\Models\User;
+use App\Services\Auth\ApplicationAccessPolicy;
 use App\Services\OAuth\ApplicationAuthentication;
 use App\Settings\ApplicationFeaturesSettings;
 use Illuminate\Support\Facades\DB;
@@ -40,6 +41,16 @@ class CreateNewUser implements CreatesNewUsers
                 throw ValidationException::withMessages([
                     'email' => 'This application does not allow signing up with an email address.',
                 ]);
+            }
+
+            // Allowlists, blocklists, and identifier protections apply to every
+            // sign-up, including ones that arrive without a password.
+            if ($environment instanceof TenantApplicationEnvironment) {
+                $reason = app(ApplicationAccessPolicy::class)->reasonFor($environment, $input['email'] ?? null);
+
+                if ($reason !== null) {
+                    throw ValidationException::withMessages(['email' => $reason]);
+                }
             }
             $identityNamespace = $environment instanceof TenantApplicationEnvironment
                 ? $environment->identityNamespace()
