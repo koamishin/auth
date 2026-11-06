@@ -104,6 +104,10 @@ test('context uses only application record routes and rejects invalid or foreign
     expect(ApplicationNavigation::currentApplication($tenant)->is($routed))->toBeTrue();
     expect(session('current_application_id'))->toBe($routed->id);
 
+    navigationRoute('filament.admin.resources.tenant-applications.appearance', $routed);
+    expect(ApplicationNavigation::currentApplication($tenant)->is($routed))->toBeTrue();
+    expect(ApplicationNavigation::forTenant($tenant)['application']->is($routed))->toBeTrue();
+
     navigationRoute('filament.admin.resources.tenant-applications.edit', (string) $foreign->id);
     expect(ApplicationNavigation::forTenant($tenant))->toBe(['application' => null, 'groups' => []]);
     expect(session('current_application_id'))->toBe($routed->id);
@@ -201,12 +205,18 @@ test('view and edit destinations render their fragment targets and switching per
     $this->get(TenantApplicationResource::getUrl('edit', ['tenant' => $tenant, 'record' => $second]))
         ->assertOk()
         ->assertSee('id="environment-callbacks"', false)
-        ->assertSee('id="hosted-login-appearance"', false)
         ->assertSee('id="application-authentication-features"', false)
         ->assertSee('id="social-connections"', false);
+
+    // Hosted login appearance lives on its own page and keeps the application sidebar.
+    $this->get(TenantApplicationResource::getUrl('appearance', ['tenant' => $tenant, 'record' => $second]))
+        ->assertOk()
+        ->assertSee('Second application')
+        ->assertSee('id="edit-appearance-form"', false)
+        ->assertSee('class="fi-app-nav"', false);
 });
 
-test('direct application URLs render only contextual navigation in the shared sidebar', function (string $page): void {
+test('application record pages render the application navigation alongside the workspace navigation', function (string $page): void {
     $tenant = navigationTenant('navigation');
     $selected = navigationApplication($tenant, 'Previously selected');
     $routed = navigationApplication($tenant, 'Opened directly');
@@ -224,12 +234,45 @@ test('direct application URLs render only contextual navigation in the shared si
     $sidebar = navigationSidebar($response);
     expect($sidebar)
         ->toContain('Opened directly', 'Overview', 'API keys', 'Users', 'Settings', 'Environment', 'Appearance', 'Authentication features', 'Social connections')
-        ->toContain('href="'.$editUrl.'#hosted-login-appearance"')
-        ->not->toContain('href="'.$staleEditUrl.'#hosted-login-appearance"')
-        ->not->toContain('fi-dd-', 'Back', 'Applications', 'Search settings', 'type="search"', 'Workspace', 'OAuth', 'API Clients', 'Webhook Endpoints');
-    expect(substr_count($sidebar, 'class="fi-app-nav"'))->toBe(1);
-    expect(substr_count($sidebar, 'class="fi-app-nav-link"'))->toBe(8);
-})->with(['view', 'edit', 'users']);
+        ->toContain('href="'.$editUrl.'#environment-callbacks"')
+        ->not->toContain('href="'.$staleEditUrl.'#environment-callbacks"')
+        ->not->toContain('fi-dd-', 'Search settings', 'type="search"');
+
+    // The application section reuses Filament's sidebar components, so it is
+    // rendered as native groups and items rather than custom markup.
+    $document = new DOMDocument;
+    $document->loadHTML($sidebar, LIBXML_NOERROR | LIBXML_NOWARNING);
+    $appNav = (new DOMXPath($document))->query('//div[@class="fi-app-nav"]');
+    expect($appNav)->toHaveCount(1);
+    expect((new DOMXPath($document))->query('//div[@class="fi-app-nav"]//li[contains(@class, "fi-sidebar-item")]'))->toHaveCount(8);
+
+    $appNavHtml = $document->saveHTML($appNav->item(0));
+    expect($appNavHtml)
+        ->toContain('data-group-label="Application"', 'data-group-label="Directory"', 'data-group-label="Configuration"')
+        ->toContain('fi-sidebar-group-items', 'fi-sidebar-item-btn', 'fi-sidebar-item-label')
+        ->toContain('Opened directly');
+
+    // Active state for fragment targets is resolved from the URL hash in the browser.
+    $xpath = new DOMXPath($document);
+    $routeActive = $page === 'edit' ? 'true' : 'false';
+
+    $fragmentLink = $xpath->query('//div[@class="fi-app-nav"]//a[contains(@href, "#environment-callbacks")]');
+    expect($fragmentLink)->toHaveCount(1);
+    expect($fragmentLink->item(0)->parentNode->getAttribute('x-bind:class'))
+        ->toBe("{ 'fi-active': isActive({$routeActive}, 'environment-callbacks') }");
+
+    $settingsLink = $xpath->query('//div[@class="fi-app-nav"]//a[normalize-space(.)="Settings"]');
+    expect($settingsLink)->toHaveCount(1);
+    expect($settingsLink->item(0)->parentNode->getAttribute('x-bind:class'))
+        ->toBe("{ 'fi-active': isActive({$routeActive}, null) }");
+
+    // The workspace navigation is retained instead of being replaced.
+    expect($sidebar)
+        ->toContain('data-group-label="Applications"', 'data-group-label="Directory &amp; Access"')
+        ->toContain('href="'.route('filament.admin.resources.tenant-applications.index', ['tenant' => $tenant]).'"')
+        ->toContain('href="'.OAuthClientResource::getUrl('index', ['tenant' => $tenant]).'"')
+        ->toContain('href="'.route('filament.admin.resources.users.index', ['tenant' => $tenant]).'"');
+})->with(['view', 'edit', 'appearance', 'users']);
 
 test('workspace pages render both collapsible groups with tenant links and the active group', function (string $route, string $activeGroup): void {
     $tenant = navigationTenant('navigation');

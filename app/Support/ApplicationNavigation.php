@@ -8,6 +8,8 @@ use App\Filament\Resources\TenantApplications\TenantApplicationResource;
 use App\Filament\Resources\Users\UserResource;
 use App\Models\Tenant;
 use App\Models\TenantApplication;
+use Filament\Navigation\NavigationGroup;
+use Filament\Navigation\NavigationItem;
 
 class ApplicationNavigation
 {
@@ -78,6 +80,56 @@ class ApplicationNavigation
         return ['application' => $application, 'groups' => $groups];
     }
 
+    /**
+     * Build render-ready Filament navigation for the selected application so its
+     * section reuses the same sidebar components as the workspace navigation.
+     *
+     * @param  list<array{label: string, items: list<array{label: string, icon: string, url: string, active: bool, fragment: ?string}>}>  $groups
+     * @return list<NavigationGroup>
+     */
+    public static function navigationGroups(array $groups): array
+    {
+        return array_map(
+            fn (array $group): NavigationGroup => NavigationGroup::make($group['label'])
+                ->items(array_map(self::navigationItem(...), $group['items'])),
+            $groups,
+        );
+    }
+
+    /**
+     * @param  array{label: string, icon: string, url: string, active: bool, fragment: ?string}  $item
+     */
+    private static function navigationItem(array $item): NavigationItem
+    {
+        $navigationItem = NavigationItem::make($item['label'])
+            ->icon($item['icon'])
+            ->url($item['url'].(filled($item['fragment']) ? '#'.$item['fragment'] : ''))
+            ->extraAttributes([
+                'x-bind:class' => "{ 'fi-active': ".self::activeExpression($item).' }',
+                'x-bind:aria-current' => self::activeExpression($item)." ? 'page' : null",
+            ]);
+
+        // Fragment destinations share one route, so which of them is active is
+        // resolved from the URL hash in the browser instead of on the server.
+        if (blank($item['fragment'])) {
+            $navigationItem->isActiveWhen(fn (): bool => $item['active']);
+        }
+
+        return $navigationItem;
+    }
+
+    /**
+     * @param  array{active: bool, fragment: ?string}  $item
+     */
+    private static function activeExpression(array $item): string
+    {
+        $fragment = $item['fragment'] === null
+            ? 'null'
+            : "'".str_replace(['\\', "'"], ['\\\\', "\\'"], $item['fragment'])."'";
+
+        return sprintf('isActive(%s, %s)', $item['active'] ? 'true' : 'false', $fragment);
+    }
+
     public static function currentApplication(?Tenant $tenant): ?TenantApplication
     {
         if (! $tenant instanceof Tenant) {
@@ -106,6 +158,11 @@ class ApplicationNavigation
 
     private static function isApplicationRecordRoute(): bool
     {
-        return request()->routeIs('filament.admin.resources.tenant-applications.view', 'filament.admin.resources.tenant-applications.edit', 'filament.admin.resources.tenant-applications.users');
+        return request()->routeIs(
+            'filament.admin.resources.tenant-applications.view',
+            'filament.admin.resources.tenant-applications.edit',
+            'filament.admin.resources.tenant-applications.appearance',
+            'filament.admin.resources.tenant-applications.users',
+        );
     }
 }

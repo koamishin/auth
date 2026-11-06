@@ -116,33 +116,35 @@
         >
             {{ \Filament\Support\Facades\FilamentView::renderHook(\Filament\View\PanelsRenderHook::SIDEBAR_NAV_START) }}
 
+            @php
+                $navigation = filament()->getNavigation();
+            @endphp
+
+            <ul class="fi-sidebar-nav-groups">
+                @foreach ($navigation as $group)
+                    @php
+                        $hasItemIcons = collect($group->getItems())->contains(
+                            fn ($item) => filled($item->getIcon()) || filled($item->getActiveIcon())
+                        );
+                    @endphp
+
+                    <x-filament-panels::sidebar.group
+                        :active="$group->isActive()"
+                        :collapsible="$group->isCollapsible()"
+                        :icon="$hasItemIcons && ! $isSidebarCollapsibleOnDesktop ? null : $group->getIcon()"
+                        :items="$group->getItems()"
+                        :label="$group->getLabel()"
+                        :attributes="\Filament\Support\prepare_inherited_attributes($group->getExtraSidebarAttributeBag())"
+                    />
+                @endforeach
+            </ul>
+
+            {{-- The selected application's settings sit alongside the workspace navigation
+                 so the sidebar never swaps out when an application is in context. --}}
             @if ($applicationNavigation['application'])
                 @include('filament.components.application-sidebar-navigation', [
                     'applicationNavigation' => $applicationNavigation,
                 ])
-            @else
-                @php
-                    $navigation = filament()->getNavigation();
-                @endphp
-
-                <ul class="fi-sidebar-nav-groups">
-                    @foreach ($navigation as $group)
-                        @php
-                            $hasItemIcons = collect($group->getItems())->contains(
-                                fn ($item) => filled($item->getIcon()) || filled($item->getActiveIcon())
-                            );
-                        @endphp
-
-                        <x-filament-panels::sidebar.group
-                            :active="$group->isActive()"
-                            :collapsible="$group->isCollapsible()"
-                            :icon="$hasItemIcons && ! $isSidebarCollapsibleOnDesktop ? null : $group->getIcon()"
-                            :items="$group->getItems()"
-                            :label="$group->getLabel()"
-                            :attributes="\Filament\Support\prepare_inherited_attributes($group->getExtraSidebarAttributeBag())"
-                        />
-                    @endforeach
-                </ul>
             @endif
 
             <script @if (filled($cspNonce)) nonce="{{ $cspNonce }}" @endif>
