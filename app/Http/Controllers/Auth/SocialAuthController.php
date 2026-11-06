@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Models\SocialAccount;
 use App\Models\TenantApplicationEnvironment;
 use App\Models\User;
+use App\Services\Auth\ApplicationAccessPolicy;
 use App\Services\OAuth\ApplicationAuthentication;
 use App\Services\OAuth\ApplicationSocialConnections;
 use App\Settings\ApplicationFeaturesSettings;
@@ -131,6 +132,16 @@ class SocialAuthController extends Controller
             return $this->socialFailure($request, $user->ban_reason
                 ? 'Your account has been suspended: '.$user->ban_reason
                 : 'Your account has been suspended. Please contact support.');
+        }
+
+        // Allow and block rules apply to every sign-in method, not just passwords.
+        $environment = $request->attributes->get('koamishin.application_environment');
+        if ($environment instanceof TenantApplicationEnvironment) {
+            $reason = app(ApplicationAccessPolicy::class)->reasonFor($environment, $user->email);
+
+            if ($reason !== null) {
+                return $this->socialFailure($request, $reason);
+            }
         }
 
         if (Features::enabled(Features::twoFactorAuthentication()) && $user->two_factor_secret && $user->two_factor_confirmed_at) {

@@ -8,6 +8,7 @@ use App\Enums\EmailCodePurpose;
 use App\Http\Controllers\Controller;
 use App\Models\TenantApplicationEnvironment;
 use App\Models\User;
+use App\Services\Auth\ApplicationAccessPolicy;
 use App\Services\Auth\EmailCodeService;
 use Illuminate\Contracts\Auth\StatefulGuard;
 use Illuminate\Http\Request;
@@ -40,8 +41,9 @@ class EmailCodeSignInController extends Controller
         $user = $this->findUser($environment, $email);
 
         // Always answer the same way, so the endpoint cannot be used to discover
-        // which addresses have accounts.
-        if ($user instanceof User) {
+        // which addresses have accounts. A refused address simply never receives
+        // a code.
+        if ($user instanceof User && app(ApplicationAccessPolicy::class)->allows($environment, $user->email)) {
             $this->codes->send($user, EmailCodePurpose::SignIn);
         }
 
@@ -73,6 +75,13 @@ class EmailCodeSignInController extends Controller
                     ? __('Your account has been suspended: :reason', ['reason' => $user->ban_reason])
                     : __('Your account has been suspended. Please contact support.'),
             ]);
+        }
+
+        // Allow and block rules apply to every sign-in method, not just passwords.
+        $reason = app(ApplicationAccessPolicy::class)->reasonFor($environment, $user->email);
+
+        if ($reason !== null) {
+            throw ValidationException::withMessages(['email' => $reason]);
         }
 
         $this->codes->verify($user, (string) $request->input('code'), EmailCodePurpose::SignIn);

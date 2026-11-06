@@ -6,6 +6,7 @@ namespace App\Services\Auth;
 
 use App\Enums\EmailCodePurpose;
 use App\Models\EmailVerificationCode;
+use App\Models\TenantApplicationEnvironment;
 use App\Models\User;
 use App\Notifications\EmailVerificationCodeNotification;
 use Illuminate\Support\Facades\Hash;
@@ -35,10 +36,20 @@ class EmailCodeService
     /**
      * Send a fresh code, replacing any code that is still live.
      *
+     * Returns null without sending when the address is refused by the
+     * application, so no caller can issue a code to a blocked address.
+     *
      * @throws ValidationException when the resend cooldown is still running.
      */
-    public function send(User $user, EmailCodePurpose $purpose): EmailVerificationCode
+    public function send(User $user, EmailCodePurpose $purpose): ?EmailVerificationCode
     {
+        $environment = $user->tenantApplicationEnvironment;
+
+        if ($environment instanceof TenantApplicationEnvironment
+            && ! app(ApplicationAccessPolicy::class)->allows($environment, $user->email)) {
+            return null;
+        }
+
         $this->assertCooldownElapsed($user, $purpose);
 
         $code = $this->generateCode();

@@ -116,6 +116,20 @@ class AuthenticationTenantApplication extends EditRecord
                         Tabs\Tab::make('User model')
                             ->icon('heroicon-o-circle-stack')
                             ->schema($this->userModelTab()),
+                        Tabs\Tab::make('Enterprise SSO')
+                            ->icon('heroicon-o-building-office-2')
+                            ->schema($this->comingSoonTab(
+                                'Enterprise SSO',
+                                'Signing in with a corporate identity provider (SAML or OIDC) per email domain is not built yet.',
+                                'The organization-wide single sign-on setting on the Settings page shares a session between this organization\'s own applications. It is not an enterprise connection to an external identity provider.',
+                            )),
+                        Tabs\Tab::make('Web3')
+                            ->icon('heroicon-o-wallet')
+                            ->schema($this->comingSoonTab(
+                                'Web3',
+                                'Signing in with a crypto wallet is not built yet. It needs message signing and signature verification against the stored address.',
+                                'A wallet address can be set on a user by an administrator today, but it cannot be used to authenticate.',
+                            )),
                     ]),
             ]);
     }
@@ -199,26 +213,37 @@ class AuthenticationTenantApplication extends EditRecord
         ];
     }
 
+    /**
+     * A tab for a capability that is on the roadmap but not implemented, so the
+     * page describes the plan instead of offering controls that do nothing.
+     *
+     * @return array<int, Section>
+     */
+    private function comingSoonTab(string $title, string ...$notes): array
+    {
+        return [
+            Section::make($title)
+                ->description('Coming soon. Nothing on this tab is enforced yet.')
+                ->icon('heroicon-o-clock')
+                ->contained(false)
+                ->components(array_map(
+                    fn (string $note): Text => Text::make($note),
+                    $notes,
+                )),
+        ];
+    }
+
     /** @return array<int, Section> */
     private function phoneTab(): array
     {
         return [
             Section::make('Phone number')
-                ->description('Phone number identifiers are not supported by this portal yet. The settings below are placeholders and are not enforced.')
+                ->description('Coming soon. Phone sign-up and SMS codes are not built yet, so nothing on this tab is enforced.')
+                ->icon('heroicon-o-clock')
                 ->contained(false)
                 ->components([
-                    Toggle::make('auth_phone_signup')
-                        ->label('Sign-up with phone number')
-                        ->default(false)
-                        ->disabled(),
-                    Toggle::make('auth_phone_signin')
-                        ->label('Sign-in with phone number')
-                        ->default(false)
-                        ->disabled(),
-                    Toggle::make('auth_phone_verification')
-                        ->label('Verify phone numbers with an SMS code')
-                        ->default(false)
-                        ->disabled(),
+                    Text::make('Sign-up and sign-in with a phone number, verified by an SMS code, needs an SMS provider to be configured first.'),
+                    Text::make('The phone number stored on a user is editable by administrators today, but it cannot be used to authenticate.'),
                 ]),
         ];
     }
@@ -228,17 +253,11 @@ class AuthenticationTenantApplication extends EditRecord
     {
         return [
             Section::make('Username')
-                ->description('This portal identifies users by email address. Usernames are not supported yet, so the settings below are placeholders and are not enforced.')
+                ->description('Coming soon. Users are identified by email address, and signing in with a username is not built yet.')
+                ->icon('heroicon-o-clock')
                 ->contained(false)
                 ->components([
-                    Toggle::make('auth_username_signup')
-                        ->label('Sign-up with username')
-                        ->default(false)
-                        ->disabled(),
-                    Toggle::make('auth_username_signin')
-                        ->label('Sign-in with username')
-                        ->default(false)
-                        ->disabled(),
+                    Text::make('A username can be set on a user by an administrator today, and it is validated (4–64 characters, letters, numbers, hyphens and underscores only), but it cannot be used to authenticate.'),
                 ]),
         ];
     }

@@ -68,9 +68,9 @@ final class PasswordPolicy
 
     public static function environment(): ?TenantApplicationEnvironment
     {
-        $environment = request()?->attributes?->get('koamishin.application_environment');
-
-        return $environment instanceof TenantApplicationEnvironment ? $environment : null;
+        // Resolved from the request or, on ordinary pages such as the security
+        // settings, from the signed in user's own environment.
+        return ApplicationContext::environment();
     }
 
     /**

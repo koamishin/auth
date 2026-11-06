@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Auth;
 
+use App\Models\TenantApplicationEnvironment;
 use App\Models\User;
+use App\Services\Auth\ApplicationAccessPolicy;
 use Illuminate\Contracts\Auth\StatefulGuard;
 use Laravel\Passkeys\Actions\VerifyPasskey;
 use Laravel\Passkeys\Contracts\PasskeyLoginResponse;
@@ -24,6 +26,13 @@ class ApplicationPasskeyLoginController extends PasskeyLoginController
 
         $passkey = $verify($request->credential(), $request->verificationOptions());
         if (! $passkey->user instanceof User || ! Passkeys::allowsLogin($request, $passkey) || $passkey->user->isBanned()) {
+            throw InvalidPasskeyException::make('Unable to sign in with this account.');
+        }
+
+        // Allow and block rules apply to every sign-in method, not just passwords.
+        $environment = $request->attributes->get('koamishin.application_environment');
+        if ($environment instanceof TenantApplicationEnvironment
+            && ! app(ApplicationAccessPolicy::class)->allows($environment, $passkey->user->email)) {
             throw InvalidPasskeyException::make('Unable to sign in with this account.');
         }
 
