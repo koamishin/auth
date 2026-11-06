@@ -12,6 +12,7 @@ use App\Filament\Resources\TenantApplications\Pages\EditTenantApplication;
 use App\Filament\Resources\TenantApplications\Pages\ListApplicationUsers;
 use App\Filament\Resources\TenantApplications\Pages\ListTenantApplications;
 use App\Filament\Resources\TenantApplications\Pages\SocialConnectionsTenantApplication;
+use App\Filament\Resources\TenantApplications\Pages\ViewApplicationUser;
 use App\Filament\Resources\TenantApplications\Pages\ViewTenantApplication;
 use App\Models\TenantApplication;
 use App\Models\TenantApplicationEnvironment;
@@ -436,6 +437,7 @@ class TenantApplicationResource extends Resource
             'social-connections' => SocialConnectionsTenantApplication::route('/{record}/social-connections'),
             'authentication' => AuthenticationTenantApplication::route('/{record}/authentication'),
             'users' => ListApplicationUsers::route('/{record}/users'),
+            'user' => ViewApplicationUser::route('/{record}/users/{userId}'),
         ];
     }
 }

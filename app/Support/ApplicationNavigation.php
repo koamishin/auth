@@ -171,6 +171,7 @@ class ApplicationNavigation
             'filament.admin.resources.tenant-applications.social-connections',
             'filament.admin.resources.tenant-applications.authentication',
             'filament.admin.resources.tenant-applications.users',
+            'filament.admin.resources.tenant-applications.user',
         );
     }
 }

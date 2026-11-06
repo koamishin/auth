@@ -7,15 +7,33 @@ namespace App\Filament\Resources\TenantApplications\Pages;
 use App\Filament\Resources\TenantApplications\TenantApplicationResource;
 use App\Filament\Resources\Users\UserResource;
 use App\Models\TenantApplication;
+use App\Models\User;
+use Filament\Actions\Action;
+use Filament\Actions\BulkAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Concerns\InteractsWithRecord;
 use Filament\Resources\Pages\Page;
 use Filament\Support\Components\Attributes\Unexposed;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
+/**
+ * Users enrolled in an application environment, with the account management
+ * tools needed to support them: verification state, authentication methods,
+ * sessions, suspension, and impersonation.
+ */
 class ListApplicationUsers extends Page implements HasTable
 {
     use InteractsWithRecord;
@@ -42,6 +60,13 @@ class ListApplicationUsers extends Page implements HasTable
             && UserResource::canViewAny();
     }
 
+    public function getSubheading(): ?string
+    {
+        $application = $this->getRecord();
+
+        return 'Accounts that can sign in to '.$application->name.' in the '.$application->environment.' environment.';
+    }
+
     public function table(Table $table): Table
     {
         return $table
@@ -52,14 +77,300 @@ class ListApplicationUsers extends Page implements HasTable
                 return $application->users($application->environment);
             })
             ->inverseRelationship('applications')
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->withCount(['passkeys', 'socialAccounts']))
             ->columns([
-                TextColumn::make('name')->searchable()->sortable(),
-                TextColumn::make('email')->searchable()->sortable(),
-                TextColumn::make('pivot.role')->label('Application role')->badge(),
-                TextColumn::make('pivot.created_at')->label('Enrolled')->dateTime('M j, Y H:i'),
+                TextColumn::make('name')
+                    ->label('User')
+                    ->searchable(['name', 'email', 'username'])
+                    ->description(fn (User $record): string => $record->email)
+                    ->weight('medium')
+                    ->sortable(),
+
+                TextColumn::make('username')
+                    ->searchable()
+                    ->placeholder('—')
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('pivot.role')
+                    ->label('Role')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state): string => ucfirst((string) $state))
+                    ->color(fn (?string $state): string => match ($state) {
+                        'owner', 'admin' => 'primary',
+                        'editor' => 'info',
+                        default => 'gray',
+                    })
+                    ->sortable(),
+
+                TextColumn::make('status')
+                    ->badge()
+                    ->state(fn (User $record): string => $record->isBanned() ? 'Suspended' : 'Active')
+                    ->color(fn (User $record): string => $record->isBanned() ? 'danger' : 'success')
+                    ->tooltip(fn (User $record): ?string => $record->isBanned() ? $record->ban_reason : null),
+
+                IconColumn::make('email_verified_at')
+                    ->label('Email')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-check-badge')
+                    ->falseIcon('heroicon-o-x-mark')
+                    ->trueColor('success')
+                    ->falseColor('gray')
+                    ->tooltip(fn (User $record): string => $record->hasVerifiedEmail() ? 'Email verified' : 'Email not verified'),
+
+                IconColumn::make('phone_verified_at')
+                    ->label('Phone')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-check-badge')
+                    ->falseIcon('heroicon-o-minus-small')
+                    ->trueColor('success')
+                    ->falseColor('gray')
+                    ->tooltip(fn (User $record): string => $record->hasVerifiedPhone() ? 'Phone verified' : 'No verified phone'),
+
+                TextColumn::make('auth_methods')
+                    ->label('Auth methods')
+                    ->badge()
+                    ->state(fn (User $record): array => self::authMethodLabels($record))
+                    ->color(fn (string $state): string => match ($state) {
+                        'Passkey' => 'success',
+                        '2FA' => 'info',
+                        'Social' => 'warning',
+                        default => 'gray',
+                    })
+                    ->placeholder('Password only'),
+
+                TextColumn::make('pivot.last_sign_in_at')
+                    ->label('Last sign in')
+                    ->since()
+                    ->placeholder('Never')
+                    ->sortable(),
+
+                TextColumn::make('pivot.created_at')
+                    ->label('Enrolled')
+                    ->dateTime('M j, Y')
+                    ->sortable(),
+            ])
+            ->filters([
+                SelectFilter::make('role')
+                    ->label('Application role')
+                    ->options(fn (): array => $this->applicationRoles())
+                    ->query(fn (Builder $query, array $data): Builder => $query->when(
+                        filled($data['value'] ?? null),
+                        fn (Builder $query): Builder => $query->wherePivot('role', $data['value']),
+                    )),
+
+                TernaryFilter::make('banned_at')
+                    ->label('Account status')
+                    ->placeholder('All accounts')
+                    ->trueLabel('Suspended only')
+                    ->falseLabel('Active only')
+                    ->nullable(),
+
+                TernaryFilter::make('email_verified_at')
+                    ->label('Email verification')
+                    ->placeholder('Any verification state')
+                    ->trueLabel('Verified')
+                    ->falseLabel('Unverified')
+                    ->nullable(),
+            ])
+            ->recordActions([
+                Action::make('viewProfile')
+                    ->label('View profile')
+                    ->icon('heroicon-o-user-circle')
+                    ->url(fn (User $record): string => TenantApplicationResource::getUrl('user', [
+                        'tenant' => $this->getRecord()->tenant,
+                        'record' => $this->getRecord(),
+                        'userId' => $record->getKey(),
+                    ])),
+
+                Action::make('impersonate')
+                    ->label('Impersonate')
+                    ->icon('heroicon-o-user-plus')
+                    ->url(fn (User $record): string => route('impersonate', $record->getKey()))
+                    ->openUrlInNewTab()
+                    ->visible(fn (User $record): bool => ($admin = Auth::user()) instanceof User
+                        && $admin->hasRole('admin')
+                        && $record->canBeImpersonated()),
+
+                Action::make('ban')
+                    ->label('Suspend')
+                    ->icon('heroicon-o-no-symbol')
+                    ->color('danger')
+                    ->visible(fn (User $record): bool => ! $record->isBanned())
+                    ->modalHeading(fn (User $record): string => 'Suspend '.$record->name)
+                    ->modalDescription('Suspending revokes every active session and token immediately.')
+                    ->form([
+                        TextInput::make('reason')
+                            ->label('Suspension reason')
+                            ->placeholder('Violation of terms, suspicious activity')
+                            ->required(),
+                    ])
+                    ->action(function (User $record, array $data): void {
+                        $record->ban($data['reason'] ?? null);
+
+                        Notification::make()
+                            ->title('User suspended')
+                            ->body("{$record->name} has been suspended and all sessions terminated.")
+                            ->danger()
+                            ->send();
+                    }),
+
+                Action::make('unban')
+                    ->label('Restore')
+                    ->icon('heroicon-o-arrow-path')
+                    ->color('success')
+                    ->visible(fn (User $record): bool => $record->isBanned())
+                    ->requiresConfirmation()
+                    ->action(function (User $record): void {
+                        $record->unban();
+
+                        Notification::make()
+                            ->title('User restored')
+                            ->body("{$record->name} can sign in again.")
+                            ->success()
+                            ->send();
+                    }),
+
+                Action::make('revokeSessions')
+                    ->label('Revoke sessions')
+                    ->icon('heroicon-o-arrow-left-on-rectangle')
+                    ->color('warning')
+                    ->requiresConfirmation()
+                    ->action(function (User $record): void {
+                        $record->revokeAllSessions();
+
+                        Notification::make()
+                            ->title('Sessions terminated')
+                            ->body("All active sessions and tokens for {$record->name} have been cleared.")
+                            ->warning()
+                            ->send();
+                    }),
+
+                Action::make('verifyEmail')
+                    ->label('Verify email')
+                    ->icon('heroicon-o-check-badge')
+                    ->color('success')
+                    ->visible(fn (User $record): bool => ! $record->hasVerifiedEmail())
+                    ->requiresConfirmation()
+                    ->modalDescription('Mark this email address as verified without the user confirming it.')
+                    ->action(function (User $record): void {
+                        $record->forceFill(['email_verified_at' => now()])->save();
+
+                        Notification::make()
+                            ->title('Email verified')
+                            ->success()
+                            ->send();
+                    }),
+
+                Action::make('sendVerification')
+                    ->label('Send verification email')
+                    ->icon('heroicon-o-envelope')
+                    ->visible(fn (User $record): bool => ! $record->hasVerifiedEmail())
+                    ->action(function (User $record): void {
+                        $record->sendEmailVerificationNotification();
+
+                        Notification::make()
+                            ->title('Verification email sent')
+                            ->success()
+                            ->send();
+                    }),
+            ])
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    BulkAction::make('banSelected')
+                        ->label('Suspend selected')
+                        ->icon('heroicon-o-no-symbol')
+                        ->color('danger')
+                        ->form([
+                            TextInput::make('reason')
+                                ->label('Suspension reason')
+                                ->required(),
+                        ])
+                        ->action(function (Collection $records, array $data): void {
+                            $records->each(fn (User $user) => $user->ban($data['reason'] ?? null));
+
+                            Notification::make()
+                                ->title($records->count().' users suspended')
+                                ->danger()
+                                ->send();
+                        })
+                        ->deselectRecordsAfterCompletion(),
+
+                    BulkAction::make('unbanSelected')
+                        ->label('Restore selected')
+                        ->icon('heroicon-o-arrow-path')
+                        ->color('success')
+                        ->requiresConfirmation()
+                        ->action(function (Collection $records): void {
+                            $records->each(fn (User $user) => $user->unban());
+
+                            Notification::make()
+                                ->title($records->count().' users restored')
+                                ->success()
+                                ->send();
+                        })
+                        ->deselectRecordsAfterCompletion(),
+
+                    BulkAction::make('revokeSelectedSessions')
+                        ->label('Revoke sessions')
+                        ->icon('heroicon-o-arrow-left-on-rectangle')
+                        ->color('warning')
+                        ->requiresConfirmation()
+                        ->action(function (Collection $records): void {
+                            $records->each(fn (User $user) => $user->revokeAllSessions());
+
+                            Notification::make()
+                                ->title('Sessions terminated for '.$records->count().' users')
+                                ->warning()
+                                ->send();
+                        })
+                        ->deselectRecordsAfterCompletion(),
+                ]),
             ])
             ->defaultSort('name')
             ->emptyStateHeading('No users enrolled')
             ->emptyStateDescription('Users enrolled in this application and environment will appear here.');
+    }
+
+    /**
+     * Distinct application roles currently in use, for the role filter.
+     *
+     * @return array<string, string>
+     */
+    public function applicationRoles(): array
+    {
+        /** @var TenantApplication $application */
+        $application = $this->getRecord();
+
+        return DB::table('tenant_application_user')
+            ->where('tenant_application_id', $application->getKey())
+            ->where('environment', $application->environment)
+            ->whereNotNull('role')
+            ->distinct()
+            ->orderBy('role')
+            ->pluck('role')
+            ->mapWithKeys(fn (string $role): array => [$role => ucfirst($role)])
+            ->all();
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function authMethodLabels(User $user): array
+    {
+        $methods = [];
+
+        if ($user->hasMfa()) {
+            $methods[] = '2FA';
+        }
+
+        if ($user->hasPasskeysEnabled()) {
+            $methods[] = 'Passkey';
+        }
+
+        if (($user->social_accounts_count ?? 0) > 0) {
+            $methods[] = 'Social';
+        }
+
+        return $methods;
     }
 }
