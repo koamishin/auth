@@ -20,6 +20,12 @@ class ApplicationAuthentication
 {
     private const SESSION_KEY = 'koamishin.application_flows';
 
+    /**
+     * Session flag marking that the current sign-in used a passkey, which counts
+     * as multi-factor on its own.
+     */
+    public const MFA_SATISFIED_BY_PASSKEY = 'koamishin.mfa_satisfied_by_passkey';
+
     private const MAX_AGE = 600;
 
     private const SSO_MAX_AGE = 28800;

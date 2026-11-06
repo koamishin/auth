@@ -19,6 +19,7 @@ use Filament\Forms\Components\ToggleButtons;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
+use Filament\Schemas\Components\Text;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Model;
@@ -105,6 +106,9 @@ class AuthenticationTenantApplication extends EditRecord
                         Tabs\Tab::make('Biometric')
                             ->icon('heroicon-o-identification')
                             ->schema($this->biometricTab()),
+                        Tabs\Tab::make('Multi-factor')
+                            ->icon('heroicon-o-shield-exclamation')
+                            ->schema($this->multiFactorTab()),
                         Tabs\Tab::make('User model')
                             ->icon('heroicon-o-circle-stack')
                             ->schema($this->userModelTab()),
@@ -306,6 +310,41 @@ class AuthenticationTenantApplication extends EditRecord
     }
 
     /** @return array<int, Section> */
+    private function multiFactorTab(): array
+    {
+        return [
+            Section::make('Two-step verification')
+                ->description('Require every user of this application to enrol a second factor before they can finish signing in.')
+                ->contained(false)
+                ->components([
+                    Toggle::make('require_mfa')
+                        ->label('Require two-step verification')
+                        ->helperText('Users without a second factor are sent to a setup screen and cannot reach the application until they enrol one.')
+                        ->default(false)
+                        ->live()
+                        ->rules(['boolean']),
+
+                    Toggle::make('passkeys_satisfy_mfa')
+                        ->label('Passkeys satisfy two-step verification')
+                        ->helperText('A passkey already combines a device with a biometric or PIN, so signing in with one skips the second step. Turn this off to require a factor to be enrolled even for passkey users.')
+                        ->default(true)
+                        ->dehydratedWhenHidden()
+                        ->rules(['boolean'])
+                        ->visible(fn (Get $get): bool => $get('require_mfa') === true),
+                ]),
+
+            Section::make('Available factors')
+                ->description('Users can enrol any of the following. Authenticator apps are available to every application; email codes require an email address.')
+                ->contained(false)
+                ->visible(fn (Get $get): bool => $get('require_mfa') === true)
+                ->components([
+                    Text::make('Authenticator app — time-based one-time codes from an authenticator app, with recovery codes.'),
+                    Text::make('Email code — one-time codes sent to the user\'s email address.'),
+                ]),
+        ];
+    }
+
+    /** @return array<int, Section> */
     private function userModelTab(): array
     {
         return [
@@ -372,6 +411,8 @@ class AuthenticationTenantApplication extends EditRecord
             'auth_email_signin' => true,
             'auth_email_code_signin' => false,
             'email_verification_bind_device' => true,
+            'require_mfa' => false,
+            'passkeys_satisfy_mfa' => true,
             'auth_password_enabled' => true,
             'passkeys_enabled' => true,
             'passkey_platform_authenticators' => true,

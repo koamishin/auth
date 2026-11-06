@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\TenantApplications\Pages;
 
+use App\Enums\SecondFactor;
 use App\Filament\Resources\TenantApplications\TenantApplicationResource;
 use App\Filament\Resources\Users\UserResource;
 use App\Models\ApplicationUserMetadata;
@@ -141,6 +142,31 @@ class ViewApplicationUser extends Page
     public function socialAccounts(): Collection
     {
         return $this->user()->socialAccounts()->get();
+    }
+
+    /**
+     * Remove an enrolled second factor, so a user who lost their device can get
+     * back in. Removing the last factor disables two-step verification for them.
+     */
+    public function removeSecondFactor(string $factor): void
+    {
+        $secondFactor = SecondFactor::tryFrom($factor);
+        $user = $this->user();
+
+        if (! $secondFactor instanceof SecondFactor
+            || ! in_array($secondFactor, $user->enrolledSecondFactors(), true)) {
+            return;
+        }
+
+        $user->removeSecondFactor($secondFactor);
+
+        Notification::make()
+            ->title($secondFactor->label().' removed')
+            ->body($user->refresh()->hasEnrolledSecondFactor()
+                ? 'The user keeps their other enrolled factors.'
+                : 'This account no longer has two-step verification.')
+            ->warning()
+            ->send();
     }
 
     /**

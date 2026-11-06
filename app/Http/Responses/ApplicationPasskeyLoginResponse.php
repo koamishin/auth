@@ -15,6 +15,10 @@ class ApplicationPasskeyLoginResponse extends PasskeyLoginResponse
 {
     public function toResponse($request): Response
     {
+        // A passkey is a device plus a biometric or PIN, so this sign-in already
+        // meets a multi-factor requirement.
+        $request->session()->put(ApplicationAuthentication::MFA_SATISFIED_BY_PASSKEY, true);
+
         $flow = $request->attributes->get('koamishin.application_flow');
         if (is_array($flow) && $request->wantsJson()) {
             if (app(ApplicationAuthentication::class)->isHosted($request)) {

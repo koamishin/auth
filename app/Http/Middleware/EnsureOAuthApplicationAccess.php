@@ -196,6 +196,24 @@ class EnsureOAuthApplicationAccess
     }
 
     /** @param Closure(Request): Response $next */
+    /**
+     * Whether the current sign-in already satisfies this application's
+     * multi-factor requirement.
+     *
+     * An enrolled second factor always satisfies it. A passkey sign-in also
+     * satisfies it on its own, because a passkey combines a device with a
+     * biometric or PIN check, unless the application insists on enrolment.
+     */
+    private function multiFactorSatisfied(Request $request, TenantApplicationEnvironment $environment, User $user): bool
+    {
+        if ($user->hasEnrolledSecondFactor()) {
+            return true;
+        }
+
+        return $environment->passkeysSatisfyMultiFactor()
+            && $request->session()->get(ApplicationAuthentication::MFA_SATISFIED_BY_PASSKEY) === true;
+    }
+
     private function authorizeExisting(Request $request, Closure $next, TenantApplicationEnvironment $environment, AuthorizationRequestInterface $authorization): Response
     {
         $user = $request->user();
@@ -224,6 +242,16 @@ class EnsureOAuthApplicationAccess
                 ? $this->authentication->transition($request, 'verify')
                 : redirect()->route('verification.notice', ['flow' => $flow]);
         }
+        if ($environment->requiresMultiFactorAuthentication() && ! $this->multiFactorSatisfied($request, $environment, $user)) {
+            if (in_array('none', explode(' ', (string) $request->query('prompt', '')), true)) {
+                throw PassportOAuthServerException::loginRequired($authorization);
+            }
+
+            return $this->authentication->isHosted($request)
+                ? $this->authentication->transition($request, 'mfa')
+                : redirect()->route('mfa.setup', ['flow' => $this->authentication->flowId($request)]);
+        }
+
         $prompts = array_filter(explode(' ', (string) $request->query('prompt', '')));
         $prompts = array_diff($prompts, ['login']);
         if (! $this->access->allows($environment, $user)) {

@@ -295,6 +295,26 @@ class TenantApplicationEnvironment extends Model
     }
 
     /**
+     * Whether this environment requires every user to have a second factor
+     * enrolled before they can finish signing in.
+     */
+    public function requiresMultiFactorAuthentication(): bool
+    {
+        return $this->getSetting('require_mfa', false) === true;
+    }
+
+    /**
+     * Whether signing in with a passkey counts as multi-factor on its own.
+     *
+     * A passkey combines a physical device with a biometric or PIN check, so it
+     * satisfies the requirement unless the application insists on enrolment.
+     */
+    public function passkeysSatisfyMultiFactor(): bool
+    {
+        return $this->getSetting('passkeys_satisfy_mfa', true) === true;
+    }
+
+    /**
      * Whether a verification link must be opened on the device that requested it.
      */
     public function bindsVerificationLinksToDevice(): bool

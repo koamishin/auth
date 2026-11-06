@@ -165,6 +165,63 @@
                 </div>
             @endif
 
+            {{-- Two-step verification --}}
+            <div class="mt-5">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Two-step verification</p>
+                    @if ($user->hasEnrolledSecondFactor())
+                        <span class="inline-flex items-center gap-1 text-[11px] font-semibold text-success-600 dark:text-success-400">
+                            <x-filament::icon icon="heroicon-m-shield-check" class="w-3.5 h-3.5" />
+                            Enabled
+                        </span>
+                    @else
+                        <span class="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-400">
+                            <x-filament::icon icon="heroicon-m-shield-exclamation" class="w-3.5 h-3.5" />
+                            Not enrolled
+                        </span>
+                    @endif
+                </div>
+
+                @php $factors = $user->enrolledSecondFactors(); @endphp
+
+                @if ($factors === [])
+                    <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                        This user has no second factor enrolled.
+                        @if ($this->environment()?->requiresMultiFactorAuthentication())
+                            They are required to enrol one before they can sign in.
+                        @endif
+                    </p>
+                @else
+                    <ul class="mt-2 divide-y divide-gray-100 dark:divide-white/5 border-y border-gray-100 dark:border-white/5">
+                        @foreach ($factors as $factor)
+                            <li class="flex items-center justify-between gap-3 py-2.5">
+                                <div class="min-w-0 flex items-center gap-2">
+                                    <x-filament::icon icon="heroicon-o-shield-check" class="w-4 h-4 text-gray-400 shrink-0" />
+                                    <div class="min-w-0">
+                                        <p class="text-sm text-gray-900 dark:text-gray-100 truncate">{{ $factor->label() }}</p>
+                                        <p class="text-[11px] text-gray-500 dark:text-gray-400">{{ $factor->description() }}</p>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    wire:click="removeSecondFactor('{{ $factor->value }}')"
+                                    wire:confirm="Remove this second factor? The user will need to enrol a new one."
+                                    class="text-[11px] font-semibold text-danger-600 dark:text-danger-400 hover:underline shrink-0"
+                                >
+                                    Remove
+                                </button>
+                            </li>
+                        @endforeach
+                    </ul>
+
+                    @if ($user->hasRecoveryCodes())
+                        <p class="mt-2 text-[11px] text-gray-500 dark:text-gray-400">
+                            Recovery codes are cleared automatically when the last factor is removed.
+                        </p>
+                    @endif
+                @endif
+            </div>
+
             {{-- Connected accounts --}}
             <div class="mt-5">
                 <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Connected accounts</p>

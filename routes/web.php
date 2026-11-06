@@ -5,6 +5,7 @@ use App\Filament\Resources\TenantApplications\TenantApplicationResource;
 use App\Http\Controllers\Auth\EmailCodeSignInController;
 use App\Http\Controllers\Auth\HostedAppearancePreviewController;
 use App\Http\Controllers\Auth\HostedAuthenticationController;
+use App\Http\Controllers\Auth\MfaSetupController;
 use App\Http\Controllers\Auth\OpenIdConnectController;
 use App\Http\Controllers\Auth\SocialAuthController;
 use App\Http\Controllers\Auth\VerifyEmailCodeController;
@@ -78,6 +79,11 @@ Route::post('email/verify-code', [VerifyEmailCodeController::class, 'store'])
 Route::post('email/verify-code/resend', [VerifyEmailCodeController::class, 'resend'])
     ->middleware(['auth', 'throttle:3,1'])
     ->name('verification.code.resend');
+
+// Enrolling a second factor when an application requires multi-factor auth.
+Route::get('mfa/setup', MfaSetupController::class)
+    ->middleware('auth')
+    ->name('mfa.setup');
 
 Route::get('.well-known/openid-configuration', [OpenIdConnectController::class, 'discovery'])->name('openid.discovery');
 Route::get('oauth/jwks', [OpenIdConnectController::class, 'jwks'])->name('oauth.jwks');

@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Responses\MfaSetupViewResponse;
 use App\Models\TenantApplicationEnvironment;
 use App\Models\User;
 use App\Services\OAuth\ApplicationAuthentication;
@@ -28,7 +29,7 @@ class HostedAuthenticationController extends Controller
      */
     public function __invoke(Request $request): Response
     {
-        $data = $request->validate(['screen' => ['required', 'in:login,register,two-factor,verify']]);
+        $data = $request->validate(['screen' => ['required', 'in:login,register,two-factor,verify,mfa']]);
         $authentication = app(ApplicationAuthentication::class);
         abort_unless($authentication->flowId($request) !== null && $authentication->isHosted($request), 419);
         $environment = $request->attributes->get('koamishin.application_environment');
@@ -43,6 +44,7 @@ class HostedAuthenticationController extends Controller
             'register' => RegisterViewResponse::class,
             'two-factor' => TwoFactorChallengeViewResponse::class,
             'verify' => VerifyEmailViewResponse::class,
+            'mfa' => MfaSetupViewResponse::class,
             default => abort(422),
         };
 
@@ -58,6 +60,16 @@ class HostedAuthenticationController extends Controller
             $user = $request->user();
             abort_unless($user instanceof User, 403);
             if (! $environment->requiresEmailVerification() || $user->hasVerifiedEmail()) {
+                return $authentication->resume($request) ?? abort(419);
+            }
+        }
+
+        if ($data['screen'] === 'mfa') {
+            $user = $request->user();
+            abort_unless($user instanceof User, 403);
+            if (! $environment->requiresMultiFactorAuthentication()
+                || $user->hasEnrolledSecondFactor()
+                || ($environment->passkeysSatisfyMultiFactor() && $request->session()->get(ApplicationAuthentication::MFA_SATISFIED_BY_PASSKEY) === true)) {
                 return $authentication->resume($request) ?? abort(419);
             }
         }
@@ -89,7 +101,7 @@ class HostedAuthenticationController extends Controller
         $authentication = app(ApplicationAuthentication::class);
         $screen = $request->header('X-Koamishin-Screen');
         if ($authentication->isHosted($request) && $authentication->flowId($request) !== null
-            && is_string($screen) && in_array($screen, ['login', 'register', 'two-factor', 'verify'], true)) {
+            && is_string($screen) && in_array($screen, ['login', 'register', 'two-factor', 'verify', 'mfa'], true)) {
             $request->merge(['screen' => $screen]);
 
             return $this($request);

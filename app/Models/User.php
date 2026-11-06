@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\EmailCodePurpose;
+use App\Enums\SecondFactor;
 use App\Services\Auth\EmailCodeService;
 use App\Services\OAuth\ApplicationAuthentication;
 use App\Settings\ApplicationFeaturesSettings;
@@ -263,6 +264,60 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
         return $this->two_factor_confirmed_at !== null
             || filled($this->app_authentication_secret)
             || $this->has_email_authentication;
+    }
+
+    /**
+     * Whether a second factor has actually been enrolled and confirmed.
+     */
+    public function hasEnrolledSecondFactor(): bool
+    {
+        return $this->hasMfa();
+    }
+
+    /**
+     * The second factors this user has enrolled.
+     *
+     * @return list<SecondFactor>
+     */
+    public function enrolledSecondFactors(): array
+    {
+        $factors = [];
+
+        if ($this->two_factor_confirmed_at !== null || filled($this->app_authentication_secret)) {
+            $factors[] = SecondFactor::AuthenticatorApp;
+        }
+
+        if ((bool) $this->has_email_authentication) {
+            $factors[] = SecondFactor::EmailCode;
+        }
+
+        return $factors;
+    }
+
+    public function hasRecoveryCodes(): bool
+    {
+        return filled($this->two_factor_recovery_codes) || filled($this->app_authentication_recovery_codes);
+    }
+
+    /**
+     * Remove an enrolled second factor, clearing the recovery codes that belong
+     * to it. Removing the last factor leaves the account without multi-factor
+     * authentication, which is what an administrator resetting access expects.
+     */
+    public function removeSecondFactor(SecondFactor $factor): void
+    {
+        match ($factor) {
+            SecondFactor::AuthenticatorApp => $this->forceFill([
+                'two_factor_secret' => null,
+                'two_factor_recovery_codes' => null,
+                'two_factor_confirmed_at' => null,
+                'app_authentication_secret' => null,
+                'app_authentication_recovery_codes' => null,
+            ])->save(),
+            SecondFactor::EmailCode => $this->forceFill([
+                'has_email_authentication' => false,
+            ])->save(),
+        };
     }
 
     /**
