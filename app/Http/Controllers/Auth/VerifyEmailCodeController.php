@@ -41,7 +41,7 @@ class VerifyEmailCodeController extends Controller
             ]);
         }
 
-        if (! ($user instanceof MustVerifyEmail && $user->hasVerifiedEmail())) {
+        if (!$user->hasVerifiedEmail()) {
             $this->codes->verify($user, (string) $request->input('code'), EmailCodePurpose::Verification);
 
             $user->markEmailAsVerified();
