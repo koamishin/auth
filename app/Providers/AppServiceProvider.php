@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Features\FeatureRegistry;
+use App\Listeners\ForgetMultiSessionAccount;
+use App\Listeners\RegisterMultiSessionAccount;
 use App\Models\Client;
 use App\Models\User;
 use App\Observers\UserObserver;
@@ -11,8 +13,11 @@ use App\Services\OAuth\PassportBridgeClientRepository;
 use BladeUI\Icons\Factory;
 use Carbon\CarbonImmutable;
 use Filament\Panel;
+use Illuminate\Auth\Events\Login;
+use Illuminate\Auth\Events\Logout;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -71,6 +76,9 @@ class AppServiceProvider extends ServiceProvider
         $this->configureBrandIcons();
 
         \Filament\Resources\Resource::scopeToTenant(false);
+
+        Event::listen(Login::class, RegisterMultiSessionAccount::class);
+        Event::listen(Logout::class, ForgetMultiSessionAccount::class);
 
         Gate::before(fn ($user, $ability): ?true => method_exists($user, 'hasRole') && $user->hasRole('super_admin') ? true : null);
 

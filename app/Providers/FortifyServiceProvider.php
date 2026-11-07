@@ -14,6 +14,7 @@ use App\Models\TenantApplicationEnvironment;
 use App\Models\User;
 use App\Services\Auth\ApplicationAccessPolicy;
 use App\Services\Auth\EmailCodeService;
+use App\Services\Auth\MultiSession;
 use App\Services\OAuth\ApplicationAuthentication;
 use App\Settings\ApplicationFeaturesSettings;
 use App\Support\PasswordPolicy;
@@ -199,6 +200,8 @@ class FortifyServiceProvider extends ServiceProvider
             'hosted' => app(ApplicationAuthentication::class)->isHosted($request),
             'emailCodeSignin' => $this->environment($request)?->allowsEmailCodeSignin() ?? false,
             'emailCodeLength' => EmailCodeService::CODE_LENGTH,
+            'accounts' => app(MultiSession::class)->accounts($request),
+            'addAccount' => $request->boolean('add'),
         ]));
 
         Fortify::resetPasswordView(fn (Request $request) => Inertia::render('auth/ResetPassword', [

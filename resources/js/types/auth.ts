@@ -11,6 +11,15 @@ export type User = {
 
 export type Auth = {
     user: User;
+    accounts?: SwitchableAccount[];
+};
+
+/** An account this browser is signed in to and can switch to. */
+export type SwitchableAccount = {
+    id: number;
+    name: string;
+    email: string;
+    current: boolean;
 };
 
 export type TwoFactorConfigContent = {

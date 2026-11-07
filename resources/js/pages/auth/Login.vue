@@ -15,8 +15,9 @@ import { register } from '@/routes';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
 import emailCode from '@/routes/auth/email-code';
+import { switchMethod } from '@/routes/accounts';
 import { store as hostedStore } from '@/routes/hosted';
-import type { AppPageProps } from '@/types';
+import type { AppPageProps, SwitchableAccount } from '@/types';
 
 const props = defineProps<{
     application?: {
@@ -35,6 +36,8 @@ const props = defineProps<{
     canRegister: boolean;
     emailCodeSignin?: boolean;
     emailCodeLength?: number;
+    accounts?: SwitchableAccount[];
+    addAccount?: boolean;
 }>();
 
 const page =
@@ -52,6 +55,22 @@ const codeEmail = ref('');
 const code = ref('');
 const codeProcessing = ref(false);
 const codeError = ref<string | null>(null);
+
+// Signing in while already authenticated adds another account to this
+// browser, so the form keeps opting out of the guest redirect.
+const formBinding = computed(() => {
+    const base = store.form();
+    return props.addAccount ? { ...base, action: '/login?add=1' } : base;
+});
+
+// Accounts this browser can switch into. Hidden while adding an account and
+// on hosted flows, where a switch would interrupt the application's sign-in.
+const otherAccounts = computed<SwitchableAccount[]>(() =>
+    props.addAccount || props.hosted ? [] : (props.accounts ?? []),
+);
+
+const switchAccount = (id: number) =>
+    router.post(switchMethod.url(), { user_id: id });
 
 const hostedHeaders = computed((): Record<string, string> =>
     props.hosted && props.flow
@@ -161,9 +180,59 @@ function submitCode() {
             {{ $page.props.errors.social }}
         </div>
 
+        <div
+            v-if="$page.props.errors?.account"
+            class="mb-4 text-center text-sm font-medium text-destructive"
+        >
+            {{ $page.props.errors.account }}
+        </div>
+
+        <div
+            v-if="addAccount"
+            class="mb-4 text-center text-sm text-muted-foreground"
+        >
+            You are signed in. Signing in below adds another account to this
+            browser.
+        </div>
+
+        <div v-if="otherAccounts.length > 0" class="mb-6">
+            <div
+                class="mb-2 text-center text-sm font-medium text-muted-foreground"
+            >
+                Continue as
+            </div>
+            <div class="flex flex-col gap-2">
+                <button
+                    v-for="account in otherAccounts"
+                    :key="account.id"
+                    type="button"
+                    class="flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-2 text-left text-sm transition-colors hover:bg-accent/50"
+                    @click="switchAccount(account.id)"
+                >
+                    <span
+                        class="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary"
+                    >
+                        {{ account.name.charAt(0).toUpperCase() }}
+                    </span>
+                    <span class="min-w-0">
+                        <span class="block truncate font-medium"
+                            >{{ account.name }}</span
+                        >
+                        <span
+                            class="block truncate text-xs text-muted-foreground"
+                            >{{ account.email }}</span
+                        >
+                    </span>
+                </button>
+            </div>
+            <div class="mt-3 text-center text-xs text-muted-foreground">
+                or sign in with another account below
+            </div>
+        </div>
+
         <Form
             v-if="!useCode"
-            v-bind="store.form()"
+            v-bind="formBinding"
             :headers="
                 hosted && flow
                     ? {

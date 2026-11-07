@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Enums\SocialLoginProvider;
 use App\Features\FeatureRegistry;
 use App\Models\TenantApplicationEnvironment;
+use App\Services\Auth\MultiSession;
 use App\Services\OAuth\ApplicationSocialConnections;
 use App\Settings\ApplicationFeaturesSettings;
 use Illuminate\Http\Request;
@@ -50,6 +51,8 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
                 'impersonating' => app('impersonate')->isImpersonating(),
+                // The accounts this browser is signed in to, for switching.
+                'accounts' => fn (): array => app(MultiSession::class)->accounts($request),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'authLayout' => function () use ($request): string {

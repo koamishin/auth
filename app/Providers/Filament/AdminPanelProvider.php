@@ -55,6 +55,10 @@ class AdminPanelProvider extends PanelProvider
                 PanelsRenderHook::TOPBAR_LOGO_AFTER,
                 fn (): string => Blade::render('@include("filament.components.topbar-context-selector")'),
             )
+            ->renderHook(
+                PanelsRenderHook::USER_MENU_BEFORE,
+                fn (): string => Blade::render('@include("filament.components.account-switcher")'),
+            )
             ->tenantMenu(false)
             ->databaseNotifications()
             ->login()

@@ -15,6 +15,13 @@ class RedirectIfApplicationFlowAuthenticated extends RedirectIfAuthenticated
 {
     public function handle(Request $request, Closure $next, string ...$guards): Response
     {
+        // Signing in as an additional account has to be possible while already
+        // authenticated: multi-session keeps the current session until the new
+        // sign-in completes. The opt-in is explicit in the query string.
+        if ($request->boolean('add')) {
+            return $next($request);
+        }
+
         $guard = $request->attributes->get('koamishin.application_guard');
         if ($guard instanceof StatefulGuard) {
             return $guard->check()

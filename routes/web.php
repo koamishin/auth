@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\EmailCodeSignInController;
 use App\Http\Controllers\Auth\HostedAppearancePreviewController;
 use App\Http\Controllers\Auth\HostedAuthenticationController;
 use App\Http\Controllers\Auth\MfaSetupController;
+use App\Http\Controllers\Auth\MultiSessionController;
 use App\Http\Controllers\Auth\OpenIdConnectController;
 use App\Http\Controllers\Auth\SocialAuthController;
 use App\Http\Controllers\Auth\VerifyEmailCodeController;
@@ -96,6 +97,12 @@ Route::post('invitations/{token}/accept', [ApplicationInvitationController::clas
 Route::post('invitations/{token}/register', [ApplicationInvitationController::class, 'register'])
     ->middleware('throttle:10,1')
     ->name('invitations.register');
+
+// Switching between the accounts a browser is signed in to. Reachable signed
+// out as well: the account registry cookie authorizes the switch.
+Route::post('accounts/switch', [MultiSessionController::class, 'switch'])->name('accounts.switch');
+Route::post('accounts/remove', [MultiSessionController::class, 'remove'])->name('accounts.remove');
+Route::post('accounts/sign-out-all', [MultiSessionController::class, 'flush'])->name('accounts.flush');
 
 Route::get('.well-known/openid-configuration', [OpenIdConnectController::class, 'discovery'])->name('openid.discovery');
 Route::get('oauth/jwks', [OpenIdConnectController::class, 'jwks'])->name('oauth.jwks');

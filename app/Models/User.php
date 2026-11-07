@@ -398,6 +398,10 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
     {
         DB::table('sessions')->where('user_id', $this->id)->delete();
 
+        // Every browser switch token dies with the sessions, so a revoked
+        // account cannot be switched back into.
+        MultiSessionAccount::query()->where('user_id', $this->getKey())->delete();
+
         DB::table('oauth_refresh_tokens')
             ->whereIn('access_token_id', $this->tokens()->select('id'))
             ->update(['revoked' => true]);
