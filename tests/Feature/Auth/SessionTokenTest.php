@@ -185,9 +185,7 @@ test('the session token endpoint mints a verifiable token for the signed-in sess
     $login = $this->post(route('login.store'), ['email' => $user->email, 'password' => 'password']);
 
     // Every completed sign-in records a first-factor verification.
-    $login->assertSessionHas(FactorVerifications::SESSION_KEY, function (array $stamps): bool {
-        return isset($stamps['first']);
-    });
+    $login->assertSessionHas(FactorVerifications::SESSION_KEY, fn(array $stamps): bool => isset($stamps['first']));
 
     $sessionId = sessionTokenCookie($login, config('session.cookie'));
     $claims = sessionTokenClaims(
@@ -286,9 +284,7 @@ test('completing the two factor challenge records a second factor verification',
     $response = $this->withSession(['login.id' => $user->id])
         ->post(route('two-factor.login.store'), ['recovery_code' => 'code1']);
 
-    $response->assertSessionHas(FactorVerifications::SESSION_KEY, function (array $stamps): bool {
-        return isset($stamps['first'], $stamps['second']);
-    });
+    $response->assertSessionHas(FactorVerifications::SESSION_KEY, fn(array $stamps): bool => isset($stamps['first'], $stamps['second']));
 
     $sessionId = sessionTokenCookie($response, config('session.cookie'));
     $claims = sessionTokenClaims(

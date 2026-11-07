@@ -42,8 +42,8 @@ class SessionTokenService
     public const LIFETIME_SECONDS = 60;
 
     public function __construct(
-        private ApplicationAuthentication $authentication,
-        private ApplicationAccess $access,
+        private readonly ApplicationAuthentication $authentication,
+        private readonly ApplicationAccess $access,
     ) {}
 
     /**
@@ -71,9 +71,9 @@ class SessionTokenService
             environment: $environment,
             tasks: $this->pendingTasks($request, $user, $environment),
             sid: $sid,
-            azp: (string) ($request->headers->get('Origin') ?? ''),
+            azp: $request->headers->get('Origin') ?? '',
             factorAges: FactorVerifications::ages($request),
-            actor: $this->actor($request, $sid),
+            actor: $this->actor($sid),
         );
     }
 
@@ -110,7 +110,7 @@ class SessionTokenService
             // application's gates already passed at authorization time.
             tasks: $this->pendingTasks($request, $user, $environment, sessionKnown: false),
             sid: $sid,
-            azp: (string) ($request->headers->get('Origin') ?? ''),
+            azp: $request->headers->get('Origin') ?? '',
             // Factor ages live in the session; an API-held token has none.
             factorAges: [-1, -1],
             actor: null,
@@ -231,7 +231,7 @@ class SessionTokenService
      *
      * @return array{iss: string, sid: string, sub: string}|null
      */
-    private function actor(Request $request, string $sid): ?array
+    private function actor(string $sid): ?array
     {
         $manager = app('impersonate');
 
@@ -269,6 +269,6 @@ class SessionTokenService
             $builder = $builder->withClaim($name, $value);
         }
 
-        return (string) $builder->getToken(new Sha256, InMemory::file($privateKeyPath))->toString();
+        return $builder->getToken(new Sha256, InMemory::file($privateKeyPath))->toString();
     }
 }

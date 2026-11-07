@@ -18,7 +18,7 @@ use Laravel\Passport\AccessToken;
  */
 class SessionTokenController extends Controller
 {
-    public function __construct(private SessionTokenService $tokens) {}
+    public function __construct(private readonly SessionTokenService $tokens) {}
 
     /**
      * Mint a token for the browser session's signed-in user.
