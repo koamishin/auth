@@ -9,6 +9,7 @@ use App\Http\Controllers\Auth\HostedAuthenticationController;
 use App\Http\Controllers\Auth\MfaSetupController;
 use App\Http\Controllers\Auth\MultiSessionController;
 use App\Http\Controllers\Auth\OpenIdConnectController;
+use App\Http\Controllers\Auth\SessionTokenController;
 use App\Http\Controllers\Auth\SocialAuthController;
 use App\Http\Controllers\Auth\VerifyEmailCodeController;
 use App\Http\Controllers\ImpersonateController;
@@ -103,6 +104,12 @@ Route::post('invitations/{token}/register', [ApplicationInvitationController::cl
 Route::post('accounts/switch', [MultiSessionController::class, 'switch'])->name('accounts.switch');
 Route::post('accounts/remove', [MultiSessionController::class, 'remove'])->name('accounts.remove');
 Route::post('accounts/sign-out-all', [MultiSessionController::class, 'flush'])->name('accounts.flush');
+
+// Short-lived session tokens for the signed-in session, verified offline by
+// backends against the JWKS document.
+Route::get('session/token', [SessionTokenController::class, 'show'])
+    ->middleware(['auth', 'throttle:60,1'])
+    ->name('session-token.show');
 
 Route::get('.well-known/openid-configuration', [OpenIdConnectController::class, 'discovery'])->name('openid.discovery');
 Route::get('oauth/jwks', [OpenIdConnectController::class, 'jwks'])->name('oauth.jwks');

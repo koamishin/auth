@@ -352,6 +352,27 @@ class ApplicationAuthentication
         $request->session()->forget(self::MFA_SATISFIED_BY_PASSKEY);
     }
 
+    /**
+     * Whether the current sign-in already satisfies an application's
+     * multi-factor requirement.
+     *
+     * An enrolled second factor always satisfies it. A passkey sign-in also
+     * satisfies it on its own, because a passkey combines a device with a
+     * biometric or PIN check, unless the application insists on enrolment.
+     *
+     * The application gate and session tokens share this one decision, so the
+     * status a token reports can never drift from what the gate enforces.
+     */
+    public function multiFactorSatisfied(Request $request, TenantApplicationEnvironment $environment, User $user): bool
+    {
+        if ($user->hasEnrolledSecondFactor()) {
+            return true;
+        }
+
+        return $environment->passkeysSatisfyMultiFactor()
+            && $request->session()->get(self::MFA_SATISFIED_BY_PASSKEY) === true;
+    }
+
     public function transition(Request $request, string $screen): Response
     {
         $flow = $this->flowId($request);

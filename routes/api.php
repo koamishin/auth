@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\ManagementOrganizationController;
 use App\Http\Controllers\Api\V1\ManagementSessionController;
 use App\Http\Controllers\Api\V1\ManagementUserController;
 use App\Http\Controllers\Auth\OpenIdConnectController;
+use App\Http\Controllers\Auth\SessionTokenController;
 use App\Http\Middleware\AuthenticateManagementClient;
 use Illuminate\Support\Facades\Route;
 
@@ -16,6 +17,12 @@ Route::get('/user', [OpenIdConnectController::class, 'userinfo'])->middleware('a
 Route::get('/oauth/userinfo', [OpenIdConnectController::class, 'userinfo'])
     ->middleware('auth:api')
     ->name('api.oauth.userinfo');
+
+// Short-lived session tokens minted from a user's access token, for SDK-driven
+// backends that want offline-verifiable tokens.
+Route::post('/oauth/session-token', [SessionTokenController::class, 'store'])
+    ->middleware(['auth:api', 'throttle:60,1'])
+    ->name('api.oauth.session-token');
 
 Route::prefix('v1')->middleware('throttle:60,1')->group(function (): void {
     Route::get('/organization', [ManagementOrganizationController::class, 'show'])

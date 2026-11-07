@@ -200,18 +200,12 @@ class EnsureOAuthApplicationAccess
      * Whether the current sign-in already satisfies this application's
      * multi-factor requirement.
      *
-     * An enrolled second factor always satisfies it. A passkey sign-in also
-     * satisfies it on its own, because a passkey combines a device with a
-     * biometric or PIN check, unless the application insists on enrolment.
+     * The decision itself lives on ApplicationAuthentication, shared with the
+     * session token status so the two can never disagree.
      */
     private function multiFactorSatisfied(Request $request, TenantApplicationEnvironment $environment, User $user): bool
     {
-        if ($user->hasEnrolledSecondFactor()) {
-            return true;
-        }
-
-        return $environment->passkeysSatisfyMultiFactor()
-            && $request->session()->get(ApplicationAuthentication::MFA_SATISFIED_BY_PASSKEY) === true;
+        return $this->authentication->multiFactorSatisfied($request, $environment, $user);
     }
 
     private function authorizeExisting(Request $request, Closure $next, TenantApplicationEnvironment $environment, AuthorizationRequestInterface $authorization): Response

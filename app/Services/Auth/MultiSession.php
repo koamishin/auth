@@ -7,6 +7,7 @@ namespace App\Services\Auth;
 use App\Http\Middleware\EnforceSessionLifetime;
 use App\Models\MultiSessionAccount;
 use App\Models\User;
+use App\Support\FactorVerifications;
 use Filament\Facades\Filament;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -186,6 +187,10 @@ class MultiSession
 
         $session->regenerateToken();
         $session->regenerate();
+
+        // The switch proves the registry token, not a factor: factor
+        // verifications must not be recorded for it.
+        $request->attributes->set(FactorVerifications::SILENT_ATTRIBUTE, true);
 
         Auth::guard(config('fortify.guard', 'web'))->login($user);
 

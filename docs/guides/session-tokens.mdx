@@ -1,0 +1,127 @@
+---
+title: Session Tokens
+description: Short-lived JWTs carrying session claims, verifiable offline by any backend against the JWKS document.
+---
+
+# Session Tokens
+
+When someone is signed in, the portal can mint a **session token**: a short-lived JSON Web Token describing who they are and the session they are in. Backends verify one offline against the published JWKS document — no call to the portal per request — which makes it cheap to authenticate a stream of requests the way Clerk's session tokens work.
+
+A session token is deliberately short-lived: **60 seconds**. Its job is to answer "who is this, and in what session, right now", not to store access. Mint one whenever a request needs it.
+
+## Minting
+
+### From a browser session
+
+```
+GET /session/token
+```
+
+For the signed-in session (the portal, or a hosted sign-in). Returns:
+
+```json
+{
+    "token": "eyJhbGciOiJSUzI1NiIs...",
+    "token_type": "Bearer",
+    "expires_in": 60,
+    "expires_at": 1713158400
+}
+```
+
+### From an access token
+
+```
+POST /api/oauth/session-token
+Authorization: Bearer <access token>
+```
+
+For SDK-driven backends: exchange the token a client application already holds from the authorization-code flow for a short-lived session token its own backends can verify offline. Only **user** access tokens qualify — client-credential (management) tokens have no user behind them and are refused.
+
+## Claims
+
+The claim set follows Clerk's session token version 2.
+
+| Claim | Description |
+| --- | --- |
+| `sub` | The user's ID. |
+| `iss` | The portal URL. Matches the `issuer` in the discovery document. |
+| `iat`, `nbf`, `exp` | Issue time, not-before, and expiry as Unix timestamps. `exp` is `iat` + 60 seconds. |
+| `jti` | Unique identifier for the token. |
+| `sid` | The session the token belongs to — see below. |
+| `azp` | The `Origin` header of the minting request. Omitted when there was none. |
+| `v` | Token version; `2`. |
+| `fva` | Factor verification age — see below. |
+| `sts` | Session status: `active`, or `pending` while the session owes a verification. |
+| `tasks` | The pending verifications by name: `email_verification`, `mfa`. Empty when `sts` is `active`. |
+| `o` | Organization claim, in application contexts: `{"id", "slg", "rol"}`. |
+| `act` | Actor claim while an administrator is impersonating: `{"iss", "sid", "sub"}`. |
+
+### The `sid` claim
+
+For a browser-session mint, `sid` is the browser session's ID — the same identifier the [management API's session endpoints](../packages/koamishin-auth-php/README.md) list and revoke, so a backend can correlate a token with a device and revoke it. For an SDK mint it is the access token's ID, the grant the token belongs to.
+
+### The `fva` claim
+
+`fva` reports `[first, second]`: the minutes since a first factor (password, passkey, emailed code, or social sign-in) was last verified in this session, and the minutes since a second factor (the two-factor challenge) was last verified. `-1` means never in this session.
+
+Two consequences follow from "in this session":
+
+- **Switching accounts resets it.** A factor verified for one account never vouches for another.
+- **Impersonation never vouches for the subject.** While `act` is present, `fva` reads `[-1, -1]`: the verifications belong to the impersonator.
+
+SDK-minted tokens carry `[-1, -1]` too — the minting request holds an access token, not the browser session where verification happened.
+
+### The `sts` and `tasks` claims
+
+The status mirrors the [application gate](core-concepts.mdx) exactly — the same shared decision, so a token can never report a session the gate would refuse. A session is `pending` when the application requires a verified email and the user's is unverified, or when the application requires multi-factor auth and the session has not satisfied it (an enrolled second factor always satisfies it; a passkey sign-in satisfies it when the application allows that).
+
+## Verifying a token
+
+Verification is standard JWT verification: check the signature against the JWKS document and validate `iss`, `exp`, and `nbf`. Any JWT library that understands JWKS works.
+
+JavaScript, with [`jose`](https://github.com/panva/jose):
+
+```js
+import { createRemoteJWKSet, jwtVerify } from 'jose';
+
+const jwks = createRemoteJWKSet(new URL('https://auth.example.com/oauth/jwks'));
+const { payload } = await jwtVerify(token, jwks, {
+    issuer: 'https://auth.example.com',
+});
+
+// payload.sub, payload.sid, payload.sts, payload.fva, ...
+```
+
+PHP, with [`lcobucci/jwt`](https://github.com/lcobucci/jwt):
+
+```php
+use Lcobucci\JWT\Encoding\JoseEncoder;
+use Lcobucci\JWT\Signer\Key\InMemory;
+use Lcobucci\JWT\Signer\Rsa\Sha256;
+use Lcobucci\JWT\Token\Parser;
+use Lcobucci\JWT\Validation\Constraint\IssuedBy;
+use Lcobucci\JWT\Validation\Constraint\SignedWith;
+use Lcobucci\JWT\Validation\Validator;
+
+$token = (new Parser(new JoseEncoder()))->parse($jwt);
+
+(new Validator())->assert(
+    $token,
+    new SignedWith(new Sha256(), InMemory::file($publicKeyPem)),
+    new IssuedBy('https://auth.example.com'),
+);
+```
+
+The tokens are RS256, signed with the key pair behind `/oauth/jwks`. The header's `kid` matches the `kid` the JWKS document publishes for that key, so key rotation can be handled the usual way. The discovery document at `/.well-known/openid-configuration` points at the JWKS URI.
+
+## Lifetime and revocation
+
+- Tokens live **60 seconds**. Mint a fresh one per request or cache it until just before `exp`; do not store it.
+- A revoked session does not retroactively kill tokens already minted — but their remaining life is under a minute. For current state, check `sid` against the management API's session endpoints.
+- Banned users cannot mint; existing tokens for them age out within the minute.
+
+## Not supported yet
+
+- **Custom claims via templates** (Clerk's JWT templates) are not available. Large data belongs in [user metadata](user-metadata.mdx), fetched through the management API instead of packed into the token.
+
+For the sessions themselves — lifetime, switching, and sign-out — see [multi-session accounts](multi-session.mdx). For hardening guidance, see [security](security.mdx).

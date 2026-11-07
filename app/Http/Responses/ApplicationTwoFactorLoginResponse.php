@@ -6,6 +6,7 @@ namespace App\Http\Responses;
 
 use App\Models\User;
 use App\Services\OAuth\ApplicationAuthentication;
+use App\Support\FactorVerifications;
 use Filament\Facades\Filament;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -19,6 +20,9 @@ class ApplicationTwoFactorLoginResponse extends TwoFactorLoginResponse
     /** @param Request $request */
     public function toResponse($request): Response
     {
+        // Completing the two-factor challenge is a second-factor verification.
+        FactorVerifications::recordSecondFactor($request);
+
         $authentication = app(ApplicationAuthentication::class);
         $flow = $authentication->flowId($request);
         if ($flow !== null) {

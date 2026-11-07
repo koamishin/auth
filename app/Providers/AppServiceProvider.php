@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Features\FeatureRegistry;
 use App\Listeners\ForgetMultiSessionAccount;
+use App\Listeners\RecordFactorVerification;
 use App\Listeners\RegisterMultiSessionAccount;
 use App\Models\Client;
 use App\Models\User;
@@ -78,6 +79,7 @@ class AppServiceProvider extends ServiceProvider
         \Filament\Resources\Resource::scopeToTenant(false);
 
         Event::listen(Login::class, RegisterMultiSessionAccount::class);
+        Event::listen(Login::class, RecordFactorVerification::class);
         Event::listen(Logout::class, ForgetMultiSessionAccount::class);
 
         Gate::before(fn ($user, $ability): ?true => method_exists($user, 'hasRole') && $user->hasRole('super_admin') ? true : null);
