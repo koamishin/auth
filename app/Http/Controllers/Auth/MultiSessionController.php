@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Auth;
  */
 class MultiSessionController extends Controller
 {
-    public function __construct(private MultiSession $sessions) {}
+    public function __construct(private readonly MultiSession $sessions) {}
 
     public function switch(Request $request): RedirectResponse
     {
@@ -27,7 +27,7 @@ class MultiSessionController extends Controller
 
         $user = $this->sessions->userFor($request, $request->input('user_id'));
 
-        if ($user === null) {
+        if (!$user instanceof \App\Models\User) {
             return back()->withErrors(['account' => 'That account is no longer available in this browser.']);
         }
 

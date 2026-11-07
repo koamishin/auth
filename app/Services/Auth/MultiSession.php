@@ -88,7 +88,7 @@ class MultiSession
             $this->deleteToken($dropped['token']);
         }
 
-        $this->store($request, array_slice($entries, -self::MAX_ACCOUNTS));
+        $this->store(array_slice($entries, -self::MAX_ACCOUNTS));
     }
 
     /**
@@ -133,7 +133,7 @@ class MultiSession
         }
 
         if (count($alive) !== count($entries)) {
-            $this->store($request, $alive);
+            $this->store($alive);
         }
 
         return $accounts;
@@ -213,7 +213,7 @@ class MultiSession
         }
 
         $this->deleteToken($entry['token']);
-        $this->store($request, array_values(array_filter(
+        $this->store(array_values(array_filter(
             $this->entries($request),
             fn (array $candidate): bool => (int) $candidate['id'] !== (int) $entry['id'],
         )));
@@ -249,7 +249,7 @@ class MultiSession
         }
 
         if (count($kept) !== count($entries)) {
-            $this->store($request, $kept);
+            $this->store($kept);
         }
     }
 
@@ -262,7 +262,7 @@ class MultiSession
             $this->deleteToken($entry['token']);
         }
 
-        $this->store($request, []);
+        $this->store([]);
 
         Auth::guard('portal')->logout();
         Auth::guard(config('fortify.guard', 'web'))->logout();
@@ -282,17 +282,15 @@ class MultiSession
             return [];
         }
 
-        return array_values(array_filter($decoded, function (mixed $entry): bool {
-            return is_array($entry)
-                && isset($entry['id'], $entry['name'], $entry['email'], $entry['token'])
-                && is_string($entry['token']);
-        }));
+        return array_values(array_filter($decoded, fn(mixed $entry): bool => is_array($entry)
+            && isset($entry['id'], $entry['name'], $entry['email'], $entry['token'])
+            && is_string($entry['token'])));
     }
 
     /**
      * @param  array<int, RegistryEntry>  $entries
      */
-    private function store(Request $request, array $entries): void
+    private function store(array $entries): void
     {
         $cookie = $entries === []
             ? cookie(self::COOKIE, null, -1)
