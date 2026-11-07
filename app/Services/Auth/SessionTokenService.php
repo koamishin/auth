@@ -183,6 +183,11 @@ class SessionTokenService
 
         if ($environment instanceof TenantApplicationEnvironment) {
             $claims['o'] = $this->organizationClaim($environment, $user);
+            // The application context the token was minted in, so backends can
+            // refuse tokens belonging to another application — the same
+            // binding the userinfo endpoint enforces.
+            $claims['application_id'] = (string) $environment->application->getKey();
+            $claims['environment'] = $environment->environment;
         }
 
         if (is_array($actor)) {

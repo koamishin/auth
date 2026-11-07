@@ -54,6 +54,8 @@ The claim set follows Clerk's session token version 2.
 | `sts` | Session status: `active`, or `pending` while the session owes a verification. |
 | `tasks` | The pending verifications by name: `email_verification`, `mfa`. Empty when `sts` is `active`. |
 | `o` | Organization claim, in application contexts: `{"id", "slg", "rol"}`. |
+| `application_id` | The application the token was minted for, in application contexts. Backends use it to refuse tokens belonging to another application. |
+| `environment` | The environment the token was minted for: `development` or `production`. |
 | `act` | Actor claim while an administrator is impersonating: `{"iss", "sid", "sub"}`. |
 
 ### The `sid` claim

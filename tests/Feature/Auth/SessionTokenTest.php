@@ -394,6 +394,10 @@ test('the organization claim carries the organization and the users role', funct
         'slg' => (string) $environment->application->tenant->slug,
         'rol' => 'admin',
     ]);
+
+    // The application binding backends check, matching userinfo.
+    expect($claims['application_id'])->toBe((string) $environment->application->getKey());
+    expect($claims['environment'])->toBe('development');
 });
 
 test('the azp claim follows the Origin header', function (): void {
@@ -422,6 +426,8 @@ test('access tokens mint session tokens for their user', function (): void {
     expect($claims['sub'])->toBe((string) $user->getKey());
     expect($claims['fva'])->toBe([-1, -1]);
     expect($claims['sts'])->toBe('active');
+    expect($claims['application_id'])->toBe((string) $environment->application->getKey());
+    expect($claims['environment'])->toBe('development');
     expect($claims['o'])->toBe([
         'id' => (string) $environment->application->tenant_id,
         'slg' => (string) $environment->application->tenant->slug,
