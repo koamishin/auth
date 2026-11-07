@@ -76,6 +76,6 @@ All three are CSRF-protected POST routes reachable while signed out as well as s
 ## Current limits
 
 - **Hosted application sign-ins** register on the browser like any other sign-in, but switching between accounts in the middle of an application's hosted flow is not supported; switch outside the flow instead.
-- The [PHP](../packages/koamishin-auth-php/README.md) and [JavaScript](../packages/koamishin-auth-js/README.md) clients do not expose switching helpers yet; the endpoints above are plain authenticated POSTs and can be called directly. Helpers are planned alongside session token support.
+- The [PHP](../packages/koamishin-auth-php/README.md) and [JavaScript](../packages/koamishin-auth-js/README.md) clients do not expose account-switching helpers yet; the endpoints above are plain authenticated POSTs and can be called directly. Both clients do support [session tokens](session-tokens.mdx).
 
 For hardening guidance for your deployment, see [security](security.mdx).

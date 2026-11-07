@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![npm version](https://img.shields.io/npm/v/@koamishin/auth-js.svg?style=flat-square)](https://www.npmjs.com/package/@koamishin/auth-js)
 
-Official browser JavaScript and TypeScript SDK for **Koamishin Auth**, using OAuth 2.0 authorization codes and PKCE. The server currently does not issue OIDC ID tokens; do not assume OIDC conformance.
+Official browser JavaScript and TypeScript SDK for **Koamishin Portal**, using OAuth 2.0 authorization codes and PKCE. The Portal currently does not issue OIDC ID tokens; do not assume OIDC conformance.
 
 ---
 
@@ -13,6 +13,7 @@ Official browser JavaScript and TypeScript SDK for **Koamishin Auth**, using OAu
 - **Standard PKCE**: High-security authorization code flow using standard Web Crypto API.
 - **Browser client**: Zero external runtime dependencies; compatible with browser code in React, Vue, Next.js, Nuxt, SvelteKit, and vanilla JS.
 - **Silent Refresh**: Built-in `refreshToken()` support to renew expired sessions.
+- **Session Tokens**: `getSessionToken()` mints sixty-second JWTs your backends verify offline against the JWKS document, instead of calling userinfo per request.
 - **Role & Tenant Aware**: Access Spatie roles, permissions, organization/application context, and public metadata inside frontend components.
 
 ---
@@ -54,12 +55,12 @@ Request `metadata:public` explicitly if your application needs public metadata; 
 
 ### 2. Sign In Button
 
-Call `redirectToSignIn()` to send the user to your centralized Koamishin Auth:
+Call `redirectToSignIn()` to send the user to your centralized Koamishin Portal:
 
 ```typescript
 import { koamishin } from './auth';
 
-// Triggers PKCE challenge and redirects browser to Koamishin Auth
+// Triggers PKCE challenge and redirects browser to Koamishin Portal
 async function handleLogin() {
   await koamishin.redirectToSignIn();
 }
@@ -129,6 +130,25 @@ koamishin.signOut();
 window.location.href = '/';
 ```
 
+### 6. Session Tokens
+
+A session token is a short-lived JWT (60 seconds) your application's backends verify **offline** against the portal's JWKS document — no userinfo call per request:
+
+```typescript
+import { decodeSessionToken } from '@koamishin/auth-js';
+
+const sessionToken = await koamishin.getSessionToken();
+
+// Send sessionToken.token to your backend on each request;
+// it verifies the signature server-side before trusting the claims.
+
+// Browser-side decode is unverified — display and routing only:
+const claims = decodeSessionToken(sessionToken);
+console.log(claims.sub, claims.sid, claims.sts);
+```
+
+Backends should also check `application_id` and `environment` against their own configuration before trusting a token, since tokens are minted per application. See the Koamishin Auth session token documentation for the full claim set.
+
 ---
 
 ## API Reference
@@ -153,7 +173,10 @@ window.location.href = '/';
 | `handleRedirectCallback()` | `Promise<{ user, tokens }>` | Exchanges one-time code for access & refresh tokens, returns user claims. |
 | `getUser(token?)` | `Promise<KoamishinUser>` | Fetches user claims from `/api/oauth/userinfo` and verifies `environment` matches any configured `pk_test_...` / `pk_live_...` key. |
 | `refreshToken(token?)` | `Promise<TokenResponse>` | Exchanges refresh token for new access token. |
+| `getSessionToken(token?)` | `Promise<SessionToken>` | Mints a short-lived session token (`POST /api/oauth/session-token`) for offline verification by your backends. |
 | `signOut()` | `void` | Clears stored tokens from browser session storage. |
+
+The package also exports `decodeSessionToken(sessionToken)` → `SessionTokenClaims`, which decodes a session token's claims **without** verifying the signature. Use it for display and routing only; a backend must verify the token against the JWKS document before trusting any claim.
 
 Browser storage is scoped by Portal URL and publishable key (or legacy client ID), keeping `pk_test_...` and `pk_live_...` sessions isolated on the same origin. This changes earlier unscoped storage keys, so users of earlier versions must sign in again. Remove the old `koamishin_access_token` and `koamishin_refresh_token` keys during migration if present. Local sign-out does not revoke Portal tokens or end other application sessions.
 

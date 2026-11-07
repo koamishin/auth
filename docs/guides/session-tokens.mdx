@@ -37,6 +37,8 @@ Authorization: Bearer <access token>
 
 For SDK-driven backends: exchange the token a client application already holds from the authorization-code flow for a short-lived session token its own backends can verify offline. Only **user** access tokens qualify — client-credential (management) tokens have no user behind them and are refused.
 
+Both client libraries wrap this endpoint: `Koamishin::sessionToken()` in the [PHP SDK](../packages/koamishin-auth-php/README.md) mints from the stored session, and `koamishin.getSessionToken()` in the [JavaScript SDK](../packages/koamishin-auth-js/README.md) mints from the browser session's access token.
+
 ## Claims
 
 The claim set follows Clerk's session token version 2.
@@ -79,7 +81,7 @@ The status mirrors the [application gate](core-concepts.mdx) exactly — the sam
 
 ## Verifying a token
 
-Verification is standard JWT verification: check the signature against the JWKS document and validate `iss`, `exp`, and `nbf`. Any JWT library that understands JWKS works.
+Verification is standard JWT verification: check the signature against the JWKS document and validate `iss`, `exp`, and `nbf`. Any JWT library that understands JWKS works. The PHP SDK ships `SessionTokenVerifier`, which does exactly this with a cached key set.
 
 JavaScript, with [`jose`](https://github.com/panva/jose):
 
