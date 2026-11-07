@@ -287,7 +287,7 @@ class MultiSession
             return [];
         }
 
-        return array_values(array_filter($decoded, fn(mixed $entry): bool => is_array($entry)
+        return array_values(array_filter($decoded, fn (mixed $entry): bool => is_array($entry)
             && isset($entry['id'], $entry['name'], $entry['email'], $entry['token'])
             && is_string($entry['token'])));
     }

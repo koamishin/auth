@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Services\Auth\MultiSession;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -27,7 +28,7 @@ class MultiSessionController extends Controller
 
         $user = $this->sessions->userFor($request, $request->input('user_id'));
 
-        if (!$user instanceof \App\Models\User) {
+        if (! $user instanceof User) {
             return back()->withErrors(['account' => 'That account is no longer available in this browser.']);
         }
 
