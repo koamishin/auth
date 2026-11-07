@@ -296,10 +296,12 @@ test('application email verification can be required, disabled, or inherited per
     expect($development->fresh()->getSetting('email_verification_required'))->toBeFalse();
     expect($development->fresh()->requiresEmailVerification())->toBeFalse();
     expect($production->fresh()->requiresEmailVerification())->toBeTrue();
+    // Production is provisioned to require a verified email, so switching to it
+    // shows that requirement rather than inheriting the portal default.
     Livewire::actingAs($admin)->test(AuthenticationTenantApplication::class, ['record' => $application->getKey()])
         ->assertSet('data.email_verification_policy', 'disabled')
         ->call('selectEnvironment', 'production')
-        ->assertSet('data.email_verification_policy', 'inherit');
+        ->assertSet('data.email_verification_policy', 'required');
 
     Livewire::actingAs($admin)->test(AuthenticationTenantApplication::class, ['record' => $application->getKey()])
         ->assertSet('data.email_verification_policy', 'disabled')

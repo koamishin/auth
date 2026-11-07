@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\AuthenticateApplicationFlow;
+use App\Http\Middleware\EnforceSessionLifetime;
 use App\Http\Middleware\EnforceVerificationLinkDevice;
 use App\Http\Middleware\EnsureAuthenticationFeatures;
 use App\Http\Middleware\EnsureEmailVerificationEnabled;
@@ -42,6 +43,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             RedirectPortalRegistrationAlias::class,
             EnforceVerificationLinkDevice::class,
+            EnforceSessionLifetime::class,
             HandleAppearance::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,

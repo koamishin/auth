@@ -123,9 +123,8 @@ class TenantApplication extends Model
             'redirect_uris' => $env === $this->environment ? ($this->redirect_uris ?? []) : [],
             'settings' => [
                 'allow_signups' => false,
-                'require_email_verification' => $env === 'production',
-                'enforce_mfa' => $env === 'production',
-                'session_lifetime_minutes' => $env === 'production' ? 120 : 1440,
+                // Must match what the environment reads, or it would be ignored.
+                ...($env === 'production' ? ['email_verification_required' => true] : []),
             ],
         ]);
 

@@ -113,6 +113,9 @@ class AuthenticationTenantApplication extends EditRecord
                         Tabs\Tab::make('Multi-factor')
                             ->icon('heroicon-o-shield-exclamation')
                             ->schema($this->multiFactorTab()),
+                        Tabs\Tab::make('Sessions')
+                            ->icon('heroicon-o-clock')
+                            ->schema($this->sessionsTab()),
                         Tabs\Tab::make('User model')
                             ->icon('heroicon-o-circle-stack')
                             ->schema($this->userModelTab()),
@@ -447,6 +450,36 @@ class AuthenticationTenantApplication extends EditRecord
     }
 
     /** @return array<int, Section> */
+    private function sessionsTab(): array
+    {
+        return [
+            Section::make('Session lifetime')
+                ->description('How long a signed in session lasts. At least one of these must be set, otherwise sessions would never expire.')
+                ->icon('heroicon-o-clock')
+                ->contained(false)
+                ->components([
+                    TextInput::make('session_inactivity_timeout')
+                        ->label('Inactivity timeout (minutes)')
+                        ->numeric()
+                        ->minValue(0)
+                        ->maxValue(43200)
+                        ->default(0)
+                        ->helperText('Expire the session after this long without activity. Set to 0 to never expire from inactivity.'),
+
+                    TextInput::make('session_max_lifetime')
+                        ->label('Maximum lifetime (minutes)')
+                        ->numeric()
+                        ->minValue(0)
+                        ->maxValue(525600)
+                        ->default(TenantApplicationEnvironment::DEFAULT_SESSION_MAX_LIFETIME)
+                        ->helperText('Expire the session after this long regardless of activity. Set to 0 to rely on the inactivity timeout alone.'),
+
+                    Text::make('Changes apply to new sessions only. Sessions that are already signed in keep the limits they started with, so lowering a limit does not sign anybody out. To end a session now, revoke it from the user\'s profile.'),
+                ]),
+        ];
+    }
+
+    /** @return array<int, Section> */
     private function userModelTab(): array
     {
         return [
@@ -588,6 +621,37 @@ class AuthenticationTenantApplication extends EditRecord
         } else {
             $settings['auth_password_min_length'] = $minLength;
         }
+
+        // Session lifetime. At least one limit has to remain, otherwise a signed
+        // in session would never expire.
+        $inactivity = (int) ($data['session_inactivity_timeout'] ?? 0);
+        $maxLifetime = (int) ($data['session_max_lifetime'] ?? TenantApplicationEnvironment::DEFAULT_SESSION_MAX_LIFETIME);
+
+        if ($inactivity < 0 || $inactivity > 43200) {
+            throw ValidationException::withMessages(['session_inactivity_timeout' => 'Choose an inactivity timeout between 0 and 43200 minutes.']);
+        }
+
+        if ($maxLifetime < 0 || $maxLifetime > 525600) {
+            throw ValidationException::withMessages(['session_max_lifetime' => 'Choose a maximum lifetime between 0 and 525600 minutes.']);
+        }
+
+        if ($inactivity === 0 && $maxLifetime === 0) {
+            throw ValidationException::withMessages(['session_max_lifetime' => 'Keep either an inactivity timeout or a maximum lifetime, so sessions still expire.']);
+        }
+
+        if ($inactivity === 0) {
+            unset($settings['session_inactivity_timeout']);
+        } else {
+            $settings['session_inactivity_timeout'] = $inactivity;
+        }
+
+        if ($maxLifetime === TenantApplicationEnvironment::DEFAULT_SESSION_MAX_LIFETIME) {
+            unset($settings['session_max_lifetime']);
+        } else {
+            $settings['session_max_lifetime'] = $maxLifetime;
+        }
+
+        unset($data['session_inactivity_timeout'], $data['session_max_lifetime']);
 
         $accessMode = $data['access_mode'] ?? null;
         if (! is_string($accessMode) || ! AccessMode::tryFrom($accessMode) instanceof AccessMode) {

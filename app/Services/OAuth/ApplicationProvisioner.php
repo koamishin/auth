@@ -138,6 +138,12 @@ class ApplicationProvisioner
                         'allow_signups' => $environment === $data['environment']
                             ? $data['allow_signups']
                             : $environment === 'development',
+                        // Production requires a verified email by default. The key has
+                        // to match what the environment reads, or it would be ignored.
+                        // Development is left unset so it inherits the portal default,
+                        // and multi-factor auth stays opt-in rather than being forced
+                        // on every end user of a new application.
+                        ...($environment === 'production' ? ['email_verification_required' => true] : []),
                     ],
                 ]);
 

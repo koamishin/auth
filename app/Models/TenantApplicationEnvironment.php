@@ -64,6 +64,9 @@ class TenantApplicationEnvironment extends Model
     /** How long a verification link stays valid, in minutes. */
     public const DEFAULT_VERIFICATION_LINK_TTL = 10;
 
+    /** Maximum session lifetime applied when an application does not set one. */
+    public const DEFAULT_SESSION_MAX_LIFETIME = 10080;
+
     /**
      * Supported metadata attribute types for the application user model.
      *
@@ -262,6 +265,38 @@ class TenantApplicationEnvironment extends Model
     public function blocksEmailSubaddresses(): bool
     {
         return $this->getSetting('block_email_subaddresses', false) === true;
+    }
+
+    /**
+     * Minutes of inactivity after which a session expires, or null when there is
+     * no inactivity limit.
+     */
+    public function sessionInactivityTimeout(): ?int
+    {
+        return $this->positiveMinutes($this->getSetting('session_inactivity_timeout'));
+    }
+
+    /**
+     * Minutes after which a session expires regardless of activity, or null when
+     * there is no maximum lifetime.
+     */
+    public function sessionMaxLifetime(): ?int
+    {
+        return $this->positiveMinutes($this->getSetting('session_max_lifetime', self::DEFAULT_SESSION_MAX_LIFETIME));
+    }
+
+    /**
+     * A setting holding a whole number of minutes, or null when unset or zero.
+     */
+    private function positiveMinutes(mixed $value): ?int
+    {
+        if (! is_numeric($value)) {
+            return null;
+        }
+
+        $minutes = (int) $value;
+
+        return $minutes > 0 ? $minutes : null;
     }
 
     /**
