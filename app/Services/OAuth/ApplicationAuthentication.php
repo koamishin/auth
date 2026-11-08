@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\OAuth;
 
+use App\Enums\AccessMode;
 use App\Models\TenantApplicationEnvironment;
 use App\Models\User;
 use App\Services\Webhooks\WebhookDispatcher;
@@ -84,7 +85,10 @@ class ApplicationAuthentication
         abort_unless($environment instanceof TenantApplicationEnvironment, 403);
 
         if ($request->is('register')) {
-            abort_unless($this->allowsSignups($environment), 403, 'Registration is closed for this application.');
+            // A waitlist application renders a join form on this page instead
+            // of sign-up; the sign-up path itself still refuses it below.
+            abort_unless($this->allowsSignups($environment)
+                || ($environment->accessMode() === AccessMode::Waitlist && $request->isMethod('GET')), 403, 'Registration is closed for this application.');
         }
 
         $this->activate($request, $flow);
@@ -185,6 +189,7 @@ class ApplicationAuthentication
             'organization' => $environment->application->tenant->name,
             'environment' => $environment->environment,
             'allowSignups' => $this->allowsSignups($environment),
+            'waitlist' => $environment->accessMode() === AccessMode::Waitlist,
             'passkeysEnabled' => $environment->allowsPasskeys(),
             'loginTitle' => $environment->getSetting('login_title'),
             'loginDescription' => $environment->getSetting('login_description'),

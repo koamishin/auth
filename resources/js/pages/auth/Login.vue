@@ -26,6 +26,7 @@ const props = defineProps<{
         environment: string;
         allowSignups: boolean;
         passkeysEnabled: boolean;
+        waitlist?: boolean;
         loginTitle?: string | null;
         loginDescription?: string | null;
     } | null;
@@ -313,9 +314,16 @@ function submitCode() {
 
             <div
                 class="text-center text-sm text-muted-foreground"
-                v-if="canRegister && (!application || application.allowSignups)"
+                v-if="
+                    application?.waitlist ||
+                    (canRegister && (!application || application.allowSignups))
+                "
             >
-                Don't have an account?
+                {{
+                    application?.waitlist
+                        ? 'Want early access?'
+                        : "Don't have an account?"
+                }}
                 <button
                     v-if="hosted && flow"
                     type="button"
@@ -328,7 +336,11 @@ function submitCode() {
                         })
                     "
                 >
-                    Sign up
+                    {{
+                        application?.waitlist
+                            ? 'Join the waitlist'
+                            : 'Sign up'
+                    }}
                 </button>
                 <TextLink
                     v-else
@@ -338,7 +350,11 @@ function submitCode() {
                             : register()
                     "
                     :tabindex="5"
-                    >Sign up</TextLink
+                    >{{
+                        application?.waitlist
+                            ? 'Join the waitlist'
+                            : 'Sign up'
+                    }}</TextLink
                 >
             </div>
         </Form>

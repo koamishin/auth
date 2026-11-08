@@ -7,6 +7,7 @@ namespace App\Filament\Resources\TenantApplications\Pages;
 use App\Filament\Resources\TenantApplications\TenantApplicationResource;
 use App\Filament\Resources\Users\UserResource;
 use App\Models\ApplicationInvitation;
+use App\Models\ApplicationWaitlistEntry;
 use App\Models\TenantApplication;
 use App\Models\TenantApplicationEnvironment;
 use App\Models\User;
@@ -190,6 +191,68 @@ class ListApplicationUsers extends Page implements HasTable
             ->title('Invitation revoked')
             ->body('The link for '.$invitation->email.' no longer works.')
             ->warning()
+            ->send();
+    }
+
+    /**
+     * Addresses waiting for early access to this application.
+     *
+     * @return Collection<int, ApplicationWaitlistEntry>
+     */
+    public function waitlistEntries(): Collection
+    {
+        /** @var TenantApplication $application */
+        $application = $this->getRecord();
+        $environment = $application->environments()
+            ->where('environment', $application->environment)
+            ->first();
+
+        if (! $environment instanceof TenantApplicationEnvironment) {
+            return collect();
+        }
+
+        return ApplicationWaitlistEntry::query()
+            ->where('tenant_application_environment_id', $environment->getKey())
+            ->waiting()
+            ->oldest()
+            ->get();
+    }
+
+    /**
+     * Invite a waitlisted address. Joining a waitlist grants nothing until an
+     * invitation is sent.
+     */
+    public function inviteWaitlisted(int|string $entryId): void
+    {
+        /** @var TenantApplication $application */
+        $application = $this->getRecord();
+        $environment = $application->environments()
+            ->where('environment', $application->environment)
+            ->first();
+        $entry = $environment instanceof TenantApplicationEnvironment
+            ? ApplicationWaitlistEntry::query()
+                ->where('tenant_application_environment_id', $environment->getKey())
+                ->waiting()
+                ->firstWhere('id', $entryId)
+            : null;
+
+        if (! $entry instanceof ApplicationWaitlistEntry || ! $environment instanceof TenantApplicationEnvironment) {
+            return;
+        }
+
+        app(ApplicationInvitationService::class)->invite(
+            $environment,
+            $entry->email,
+            'member',
+            Auth::user() instanceof User ? Auth::user() : null,
+        );
+
+        $entry->forceFill(['invited_at' => now()])->save();
+
+        Notification::make()
+            ->title('Invitation sent')
+            ->body($entry->email.' can now join this application.')
+            ->success()
             ->send();
     }
 

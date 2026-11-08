@@ -12,6 +12,7 @@ use App\Http\Controllers\Auth\OpenIdConnectController;
 use App\Http\Controllers\Auth\SessionTokenController;
 use App\Http\Controllers\Auth\SocialAuthController;
 use App\Http\Controllers\Auth\VerifyEmailCodeController;
+use App\Http\Controllers\Auth\WaitlistController;
 use App\Http\Controllers\ImpersonateController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Setup\SetupController;
@@ -92,6 +93,11 @@ Route::get('mfa/setup', MfaSetupController::class)
 Route::get('invitations/{token}', [ApplicationInvitationController::class, 'show'])
     ->middleware('throttle:30,1')
     ->name('invitations.show');
+
+// Joining the waitlist of an application in early access.
+Route::post('auth/waitlist', [WaitlistController::class, 'store'])
+    ->middleware('throttle:6,1')
+    ->name('auth.waitlist');
 Route::post('invitations/{token}/accept', [ApplicationInvitationController::class, 'accept'])
     ->middleware('throttle:10,1')
     ->name('invitations.accept');

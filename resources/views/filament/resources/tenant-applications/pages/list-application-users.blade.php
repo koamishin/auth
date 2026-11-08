@@ -1,5 +1,6 @@
 @php
     $invitations = $this->pendingInvitations();
+    $waitlist = $this->waitlistEntries();
 @endphp
 
 <x-filament-panels::page>
@@ -54,6 +55,50 @@
                                 class="text-[11px] font-semibold text-danger-600 dark:text-danger-400 hover:underline"
                             >
                                 Revoke
+                            </button>
+                        </div>
+                    </li>
+                @endforeach
+            </ul>
+        </section>
+    @endif
+
+    @if ($waitlist->isNotEmpty())
+        <section class="mt-8">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-base font-semibold text-gray-950 dark:text-white">Waitlist</h2>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        These addresses asked for early access. Inviting one sends the same link as an ordinary invitation.
+                    </p>
+                </div>
+                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">
+                    {{ $waitlist->count() }} waiting
+                </span>
+            </div>
+
+            <ul class="mt-4 divide-y divide-gray-100 dark:divide-white/5 border-y border-gray-100 dark:border-white/5">
+                @foreach ($waitlist as $entry)
+                    <li class="flex flex-wrap items-center justify-between gap-3 py-3">
+                        <div class="min-w-0 flex items-center gap-3">
+                            <span class="w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/5 flex items-center justify-center shrink-0">
+                                <x-filament::icon icon="heroicon-o-clock" class="w-4 h-4 text-gray-400" />
+                            </span>
+                            <div class="min-w-0">
+                                <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{{ $entry->email }}</p>
+                                <p class="text-[11px] text-gray-500 dark:text-gray-400">
+                                    joined {{ $entry->created_at?->diffForHumans() }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-3 shrink-0">
+                            <button
+                                type="button"
+                                wire:click="inviteWaitlisted({{ $entry->getKey() }})"
+                                class="text-[11px] font-semibold text-primary-600 dark:text-primary-400 hover:underline"
+                            >
+                                Invite
                             </button>
                         </div>
                     </li>

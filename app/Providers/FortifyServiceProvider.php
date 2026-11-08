@@ -225,6 +225,7 @@ class FortifyServiceProvider extends ServiceProvider
 
         Fortify::registerView(fn (Request $request) => Inertia::render('auth/Register', [
             'application' => app(ApplicationAuthentication::class)->pageContext($request),
+            'waitlistJoined' => (bool) $request->session()->get('waitlist_joined'),
             'flow' => app(ApplicationAuthentication::class)->flowId($request),
             'hosted' => app(ApplicationAuthentication::class)->isHosted($request),
             'passwordRules' => PasswordPolicy::rulesForFrontend(),

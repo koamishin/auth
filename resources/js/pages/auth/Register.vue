@@ -10,6 +10,7 @@ import { Spinner } from '@/components/ui/spinner';
 import AuthBase from '@/layouts/AuthLayout.vue';
 import { login } from '@/routes';
 import { store } from '@/routes/register';
+import { waitlist as waitlistStore } from '@/routes/auth';
 import { store as hostedStore } from '@/routes/hosted';
 const props = defineProps<{
     application?: {
@@ -17,25 +18,31 @@ const props = defineProps<{
         organization: string;
         environment: string;
         allowSignups: boolean;
+        waitlist?: boolean;
     } | null;
     flow?: string | null;
     hosted?: boolean;
     passwordRules?: string | null;
     collectsNameParts?: boolean;
+    waitlistJoined?: boolean;
 }>();
 </script>
 
 <template>
     <AuthBase
         :title="
-            application
-                ? `Create your ${application.name} account`
-                : 'Create an account'
+            application?.waitlist
+                ? `Join the ${application.name} waitlist`
+                : application
+                  ? `Create your ${application.name} account`
+                  : 'Create an account'
         "
         :description="
-            application
-                ? `${application.organization} · ${application.environment}`
-                : 'Enter your details below to create your account'
+            application?.waitlist
+                ? 'Sign-up is by invitation. Leave your address and we will be in touch.'
+                : application
+                  ? `${application.organization} · ${application.environment}`
+                  : 'Enter your details below to create your account'
         "
     >
         <Head
@@ -51,7 +58,48 @@ const props = defineProps<{
             {{ $page.props.errors.social }}
         </div>
 
+        <div
+            v-if="application?.waitlist && waitlistJoined"
+            class="mb-4 text-center text-sm text-muted-foreground"
+        >
+            You're on the list. We'll be in touch when your invitation is
+            ready.
+        </div>
+
         <Form
+            v-else-if="application?.waitlist"
+            v-bind="waitlistStore.form()"
+            v-slot="{ errors, processing }"
+            class="flex flex-col gap-6"
+        >
+            <input v-if="flow" type="hidden" name="flow" :value="flow" />
+            <div class="grid gap-6">
+                <div class="grid gap-2">
+                    <Label for="waitlist-email">Email address</Label>
+                    <Input
+                        id="waitlist-email"
+                        type="email"
+                        name="email"
+                        required
+                        autocomplete="email"
+                        placeholder="you@example.com"
+                    />
+                    <InputError :message="errors.email" />
+                </div>
+
+                <Button
+                    type="submit"
+                    class="mt-2 w-full"
+                    :disabled="processing"
+                >
+                    <Spinner v-if="processing" />
+                    Join the waitlist
+                </Button>
+            </div>
+        </Form>
+
+        <Form
+            v-if="!application?.waitlist"
             v-bind="store.form()"
             :headers="
                 hosted && flow
@@ -197,6 +245,10 @@ const props = defineProps<{
             </div>
         </Form>
 
-        <SocialLoginButtons :flow="flow" :hosted="hosted" />
+        <SocialLoginButtons
+            v-if="!application?.waitlist"
+            :flow="flow"
+            :hosted="hosted"
+        />
     </AuthBase>
 </template>
