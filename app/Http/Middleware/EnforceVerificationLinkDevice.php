@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Middleware;
 
 use App\Models\TenantApplicationEnvironment;
+use App\Services\OAuth\ApplicationAuthentication;
 use App\Support\VerificationDevice;
 use Closure;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -41,7 +43,12 @@ class EnforceVerificationLinkDevice
         }
 
         if (! $this->device->matches($request, $fingerprint)) {
-            abort(403, 'This verification link was requested from a different device or browser. Open it on the device you signed up from, or request a new link.');
+            // An unrecognized device gets the hosted explanation rather than a
+            // bare error: the attempt was cancelled and nothing was signed in.
+            return Inertia::render('auth/UnauthorizedSignIn', [
+                'application' => app(ApplicationAuthentication::class)->pageContext($request),
+                'flow' => app(ApplicationAuthentication::class)->flowId($request),
+            ])->toResponse($request)->setStatusCode(403);
         }
 
         return $next($request);
