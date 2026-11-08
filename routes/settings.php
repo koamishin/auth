@@ -39,6 +39,12 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         ->middleware(RequirePassword::class)
         ->name('security.edit');
 
+    Route::delete('settings/security/devices/{session}', [SecurityController::class, 'destroyDevice'])
+        ->where('session', '[A-Za-z0-9]+')
+        ->name('security.devices.destroy');
+    Route::delete('settings/security/devices', [SecurityController::class, 'destroyOtherDevices'])
+        ->name('security.devices.destroy-others');
+
     Route::put('settings/password', [SecurityController::class, 'update'])
         ->middleware('throttle:6,1')
         ->name('user-password.update');

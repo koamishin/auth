@@ -15,6 +15,7 @@ import { Separator } from '@/components/ui/separator';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { edit } from '@/routes/security';
+import { destroy, destroyOthers } from '@/routes/security/devices';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 
 const page = usePage<SharedData>();
@@ -48,6 +49,13 @@ const props = defineProps<{
         created_at: string | null;
     }>;
     passwordRules?: string;
+    devices?: Array<{
+        id: string;
+        device: string;
+        ip: string | null;
+        last_active: string;
+        current: boolean;
+    }>;
 }>();
 
 const { filamentMfa } = toRefs(props);
@@ -57,6 +65,12 @@ const emailMfaEnabled = ref(filamentMfa.value.state.email);
 const fortifyTwoFactorEnabled = ref(props.twoFactorEnabled ?? false);
 
 const showPasswordForm = settingsFeatures.password !== false;
+
+const formatDate = (value: string): string =>
+    new Date(value).toLocaleString(undefined, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+    });
 
 const breadcrumbItems: BreadcrumbItem[] = [
     {
@@ -240,6 +254,66 @@ const breadcrumbItems: BreadcrumbItem[] = [
                     />
 
                     <PasskeyManager :passkeys="passkeys ?? []" />
+                </section>
+
+                <Separator />
+
+                <section class="space-y-4">
+                    <Heading
+                        variant="small"
+                        title="Active devices"
+                        description="Browsers and devices currently signed in to your account"
+                    />
+
+                    <div class="space-y-3">
+                        <div
+                            v-for="device in devices ?? []"
+                            :key="device.id"
+                            class="flex items-center justify-between gap-4 rounded-lg border border-border p-3"
+                        >
+                            <div class="min-w-0">
+                                <p class="flex items-center gap-2 text-sm font-medium">
+                                    {{ device.device }}
+                                    <span
+                                        v-if="device.current"
+                                        class="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary"
+                                    >
+                                        This device
+                                    </span>
+                                </p>
+                                <p class="text-xs text-muted-foreground">
+                                    <template v-if="device.ip"
+                                        >{{ device.ip }} ·
+                                    </template>
+                                    Last active {{
+                                        formatDate(device.last_active)
+                                    }}
+                                </p>
+                            </div>
+
+                            <Form
+                                v-if="!device.current"
+                                method="delete"
+                                :action="destroy({ session: device.id }).url"
+                                :options="{ preserveScroll: true }"
+                            >
+                                <Button type="submit" variant="outline" size="sm">
+                                    Sign out
+                                </Button>
+                            </Form>
+                        </div>
+
+                        <Form
+                            v-if="(devices ?? []).length > 1"
+                            method="delete"
+                            :action="destroyOthers().url"
+                            :options="{ preserveScroll: true }"
+                        >
+                            <Button type="submit" variant="outline">
+                                Sign out all other devices
+                            </Button>
+                        </Form>
+                    </div>
                 </section>
             </div>
         </SettingsLayout>
