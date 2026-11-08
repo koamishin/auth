@@ -3,6 +3,7 @@ import { Head, useForm, usePage } from '@inertiajs/vue3';
 import { ref, toRefs } from 'vue';
 import { toast } from 'vue-sonner';
 import Heading from '@/components/Heading.vue';
+import DeleteUser from '@/components/DeleteUser.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -108,6 +109,7 @@ const breadcrumbs = [{ title: 'Profile settings', href: edit().url }];
 const props = defineProps<{
     mustVerifyEmail: boolean;
     status?: string;
+    allowsAccountDeletion: boolean;
 }>();
 
 const { mustVerifyEmail, status } = toRefs(props);
@@ -260,6 +262,10 @@ const { mustVerifyEmail, status } = toRefs(props);
                     </div>
                 </form>
             </div>
+
+            <DeleteUser
+                v-if="settingsFeatures.accountDeletion && allowsAccountDeletion"
+            />
         </SettingsLayout>
     </AppLayout>
 </template>

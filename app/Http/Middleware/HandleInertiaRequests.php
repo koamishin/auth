@@ -42,6 +42,7 @@ class HandleInertiaRequests extends Middleware
                 'password' => FeatureRegistry::isFeatureAvailableForUser($user, 'settings_password'),
                 'appearance' => FeatureRegistry::isFeatureAvailableForUser($user, 'settings_appearance'),
                 'passkeys' => FeatureRegistry::isFeatureAvailableForUser($user, 'settings_passkeys'),
+                'accountDeletion' => FeatureRegistry::isFeatureAvailableForUser($user, 'settings_account_deletion'),
             ];
         }
 

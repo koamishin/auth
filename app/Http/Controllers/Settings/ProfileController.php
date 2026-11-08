@@ -12,6 +12,7 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -51,8 +52,8 @@ class ProfileController extends Controller
         $data = $profileUpdateRequest->validated();
 
         // Applications that collect a first and last name keep the display name
-        // in step with them.
-        $displayName = $profileUpdateRequest->displayNameFrom($data, $user->name);
+        // in step with them; anywhere else the submitted name wins.
+        $displayName = $profileUpdateRequest->displayNameFrom($data, is_string($data['name'] ?? null) ? $data['name'] : $user->name);
 
         if (is_string($displayName) && $displayName !== '') {
             $data['name'] = $displayName;
@@ -119,9 +120,10 @@ class ProfileController extends Controller
         $user = $profileDeleteRequest->user();
 
         // An application can forbid its own users from deleting their accounts.
-        $environment = $profileDeleteRequest->attributes->get('koamishin.application_environment');
-
-        if ($environment instanceof TenantApplicationEnvironment && ! $environment->allowsAccountDeletion()) {
+        // The environment resolves outside application flows too — the settings
+        // pages run without one, which is where users actually delete accounts.
+        if (($environment = $this->environment($profileDeleteRequest)) instanceof TenantApplicationEnvironment
+            && ! $environment->allowsAccountDeletion()) {
             return to_route('profile.edit')->with('error', 'This application does not allow accounts to be deleted.');
         }
 
@@ -130,6 +132,10 @@ class ProfileController extends Controller
         }
 
         Auth::logout();
+
+        // Rows without foreign keys still belong to the account.
+        $user->tokens()->delete();
+        DB::table('sessions')->where('user_id', $user->getKey())->delete();
 
         $user->delete();
 
