@@ -63,6 +63,7 @@ class CreateNewUser implements CreatesNewUsers
                 'name' => $this->displayNameFrom($input, $input['name'] ?? null) ?? '',
                 'first_name' => $input['first_name'] ?? null,
                 'last_name' => $input['last_name'] ?? null,
+                'username' => $input['username'] ?? null,
                 'email' => $input['email'],
                 'password' => $input['password'],
                 'identity_namespace' => $identityNamespace,

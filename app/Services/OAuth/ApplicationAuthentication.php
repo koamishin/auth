@@ -190,6 +190,8 @@ class ApplicationAuthentication
             'environment' => $environment->environment,
             'allowSignups' => $this->allowsSignups($environment),
             'waitlist' => $environment->accessMode() === AccessMode::Waitlist,
+            'collectsUsername' => $environment->collectsUsername(),
+            'requiresUsername' => $environment->requiresUsername(),
             'passkeysEnabled' => $environment->allowsPasskeys(),
             'loginTitle' => $environment->getSetting('login_title'),
             'loginDescription' => $environment->getSetting('login_description'),

@@ -19,6 +19,8 @@ const props = defineProps<{
         environment: string;
         allowSignups: boolean;
         waitlist?: boolean;
+        collectsUsername?: boolean;
+        requiresUsername?: boolean;
     } | null;
     flow?: string | null;
     hosted?: boolean;
@@ -117,6 +119,17 @@ const props = defineProps<{
             <input v-if="flow" type="hidden" name="flow" :value="flow" />
             <input v-if="hosted" type="hidden" name="hosted" value="1" />
             <div class="grid gap-6">
+                <div v-if="application?.collectsUsername" class="grid gap-2">
+                    <Label for="username">Username</Label>
+                    <Input
+                        id="username"
+                        name="username"
+                        :required="application?.requiresUsername"
+                        autocomplete="username"
+                        placeholder="e.g. octocat"
+                    />
+                    <InputError :message="errors.username" />
+                </div>
                 <!-- Applications can collect a first and last name instead of one field. -->
                 <div v-if="collectsNameParts" class="grid gap-6 sm:grid-cols-2">
                     <div class="grid gap-2">

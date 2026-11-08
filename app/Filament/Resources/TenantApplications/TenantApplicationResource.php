@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\TenantApplications;
 
 use App\Enums\AccessMode;
+use App\Enums\FieldMode;
 use App\Enums\SocialLoginProvider;
 use App\Filament\Resources\TenantApplications\Pages\AppearanceTenantApplication;
 use App\Filament\Resources\TenantApplications\Pages\AuthenticationTenantApplication;
@@ -290,6 +291,7 @@ class TenantApplicationResource extends Resource
             'require_mfa' => $config?->getSetting('require_mfa', false) === true,
             'passkeys_satisfy_mfa' => $config?->getSetting('passkeys_satisfy_mfa', true) === true,
             'allow_name_parts' => $config?->getSetting('allow_name_parts', false) === true,
+            'username_mode' => FieldMode::fromSetting($config?->getSetting('username_mode'))->value,
             'allow_account_deletion' => $config?->getSetting('allow_account_deletion', true) === true,
             'session_inactivity_timeout' => (int) ($config?->getSetting('session_inactivity_timeout') ?? 0),
             'session_max_lifetime' => (int) ($config?->getSetting('session_max_lifetime') ?? TenantApplicationEnvironment::DEFAULT_SESSION_MAX_LIFETIME),

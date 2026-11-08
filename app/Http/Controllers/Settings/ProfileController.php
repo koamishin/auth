@@ -29,6 +29,8 @@ class ProfileController extends Controller
             'mustVerifyEmail' => $user instanceof MustVerifyEmail,
             'status' => $request->session()->get('status'),
             'collectsNameParts' => $this->environment($request)?->collectsNameParts() ?? false,
+            'collectsUsername' => $this->environment($request)?->collectsUsername() ?? false,
+            'requiresUsername' => $this->environment($request)?->requiresUsername() ?? false,
             'allowsAccountDeletion' => $this->environment($request)?->allowsAccountDeletion() ?? true,
         ]);
     }

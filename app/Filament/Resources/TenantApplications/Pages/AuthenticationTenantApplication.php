@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\TenantApplications\Pages;
 
 use App\Enums\AccessMode;
+use App\Enums\FieldMode;
 use App\Filament\Resources\TenantApplications\TenantApplicationResource;
 use App\Models\TenantApplication;
 use App\Models\TenantApplicationEnvironment;
@@ -256,11 +257,17 @@ class AuthenticationTenantApplication extends EditRecord
     {
         return [
             Section::make('Username')
-                ->description('Coming soon. Users are identified by email address, and signing in with a username is not built yet.')
-                ->icon('heroicon-o-clock')
+                ->description('Let users carry a username on this application: collected at sign-up, editable in their profile, and accepted on the sign-in form instead of an email address.')
+                ->icon('heroicon-o-user-circle')
                 ->contained(false)
                 ->components([
-                    Text::make('A username can be set on a user by an administrator today, and it is validated (4–64 characters, letters, numbers, hyphens and underscores only), but it cannot be used to authenticate.'),
+                    Select::make('username_mode')
+                        ->label('Username')
+                        ->options(FieldMode::options())
+                        ->default(FieldMode::Disabled->value)
+                        ->required()
+                        ->rules(['in:disabled,optional,required'])
+                        ->helperText('A username is 4–64 letters, numbers, hyphens, and underscores, and is unique per application environment. Optional lets users choose one; required makes every new user pick one. Turning this off also stops usernames being accepted on the sign-in form.'),
                 ]),
         ];
     }
@@ -599,6 +606,19 @@ class AuthenticationTenantApplication extends EditRecord
         } else {
             $settings['email_verification_method'] = $verificationMethod;
         }
+
+        $usernameMode = $data['username_mode'] ?? FieldMode::Disabled->value;
+        if (! array_key_exists($usernameMode, FieldMode::options())) {
+            throw ValidationException::withMessages(['username_mode' => 'Choose a valid username setting.']);
+        }
+
+        if ($usernameMode === FieldMode::Disabled->value) {
+            unset($settings['username_mode']);
+        } else {
+            $settings['username_mode'] = $usernameMode;
+        }
+
+        unset($data['username_mode']);
 
         $linkTtl = (int) ($data['email_verification_link_ttl'] ?? TenantApplicationEnvironment::DEFAULT_VERIFICATION_LINK_TTL);
         if ($linkTtl < 5 || $linkTtl > 1440) {

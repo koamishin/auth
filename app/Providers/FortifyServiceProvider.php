@@ -156,9 +156,21 @@ class FortifyServiceProvider extends ServiceProvider
                 ? $environment->identityNamespace()
                 : User::PORTAL_IDENTITY_NAMESPACE;
 
+            // While usernames are on, a username works wherever an email
+            // address does on the sign-in form.
+            $acceptsUsername = ! $environment instanceof TenantApplicationEnvironment
+                || $environment->collectsUsername();
+            $identifier = (string) $request->input(Fortify::username());
+
             $user = User::query()
                 ->where('identity_namespace', $identityNamespace)
-                ->where('email', $request->input(Fortify::username()))
+                ->where(function ($query) use ($acceptsUsername, $identifier): void {
+                    $query->where('email', $identifier);
+
+                    if ($acceptsUsername) {
+                        $query->orWhere('username', $identifier);
+                    }
+                })
                 ->first();
 
             if ($user && Hash::check($request->input('password'), $user->password)) {

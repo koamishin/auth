@@ -20,6 +20,29 @@ trait ProfileValidationRules
             'name' => $this->nameRules(),
             'email' => $this->emailRules($userId, $identityNamespace),
             ...$this->namePartRules(),
+            ...$this->usernameFieldRules($userId, $identityNamespace),
+        ];
+    }
+
+    /**
+     * Rules for the username, only when the application in context collects
+     * one — required of every user or optional, as the application demands.
+     *
+     * @return array<string, array<int, \Illuminate\Contracts\Validation\Rule|array<mixed>|string>>
+     */
+    protected function usernameFieldRules(?int $userId = null, ?string $identityNamespace = null): array
+    {
+        $environment = ApplicationContext::environment();
+
+        if (! $environment instanceof TenantApplicationEnvironment || ! $environment->collectsUsername()) {
+            return [];
+        }
+
+        return [
+            'username' => [
+                $environment->requiresUsername() ? 'required' : 'nullable',
+                ...$this->usernameFormatRules($userId, $identityNamespace),
+            ],
         ];
     }
 
@@ -122,6 +145,17 @@ trait ProfileValidationRules
      */
     protected function usernameRules(?int $userId = null, ?string $identityNamespace = null): array
     {
+        return [
+            'nullable',
+            ...$this->usernameFormatRules($userId, $identityNamespace),
+        ];
+    }
+
+    /**
+     * @return array<int, \Illuminate\Contracts\Validation\Rule|array<mixed>|string>
+     */
+    protected function usernameFormatRules(?int $userId = null, ?string $identityNamespace = null): array
+    {
         $namespace = $identityNamespace ?? $this->resolveIdentityNamespace($userId);
 
         $uniqueRule = Rule::unique(User::class)->where('identity_namespace', $namespace);
@@ -131,7 +165,6 @@ trait ProfileValidationRules
         }
 
         return [
-            'nullable',
             'string',
             'min:4',
             'max:64',

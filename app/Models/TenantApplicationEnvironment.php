@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\AccessMode;
+use App\Enums\FieldMode;
 use App\Settings\ApplicationFeaturesSettings;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -314,6 +315,25 @@ class TenantApplicationEnvironment extends Model
     public function collectsNameParts(): bool
     {
         return $this->getSetting('allow_name_parts', false) === true;
+    }
+
+    /**
+     * How this application treats usernames: never collected, optional, or
+     * demanded of every user.
+     */
+    public function usernameMode(): FieldMode
+    {
+        return FieldMode::fromSetting($this->getSetting('username_mode'));
+    }
+
+    public function collectsUsername(): bool
+    {
+        return $this->usernameMode() !== FieldMode::Disabled;
+    }
+
+    public function requiresUsername(): bool
+    {
+        return $this->usernameMode() === FieldMode::Required;
     }
 
     public function blocksDisposableEmails(): bool

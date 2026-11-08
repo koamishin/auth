@@ -20,6 +20,7 @@ const settingsFeatures = page.props.settingsFeatures || {};
 const form = useForm({
     name: user.name,
     email: user.email,
+    username: user.username ?? '',
 });
 
 const photoInput = ref<HTMLInputElement | null>(null);
@@ -110,6 +111,8 @@ const props = defineProps<{
     mustVerifyEmail: boolean;
     status?: string;
     allowsAccountDeletion: boolean;
+    collectsUsername: boolean;
+    requiresUsername: boolean;
 }>();
 
 const { mustVerifyEmail, status } = toRefs(props);
@@ -216,6 +219,18 @@ const { mustVerifyEmail, status } = toRefs(props);
                             placeholder="Email address"
                         />
                         <InputError :message="form.errors.email" />
+                    </div>
+
+                    <div v-if="collectsUsername" class="grid gap-2">
+                        <Label for="username">Username</Label>
+                        <Input
+                            id="username"
+                            v-model="form.username"
+                            :required="requiresUsername"
+                            autocomplete="username"
+                            placeholder="e.g. octocat"
+                        />
+                        <InputError :message="form.errors.username" />
                     </div>
 
                     <div
