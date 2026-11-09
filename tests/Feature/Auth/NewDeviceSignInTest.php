@@ -81,11 +81,9 @@ test('a sign-in from an unrecognized device alerts the account owner', function 
         ->assertSessionHasNoErrors()
         ->assertRedirect();
 
-    Notification::assertSentTo($user, NewDeviceSignInNotification::class, function (NewDeviceSignInNotification $notification) use ($user): bool {
-        return $notification->deviceName !== ''
-            && $notification->ipAddress !== null
-            && str_contains($notification->revocationUrl, 'signin-alert/'.$user->getKey().'/');
-    });
+    Notification::assertSentTo($user, NewDeviceSignInNotification::class, fn(NewDeviceSignInNotification $notification): bool => $notification->deviceName !== ''
+        && $notification->ipAddress !== null
+        && str_contains($notification->revocationUrl, 'signin-alert/'.$user->getKey().'/'));
     expect(RecognizedDevice::query()->where('user_id', $user->getKey())->count())->toBe(1);
 });
 
@@ -137,9 +135,7 @@ test('alerts follow the application setting and carry the support address', func
         ->post(route('login.store', ['add' => 1]), ['email' => $user->email, 'password' => 'password', 'flow' => $flow])
         ->assertSessionHasNoErrors();
 
-    Notification::assertSentTo($user, NewDeviceSignInNotification::class, function (NewDeviceSignInNotification $notification): bool {
-        return $notification->supportEmail === 'help@example.test';
-    });
+    Notification::assertSentTo($user, NewDeviceSignInNotification::class, fn(NewDeviceSignInNotification $notification): bool => $notification->supportEmail === 'help@example.test');
     expect(RecognizedDevice::query()->where('user_id', $user->getKey())->count())->toBe(2);
 });
 
@@ -228,7 +224,7 @@ test('the system page configures the alerts', function (): void {
 
     // Defaults are not persisted.
     $page()->set('data.unauthorized_signin_alerts', true)
-        ->set('data.support_email', null)
+        ->set('data.support_email')
         ->call('save', false)
         ->assertHasNoErrors();
 
