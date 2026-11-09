@@ -1,0 +1,153 @@
+---
+title: User Authentication
+description: Configure how users sign up and sign in — identifiers, passwords, passkeys, email codes, social connections, and multi-factor authentication.
+---
+
+# User authentication
+
+User authentication controls how users sign up and sign in to an application: which identifiers they use, which methods they can authenticate with, and what is required of them before they reach the application. Every option is configured per application environment, so development and production can differ.
+
+To configure authentication, navigate to **Applications** in the admin panel, select the application, and open **Users & authentication**. Each section below lives on one of that page's tabs.
+
+## Identifiers
+
+An identifier is what a user enters when signing in.
+
+| Identifier | Description | Sign-in | Example |
+| ---------- | ----------- | ------- | ------- |
+| Email address | Always collected and verified. | Yes | `octo@example.com` |
+| Username | 4–64 letters, numbers, hyphens, and underscores, unique per application environment. | Yes, while enabled | `octocat` |
+| Phone number | Stored in international format. SMS verification is not built yet, so a number is never treated as proof of ownership. | No | `+14155550123` |
+
+While usernames are enabled, a username works wherever an email address does on the sign-in form.
+
+### Configure identifiers
+
+1. Open **Users & authentication** and select the **Username** or **Phone number** tab.
+2. Choose **Disabled**, **Optional**, or **Required**. Optional lets users fill the field in; Required demands it of every new user and keeps profile validation asking for it.
+3. Select **Save**.
+
+## Authentication methods
+
+### Email address and password
+
+| Setting | Description |
+| ------- | ----------- |
+| **Allow password authentication** | Turning this off stops new passwords from being created — sign-up and password resets require another method. Users who already have a password keep signing in with it, so nobody is locked out. |
+| **Minimum password length** | Enforced whenever a password is created or changed in this environment, on top of the platform default. |
+
+To configure passwords:
+
+1. Open **Users & authentication** and select the **Password** tab.
+2. Turn **Allow password authentication** on or off and set the **Minimum password length**.
+3. Select **Save**.
+
+### Passkeys
+
+Passkeys let users sign in with Touch ID, Face ID, Windows Hello, Android biometrics, or an external security key. Users register them from their security page; see [user accounts](user-accounts.mdx).
+
+| Setting | Tab | Description |
+| ------- | --- | ----------- |
+| **Allow passkey sign-in** | Passkeys | Enables the feature for the application. |
+| **Allow built-in authenticators** | Biometric | Permits platform authenticators. Turn off to accept only external security keys. |
+| **Require biometric or PIN verification** | Biometric | Requires the authenticator to verify the user rather than only testing for presence. Recommended. |
+
+### Email codes
+
+When enabled, users can sign in with a single-use code sent to their email address instead of a password. Codes expire after 10 minutes and can only be requested again after 30 seconds.
+
+To configure email codes:
+
+1. Open **Users & authentication** and select the **Email** tab.
+2. Turn **Allow sign-in with an email code** on or off.
+3. Select **Save**.
+
+### Social connections
+
+Social connections let users sign in with providers such as GitHub or Google. Providers are configured per environment with their own credentials; only configured providers appear on sign-in and account pages. Users connect and disconnect providers from their security page, and a provider identity already claimed by another user stays claimed.
+
+To configure social connections, use the application's **Social connections** page.
+
+## Multi-factor authentication
+
+Multi-factor authentication (MFA) adds a second step after the first factor. When an application requires it, users without a second factor are sent to a setup screen and cannot reach the application until they enrol one. Users enrol an authenticator app or email code, with recovery codes, from their security page.
+
+| Setting | Description |
+| ------- | ----------- |
+| **Require two-step verification** | Demands a second factor of every user of this application. |
+| **Passkeys satisfy two-step verification** | A passkey already combines a device with a biometric or PIN, so signing in with one skips the second step. Turn off to require an enrolled factor even for passkey users. |
+
+To configure MFA:
+
+1. Open **Users & authentication** and select the **Multi-factor** tab.
+2. Turn **Require two-step verification** on or off.
+3. Choose whether **Passkeys satisfy two-step verification**.
+4. Select **Save**.
+
+> The Portal-wide **Two-factor authentication** feature must also be on before users can enrol factors. Disabling it prevents new enrolments but continues to challenge users who already enrolled.
+
+## Email verification
+
+Applications choose whether users must verify their email address before the application authorizes them, and how verification happens.
+
+| Setting | Description |
+| ------- | ----------- |
+| **Verification policy** | Require a verified email, inherit the Portal default, or disable the requirement. |
+| **Verification method** | **Link** sends a signed link; **Code** sends a single-use code that expires after 10 minutes. |
+| **Link lifetime (minutes)** | How long a verification link stays valid. |
+| **Require the same device and browser** | Binds a verification link to the browser that requested it. A link opened elsewhere is refused and shows the [unauthorized sign-in](security.mdx#know-when-a-new-device-signs-in) page. |
+
+To configure email verification:
+
+1. Open **Users & authentication** and select the **Email** tab.
+2. Choose the **Verification policy** and **Verification method**.
+3. Adjust the **Link lifetime** and device binding as needed.
+4. Select **Save**.
+
+## Who can sign up
+
+The **Access** tab decides who can create an account.
+
+| Mode | Description |
+| ---- | ----------- |
+| **Open** | Anyone can sign up. |
+| **Invite-only** | Sign-ups are closed; only people an operator invites can sign in. |
+| **Waitlist** | Sign-ups are closed, but interested users can join a waitlist for an operator to invite. |
+
+Two rules can narrow an open application further: **Block email subaddresses** refuses addresses such as `name+tag@example.com`, and **Block disposable email addresses** refuses throwaway providers. Block rules always win over an allowlist, and both apply to sign-in as well as sign-up, so an address refused at sign-up cannot slip in later.
+
+For invitations and the waitlist flow, see [tenancy and OAuth](core-concepts.mdx). For what users manage after signing up, see [user accounts](user-accounts.mdx).
+
+## Portal-wide settings
+
+The **Application Features** settings apply to every application alongside the per-application options:
+
+| Feature | Effect when disabled |
+| ------- | -------------------- |
+| Registration | Self-service sign-up is refused everywhere. |
+| Password reset | The forgot-password flow is turned off. |
+| Two-factor authentication | Users cannot enrol new factors. |
+| Email verification | The Portal default requirement is dropped; applications can still add their own. |
+
+## Where to configure
+
+| Tab | Configures |
+| --- | ---------- |
+| Email | Email sign-up and sign-in, email codes, verification policy and method |
+| Phone | Whether phone numbers are collected |
+| Username | Whether usernames are collected and accepted at sign-in |
+| Password | Password authentication and minimum length |
+| Passkeys | Passkey sign-in |
+| Biometric | Which authenticators passkeys accept, and verification requirements |
+| Access | Sign-up modes and identifier rules |
+| Multi-factor | Two-step verification requirements |
+| Sessions | Session lifetime and [sign-in alerts](security.mdx#know-when-a-new-device-signs-in) |
+| User model | Name parts, account deletion, and [user metadata](user-metadata.mdx) |
+| Enterprise SSO | Not built yet |
+| Web3 | Not built yet |
+
+## Next steps
+
+- To understand the OAuth context behind these pages, see [tenancy and OAuth](core-concepts.mdx).
+- To manage several signed-in accounts in one browser, see [multi-session accounts](multi-session.mdx).
+- For what backends learn about a session, see [session tokens](session-tokens.mdx).
