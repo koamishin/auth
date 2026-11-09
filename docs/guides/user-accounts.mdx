@@ -1,0 +1,59 @@
+---
+title: User Accounts
+description: What users can manage about themselves — profile fields, connected accounts, devices, and account deletion — and where applications configure each.
+---
+
+# User Accounts
+
+Users manage their own account from the Portal's settings pages. What they see there follows the application they belong to: each profile field is configured per application environment, so one application can demand a username while another never collects one.
+
+## Profile fields
+
+| Field | Configuration | Notes |
+| --- | --- | --- |
+| Display name | Always | Applications that collect name parts derive the display name from a first and last name instead. |
+| First and last name | **User permissions** tab: *Collect a first and last name* | The display name is kept in step with the parts. |
+| Email address | Always | Changing it marks the address unverified again. |
+| Username | **Username** tab: Disabled / Optional / Required | 4–64 letters, numbers, hyphens, and underscores; unique per application environment. |
+| Phone number | **Phone number** tab: Disabled / Optional / Required | Stored in international format, e.g. `+14155550123`. |
+| Avatar | Always | — |
+
+Both optional fields follow the same three-state rule: **Disabled** keeps the field hidden and unenforced, **Optional** lets users fill it in, and **Required** demands it of every new user and keeps profile validation asking for it.
+
+While usernames are on, **a username works wherever an email address does on the sign-in form**; turning them off stops that too. Phone numbers are collected but not yet verified — SMS codes are still to come — so nothing treats a number as proof of ownership, and it cannot be used to sign in. Sign-up collects these fields when the application allows it; profile settings edit them afterwards.
+
+## Connected accounts
+
+Users link social providers from the security page and disconnect them again. Connecting runs the ordinary provider sign-in flow and attaches the identity to the signed-in account instead of signing anyone in.
+
+Two rules govern the list:
+
+- A provider identity already claimed by another user **stays claimed** — linking can never move an account between users.
+- **The last way to sign in is never disconnected.** A user with no password and a single connection keeps it until a password is set or another provider is connected.
+
+Which providers appear follows the application's social connection configuration; the admin panel's social connection settings are the only place that list changes.
+
+## Active devices
+
+The security page lists every browser session the account has open — device, address, last activity, and which one is this device. Users sign out any single device or all the others at once. Sign-in alerts (see [security](security.mdx)) notify owners when a new device appears.
+
+## Account deletion
+
+The **User permissions** tab carries *Allow users to delete their accounts*, on by default. Turning it off removes the delete section from the profile page and refuses the action server-side; administrators can still delete a user from the panel.
+
+Deleting an account requires the account's password and removes the account and everything hanging off it: sessions, OAuth tokens, switch tokens for [multi-session](multi-session.mdx), passkeys, social connections, memberships, and metadata. The account cannot sign in again.
+
+A second gate sits above the application setting: account deletion is a role feature (*Account Deletion*) that operators can turn off for particular roles. Both the feature and the application setting must allow it before the control appears.
+
+## Where to configure it
+
+Everything above lives in the application's **Users & authentication** page in the admin panel:
+
+| Tab | Configures |
+| --- | --- |
+| Phone number | Whether phone numbers are collected |
+| Username | Whether usernames are collected, and whether they sign in |
+| User permissions | Name parts and account deletion |
+| Sessions | Session lifetime and [sign-in alerts](security.mdx) |
+
+Users see only what these settings allow; the controls themselves are never shown in a state they cannot honor.

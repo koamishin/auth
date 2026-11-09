@@ -109,7 +109,9 @@ Submit logout using a POST form with `@csrf`. The SDK validates the OAuth state,
 
 The guard returns a `KoamishinUser`, not an Eloquent model. The verified callback creates the central Portal identity; if the consuming app needs Eloquent relations, explicitly project the returned identity into that app's own `users` table. The [SDK README](../../packages/koamishin-auth-php/README.md#maintain-a-local-eloquent-user-projection) shows a migration and projector service. Key the local row by `koamishin_user_id`, validate the configured application and environment, and never link accounts by email alone. Copy only the public metadata that the app needs; keep private metadata behind the management API. The guard remains the source for Portal authentication and app-scoped roles, while local models own the consuming app's data relations.
 
-For bearer-token requests the guard validates the token against the Portal, and an invalid bearer token does not fall back to a browser session. Use session blocking with a shared lock-capable cache when concurrent requests can refresh the same session. For role checks and additional guard details, see the [SDK README](../../packages/koamishin-auth-php/README.md).
+For bearer-token requests the guard validates the token against the Portal, and an invalid bearer token does not fall back to a browser session. A bearer **session token** is the exception: the guard verifies it offline against the cached JWKS key set instead of calling userinfo. Use session blocking with a shared lock-capable cache when concurrent requests can refresh the same session. For role checks and additional guard details, see the [SDK README](../../packages/koamishin-auth-php/README.md).
+
+Session tokens — `Koamishin::sessionToken()` to mint one for the current session, `SessionTokenVerifier` to verify one offline, and `Koamishin::userForSessionToken()` for verification plus application binding — are documented in [session tokens](session-tokens.mdx).
 
 ## 4. Manage users and metadata from the server
 

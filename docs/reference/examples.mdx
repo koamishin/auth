@@ -15,8 +15,13 @@ The Portal exposes OAuth authorization and userinfo for signed-in users, plus a 
 | `POST /oauth/token`       | Exchange an authorization code, refresh token, or management client credentials.  |
 | `GET /api/oauth/userinfo` | Return scope-filtered claims for an enrolled user with a valid user bearer token. |
 | `GET /api/user`           | Return the same scoped userinfo claims.                                           |
+| `GET /session/token`      | Mint a short-lived session token for the signed-in browser session.               |
+| `POST /api/oauth/session-token` | Mint a session token from a user access token; client-credential tokens are refused. |
+| `POST /auth/waitlist`     | Join the waitlist of an application that is not accepting sign-ups yet.            |
 
-Userinfo checks the active OAuth client's unique application-environment mapping and the user's organization and environment membership on each request. See [tenancy and OAuth](../guides/core-concepts.mdx) for claims and [the Laravel SDK](../guides/laravel-sdk.mdx) for a complete login example. The Portal does not issue OIDC ID tokens.
+Userinfo checks the active OAuth client's unique application-environment mapping and the user's organization and environment membership on each request. See [tenancy and OAuth](../guides/core-concepts.mdx) for claims and [the Laravel SDK](../guides/laravel-sdk.mdx) for a complete login example. The Portal does not issue OIDC ID tokens; [session tokens](../guides/session-tokens.mdx) are a separate, short-lived JWT that backends verify offline against the JWKS document.
+
+Browser-side account management uses a handful of POST routes behind the session rather than bearer tokens: `accounts/switch`, `accounts/remove`, and `accounts/sign-out-all` for [multi-session](../guides/multi-session.mdx), and per-device and per-connection removal under `settings/security/devices` and `settings/connections`. See [user accounts](../guides/user-accounts.mdx).
 
 ## Management API
 

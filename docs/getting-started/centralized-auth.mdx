@@ -7,7 +7,7 @@ description: Start signup in App A, create an account, and sign in to App B with
 
 This walkthrough connects two Laravel applications to one Koamishin Auth instance. App A starts a contextual registration flow, Koamishin Auth creates the account scoped to App A's environment, and OAuth returns the user to App A. App B can then authenticate its own users through its client. Each app keeps its own local session, application membership, isolated identity namespace, and metadata.
 
-Self-service access is controlled by the selected environment's **Allow self-service signup** setting. When it is enabled, a new account can join that environment during signup. When the setting is missing or false, an administrator must enroll the user first.
+Self-service access is controlled by the selected environment's **Access** mode: **Open** accepts sign-ups, **Invite-only** closes them and leaves enrollment to an administrator, and **Waitlist** closes them but collects addresses for an operator to invite. The legacy `allow_signups` setting maps onto the same choice.
 
 ## Before you start
 
@@ -41,7 +41,7 @@ In the Koamishin Auth administration panel, select your organization and create 
 | **Framework** | Laravel | Laravel / Next.js / Node.js |
 | **Environment** | Development | Development |
 | **Callback URL** | `https://portal-app-1.test/koamishin/callback` | `http://localhost:3000/api/auth/callback` |
-| **Allow self-service signup** | Enabled | Enabled |
+| **Access mode** | Open | Open |
 | **OAuth Consent Screen** | Off (first-party seamless) | Off (first-party seamless) |
 
 Navigate to **Applications** (`/admin/<org>/tenant-applications`) to view the registered applications within your organization:
@@ -59,7 +59,7 @@ Navigate to **Applications** (`/admin/<org>/tenant-applications`) to view the re
 Open App A's settings (`/admin/<org>/tenant-applications/<id>/edit`) and scroll to **Environment & Callbacks**:
 
 1. Set the active environment to **Development**.
-2. Enable **Allow self-service user signup** to permit new user registration directly through App A.
+2. Open the application's **Users & authentication** page and set the **Access** tab's mode to **Open**, to permit new user registration directly through App A.
 3. Set the **Allowed Callback URLs (Redirect URIs)** to App A's exact OAuth callback endpoint (`https://portal-app-1.test/koamishin/callback`).
 
 ![App A Environment & Callback Configuration](../images/screenshots/centralized-app-a-config.png)
@@ -69,7 +69,7 @@ Open App A's settings (`/admin/<org>/tenant-applications/<id>/edit`) and scroll 
 Similarly, open App B's settings (`/admin/<org>/tenant-applications/<id>/edit`) and scroll to **Environment & Callbacks**:
 
 1. Confirm the environment is set to **Development**.
-2. Verify **Allow self-service user signup** matches your organization policy.
+2. Verify the **Access** tab's mode matches your organization policy; **Invite-only** and **Waitlist** both close self-service signup.
 3. Configure App B's redirect URI (for example, `http://localhost:3000/api/auth/callback` or your consumer port callback).
 
 ![App B Environment & Callback Configuration](../images/screenshots/centralized-app-b-config.png)
