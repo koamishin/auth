@@ -8,14 +8,34 @@ export async function getStaticPaths() {
 
 const { page, pages } = Astro.props;
 const base = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
-const sections = [
-  { label: 'Start here', items: pages.filter((item) => item.source === 'docs/index.mdx' || item.source === 'docs/architecture.mdx') },
-  { label: 'Getting started', items: pages.filter((item) => item.source.startsWith('docs/getting-started/')) },
-  { label: 'Guides', items: pages.filter((item) => item.source.startsWith('docs/guides/')) },
-  { label: 'Reference', items: pages.filter((item) => item.source.startsWith('docs/reference/')) },
-  { label: 'Repository', items: pages.filter((item) => !item.source.startsWith('docs/')) },
+
+const tabs = [
+  {
+    id: 'guides',
+    label: 'Guides',
+    groups: [
+      { label: 'Start here', items: pages.filter((item) => item.source === 'docs/index.mdx' || item.source === 'docs/architecture.mdx') },
+      { label: 'Getting started', items: pages.filter((item) => item.source.startsWith('docs/getting-started/')) },
+      { label: 'Guides', items: pages.filter((item) => item.source.startsWith('docs/guides/')) },
+    ],
+  },
+  {
+    id: 'reference',
+    label: 'Reference',
+    groups: [
+      { label: 'Reference', items: pages.filter((item) => item.source.startsWith('docs/reference/')) },
+      { label: 'Repository', items: pages.filter((item) => !item.source.startsWith('docs/')) },
+    ],
+  },
 ];
-const section = sections.find((group) => group.items.some((item) => item.source === page.source));
+const activeTab = tabs.find((tab) => tab.groups.some((group) => group.items.some((item) => item.source === page.source)))?.id ?? 'guides';
+const activeGroup = tabs.flatMap((tab) => tab.groups).find((group) => group.items.some((item) => item.source === page.source));
+const toc = (page.headings ?? []).filter((heading) => heading.depth >= 2 && heading.depth <= 3);
+const sdkOptions = [
+  { label: 'Platform', source: 'docs/index.mdx', url: `${base}/docs/` },
+  { label: 'Laravel SDK', source: 'packages/koamishin-auth-php/README.md', url: `${base}/docs/repository/packages/koamishin-auth-php/README/` },
+  { label: 'JavaScript SDK', source: 'packages/koamishin-auth-js/README.md', url: `${base}/docs/repository/packages/koamishin-auth-js/README/` },
+];
 ---
 <!doctype html>
 <html lang="en">
@@ -23,37 +43,422 @@ const section = sections.find((group) => group.items.some((item) => item.source 
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={page.description || `Documentation for ${page.title}.`} />
-    <meta name="theme-color" content="#f5f4ee" />
+    <meta name="theme-color" content="#fbfbf9" />
     <link rel="icon" type="image/svg+xml" href={`${base}/koamishin-logo.svg`} />
     <title>{page.title} | Koamishin documentation</title>
   </head>
   <body>
     <a class="skip" href="#main">Skip to content</a>
-    <header class="header shell">
-      <a class="brand" href={`${base}/`}><img src={`${base}/koamishin-logo.svg`} alt="" width="36" height="36" /><span>koamishin<span class="brand-light"> / auth</span></span></a>
-      <nav aria-label="Main navigation"><a href={`${base}/`}>Home</a><a class="current" href={`${base}/docs/`} aria-current="page">Documentation <span aria-hidden="true">↗</span></a></nav>
+    <header class="header">
+      <div class="shell header-inner">
+        <a class="brand" href={`${base}/`}><img src={`${base}/koamishin-logo.svg`} alt="" width="32" height="32" /><span>koamishin<span class="brand-light"> / auth</span></span></a>
+        <nav aria-label="Main navigation">
+          <a href={`${base}/`}>Home</a>
+          <a class="pill current" href={`${base}/docs/`} aria-current="page">Docs</a>
+          <a class="pill pill-dark" href={`${base}/docs/getting-started/installation/`}>Get started <span aria-hidden="true">→</span></a>
+        </nav>
+      </div>
     </header>
     <div class="shell layout">
       <aside class="sidebar">
-        <nav class="desktop-nav" aria-label="Documentation navigation">
-          {sections.map((group) => <div class="nav-group"><p>{group.label}</p>{group.items.map((item) => <a href={item.url} aria-current={item.source === page.source ? 'page' : undefined}>{item.title}</a>)}</div>)}
-        </nav>
-        <details class="mobile-nav"><summary>Browse documentation <span aria-hidden="true">↓</span></summary>
-          <nav aria-label="Documentation navigation">
-            {sections.map((group) => <div class="nav-group"><p>{group.label}</p>{group.items.map((item) => <a href={item.url} aria-current={item.source === page.source ? 'page' : undefined}>{item.title}</a>)}</div>)}
-          </nav>
+        <details class="sidebar-collapse" open>
+          <summary class="sidebar-toggle">Browse documentation <span aria-hidden="true">↓</span></summary>
+          <div class="sidebar-card">
+            <div class="sdk-picker">
+              <label for="sdk-select">Select your SDK</label>
+              <div class="sdk-select-row">
+                <img src={`${base}/koamishin-logo.svg`} alt="" width="20" height="20" />
+                <select id="sdk-select">
+                  {sdkOptions.map((option) => <option value={option.url} selected={option.source === page.source}>{option.label}</option>)}
+                </select>
+                <span class="sdk-chevron" aria-hidden="true">⌄</span>
+              </div>
+            </div>
+            <input class="tab-input" type="radio" name="doc-tab" id="tab-guides" checked={activeTab === 'guides'} />
+            <input class="tab-input" type="radio" name="doc-tab" id="tab-reference" checked={activeTab === 'reference'} />
+            <div class="switcher-buttons">
+                <label for="tab-guides">
+                  <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 3.5A1.5 1.5 0 0 1 3.5 2H6a2 2 0 0 1 2 2v9a1.5 1.5 0 0 0-1.5-1.5H2zM14 3.5A1.5 1.5 0 0 0 12.5 2H10a2 2 0 0 0-2 2v9a1.5 1.5 0 0 1 1.5-1.5H14z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+                  Guides
+                </label>
+                <label for="tab-reference">
+                  <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M5.5 4 2 8l3.5 4M10.5 4 14 8l-3.5 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  Reference
+                  <span class="label-chevron" aria-hidden="true">›</span>
+                </label>
+            </div>
+            <hr class="sidebar-divider" />
+            <div class="docs-search">
+              <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="m10.5 10.5 3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+              <input id="docs-search" type="search" placeholder="Search documentation" aria-label="Filter documentation pages" autocomplete="off" />
+            </div>
+            <nav class="docs-nav" aria-label="Documentation navigation">
+              {tabs.map((tab) => (
+                <div class="panel" data-tab={tab.id}>
+                  {tab.groups.map((group) => (
+                    <details class="nav-group" open>
+                      <summary>{group.label}<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="m4 6 4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></summary>
+                      <div class="nav-children">
+                        {group.items.map((item) => <a href={item.url} aria-current={item.source === page.source ? 'page' : undefined}>{item.title}</a>)}
+                      </div>
+                    </details>
+                  ))}
+                </div>
+              ))}
+            </nav>
+            <p class="search-empty" hidden>No matching pages.</p>
+          </div>
         </details>
       </aside>
       <main id="main" class="main">
-        <div class="breadcrumb"><a href={`${base}/docs/`}>Documentation</a><span aria-hidden="true"> / </span><span>{section?.label}</span></div>
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+          <a href={`${base}/docs/`}>Documentation</a><span aria-hidden="true">/</span><span>{activeGroup?.label}</span><span aria-hidden="true">/</span><span class="breadcrumb-current">{page.title}</span>
+        </nav>
         <article class="prose" set:html={page.html} />
         <div class="page-end"><span>KOAMISHIN / DOCUMENTATION</span><a href="#main">Back to top ↑</a></div>
       </main>
+      {toc.length > 0 && (
+        <aside class="toc" aria-label="On this page">
+          <p class="toc-title">On this page</p>
+          <ul>
+            {toc.map((heading) => <li class={`toc-depth-${heading.depth}`}><a href={`#${heading.slug}`}>{heading.text}</a></li>)}
+          </ul>
+        </aside>
+      )}
     </div>
     <footer class="footer shell"><span>Account access, thoughtfully connected.</span><a href={`${base}/`}>Back to home ↗</a></footer>
+    <script is:inline>
+      const sdkSelect = document.getElementById('sdk-select');
+      sdkSelect?.addEventListener('change', () => { if (sdkSelect.value) window.location.href = sdkSelect.value; });
+
+      const nav = document.querySelector('.docs-nav');
+      const searchInput = document.getElementById('docs-search');
+      const searchEmpty = document.querySelector('.search-empty');
+      searchInput?.addEventListener('input', () => {
+        const query = searchInput.value.trim().toLowerCase();
+        const searching = query.length > 0;
+        nav.classList.toggle('is-searching', searching);
+        let matches = 0;
+        nav.querySelectorAll('.nav-group').forEach((group) => {
+          let groupMatches = 0;
+          group.querySelectorAll('a').forEach((link) => {
+            const hit = !searching || link.textContent.toLowerCase().includes(query);
+            link.hidden = !hit;
+            if (hit) { groupMatches += 1; matches += 1; }
+          });
+          group.hidden = searching && groupMatches === 0;
+          if (searching) group.open = true;
+        });
+        if (searchEmpty) searchEmpty.hidden = !searching || matches > 0;
+      });
+
+      const sidebarCollapse = document.querySelector('.sidebar-collapse');
+      const desktopQuery = window.matchMedia('(min-width: 901px)');
+      const syncSidebar = () => { if (desktopQuery.matches) sidebarCollapse.open = true; };
+      desktopQuery.addEventListener('change', syncSidebar);
+      syncSidebar();
+    </script>
   </body>
 </html>
 <style is:global>
   @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap');
-  :root{font-family:Manrope,sans-serif;color:#20241f;background:#f5f4ee;font-synthesis:none;scroll-behavior:smooth}*{box-sizing:border-box}body{margin:0}a{color:inherit}a:focus-visible,summary:focus-visible{outline:3px solid #c85d36;outline-offset:4px}.shell{width:min(100% - 64px,1280px);margin-inline:auto}.skip{position:absolute;left:16px;top:-80px;background:#fff;padding:12px;z-index:10}.skip:focus{top:16px}.header{height:96px;display:flex;align-items:center;justify-content:space-between;gap:24px;border-bottom:1px solid #d2d5ca}.brand{display:inline-flex;align-items:center;gap:12px;text-decoration:none;font-size:16px;font-weight:700;letter-spacing:-.04em}.brand img{border-radius:8px}.brand-light{font-weight:400;color:#777c72}.header nav{display:flex;align-items:center;gap:32px;font-size:14px;font-weight:600}.header nav a{text-decoration:none}.header .current{border:1px solid #c7cbc0;border-radius:999px;padding:12px 16px}.current span{margin-left:16px}.layout{display:grid;grid-template-columns:240px minmax(0,1fr);gap:64px}.sidebar{padding:48px 0}.mobile-nav{display:none}.nav-group{margin-bottom:32px}.nav-group p{margin:0 0 12px;color:#788173;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}.nav-group a{display:block;padding:8px 12px;margin-left:-12px;border-radius:8px;text-decoration:none;color:#586256;font-size:14px;line-height:1.45}.nav-group a:hover{background:#e8ebe3}.nav-group a[aria-current=page]{background:#dce4d6;color:#263b29;font-weight:700}.main{min-width:0;max-width:850px;padding:48px 0 80px}.breadcrumb{font-size:12px;font-weight:700;color:#788173;margin-bottom:32px}.breadcrumb a{text-decoration:none}.prose{font-size:16px;line-height:1.75;overflow-wrap:anywhere}.prose h1,.prose h2,.prose h3{line-height:1.2;letter-spacing:-.04em;text-wrap:balance}.prose h1{font-size:clamp(36px,4vw,56px);margin:0 0 32px}.prose h2{font-size:26px;margin:48px 0 16px}.prose h3{font-size:20px;margin:32px 0 12px}.prose p,.prose ul,.prose ol{margin:0 0 20px}.prose a{color:#385d3e;text-decoration-thickness:1px;text-underline-offset:3px}.prose a:hover{color:#c15430}.prose code{font-family:ui-monospace,monospace;font-size:.875em;background:#e6eae1;padding:2px 4px;border-radius:4px}.prose img{max-width:100%;height:auto;border-radius:10px;box-shadow:0 8px 24px rgba(32,36,31,0.08);border:1px solid #d2d5ca;margin:24px 0;display:block}.prose pre{overflow:auto;padding:24px;border-radius:8px;margin:24px 0;background:#242d25!important;color:#f5f4ee}.prose pre code{background:none;padding:0;font-size:14px;overflow-wrap:normal}.prose table{display:block;overflow:auto;border-collapse:collapse;margin:24px 0}.prose th,.prose td{padding:12px;border:1px solid #d2d5ca;text-align:left;vertical-align:top}.prose blockquote{margin:24px 0;padding:16px 24px;background:#e6ebe2;border-radius:8px}.prose blockquote p:last-child{margin:0}.page-end{display:flex;justify-content:space-between;gap:24px;border-top:1px solid #d2d5ca;margin-top:64px;padding-top:24px;font-size:12px;font-weight:700;color:#788173}.page-end a{color:#434b40;text-decoration:none}.footer{display:flex;justify-content:space-between;gap:24px;border-top:1px solid #d2d5ca;padding:32px 0 48px;font-size:12px;color:#7e857a}.footer a{color:#434b40;font-weight:700;text-decoration:none}@media(max-width:800px){.shell{width:min(100% - 40px,1280px)}.header{height:80px}.header nav{gap:16px}.header nav>a:first-child{display:none}.layout{display:block}.sidebar{padding:24px 0 0}.desktop-nav{display:none}.mobile-nav{display:block;border:1px solid #c7cbc0;border-radius:8px}.mobile-nav>summary{display:flex;justify-content:space-between;cursor:pointer;padding:16px;font-size:14px;font-weight:700}.mobile-nav nav{padding:8px 24px 0}.main{padding:32px 0 64px}.footer{flex-direction:column}.prose h1{font-size:36px}}@media(prefers-reduced-motion:reduce){:root{scroll-behavior:auto}}
+
+  :root {
+    font-family: Manrope, sans-serif;
+    color: #20241f;
+    background: #fbfbf9;
+    font-synthesis: none;
+    scroll-behavior: smooth;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  a { color: inherit; }
+  a:focus-visible, summary:focus-visible, select:focus-visible, input:focus-visible {
+    outline: 3px solid #c85d36;
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+  .shell { width: min(100% - 64px, 1360px); margin-inline: auto; }
+  .skip { position: absolute; left: 16px; top: -80px; background: #fff; padding: 12px; z-index: 20; border: 1px solid #e4e4de; border-radius: 8px; }
+  .skip:focus { top: 16px; }
+
+  /* ---------- Header ---------- */
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: rgba(251, 251, 249, 0.92);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid #e7e7e1;
+  }
+  .header-inner { height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+  .brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font-size: 16px; font-weight: 700; letter-spacing: -0.04em; white-space: nowrap; }
+  .brand img { border-radius: 8px; }
+  .brand-light { font-weight: 400; color: #8b8f85; }
+  .header nav { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; }
+  .header nav a { text-decoration: none; color: #6c7167; padding: 8px 12px; border-radius: 999px; white-space: nowrap; }
+  .header nav a:hover { color: #20241f; background: #f0f0eb; }
+  .header nav .pill { border: 1px solid #e0e0d9; background: #fff; color: #20241f; }
+  .header nav .current { background: #eef0e9; border-color: #dfe2d8; }
+  .header nav .pill-dark { background: #252c24; border-color: #252c24; color: #fff; }
+  .header nav .pill-dark:hover { background: #435441; color: #fff; }
+  .pill-dark span { margin-left: 10px; }
+
+  /* ---------- Layout ---------- */
+  .layout {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr) 220px;
+    gap: 56px;
+    align-items: start;
+  }
+
+  /* ---------- Sidebar (reference design) ---------- */
+  .sidebar { position: sticky; top: 96px; max-height: calc(100vh - 120px); overflow: auto; padding: 32px 0 40px; scrollbar-width: thin; }
+  .sidebar-toggle { display: none; }
+  .sidebar-card {
+    position: relative;
+    background: #fff;
+    border: 1px solid #e7e7e1;
+    border-radius: 16px;
+    padding: 12px;
+    display: grid;
+    gap: 12px;
+    box-shadow: 0 1px 2px rgba(32, 36, 31, 0.04);
+  }
+
+  /* SDK picker */
+  .sdk-picker { background: #f5f5f1; border-radius: 12px; padding: 10px 12px 12px; }
+  .sdk-picker label { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #8b8f85; margin-bottom: 8px; }
+  .sdk-select-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #fff;
+    border: 1px solid #e4e4de;
+    border-radius: 10px;
+    padding: 8px 12px;
+  }
+  .sdk-select-row img { border-radius: 5px; }
+  .sdk-select-row select {
+    flex: 1;
+    min-width: 0;
+    appearance: none;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    color: #20241f;
+    cursor: pointer;
+  }
+  .sdk-chevron { color: #8b8f85; font-size: 14px; line-height: 1; transform: translateY(-2px); }
+
+  /* Guides / Reference switcher */
+  .tab-input { position: absolute; top: 0; left: 0; opacity: 0; width: 1px; height: 1px; }
+  #tab-guides:checked ~ .docs-nav .panel[data-tab='reference'],
+  #tab-reference:checked ~ .docs-nav .panel[data-tab='guides'] { display: none; }
+  .docs-nav.is-searching .panel[data-tab] { display: block !important; }
+  .switcher-buttons { display: grid; gap: 4px; }
+  .switcher-buttons label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 12px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #4c5147;
+    cursor: pointer;
+  }
+  .switcher-buttons label:hover { background: #f5f5f1; color: #20241f; }
+  .switcher-buttons label svg { color: #8b8f85; flex: none; }
+  .switcher-buttons .label-chevron { margin-left: auto; color: #a3a79c; font-size: 16px; }
+  #tab-guides:checked ~ .switcher-buttons label[for='tab-guides'],
+  #tab-reference:checked ~ .switcher-buttons label[for='tab-reference'] { background: #eeefe9; color: #20241f; }
+  #tab-guides:checked ~ .switcher-buttons label[for='tab-guides'] svg,
+  #tab-reference:checked ~ .switcher-buttons label[for='tab-reference'] svg { color: #5c6b57; }
+  #tab-guides:focus-visible ~ .switcher-buttons label[for='tab-guides'],
+  #tab-reference:focus-visible ~ .switcher-buttons label[for='tab-reference'] { outline: 3px solid #c85d36; outline-offset: 2px; }
+
+  .sidebar-divider { border: 0; border-top: 1px solid #ebebe4; margin: 2px 4px; }
+
+  /* Search */
+  .docs-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid #e4e4de;
+    border-radius: 10px;
+    padding: 9px 12px;
+    color: #8b8f85;
+    background: #fff;
+  }
+  .docs-search:focus-within { border-color: #c7cbc0; }
+  .docs-search input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: 13.5px;
+    color: #20241f;
+  }
+  .docs-search input:focus { outline: none; }
+  .docs-search input::placeholder { color: #a3a79c; }
+  .search-empty { margin: 4px 8px; font-size: 13px; color: #8b8f85; }
+
+  /* Nav groups: collapsible sections with indented children */
+  .docs-nav { display: grid; gap: 2px; }
+  .nav-group { border-radius: 10px; }
+  .nav-group[hidden], .nav-group a[hidden], .panel[hidden] { display: none; }
+  .nav-group summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    list-style: none;
+    cursor: pointer;
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-size: 14.5px;
+    font-weight: 500;
+    color: #454a41;
+  }
+  .nav-group summary::-webkit-details-marker { display: none; }
+  .nav-group summary:hover { background: #f5f5f1; color: #20241f; }
+  .nav-group summary svg { color: #a3a79c; transition: transform 160ms ease; flex: none; transform: rotate(-90deg); }
+  .nav-group[open] > summary svg { transform: rotate(0deg); }
+  .nav-children {
+    display: grid;
+    gap: 2px;
+    margin: 2px 0 8px 12px;
+    padding-left: 12px;
+    border-left: 1px solid #e7e7e1;
+  }
+  .nav-children a {
+    display: block;
+    padding: 7px 12px;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #6c7167;
+    font-size: 13.5px;
+    line-height: 1.45;
+  }
+  .nav-children a:hover { background: #f5f5f1; color: #20241f; }
+  .nav-children a[aria-current='page'] { background: #e9eee2; color: #2c4130; font-weight: 700; }
+
+  /* ---------- Main content ---------- */
+  .main { min-width: 0; max-width: 820px; padding: 40px 0 88px; }
+  .breadcrumb {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #9a9e93;
+    margin-bottom: 28px;
+  }
+  .breadcrumb a { text-decoration: none; color: #6c7167; }
+  .breadcrumb a:hover { color: #20241f; }
+  .breadcrumb-current { color: #454a41; }
+
+  .prose { font-size: 16px; line-height: 1.75; overflow-wrap: anywhere; }
+  .prose h1, .prose h2, .prose h3, .prose h4 { line-height: 1.22; letter-spacing: -0.035em; text-wrap: balance; color: #1c201b; }
+  .prose h1 { font-size: clamp(32px, 3.6vw, 46px); margin: 0 0 20px; }
+  .prose > h1 + p { font-size: 19px; line-height: 1.65; color: #676e63; margin: 0 0 32px; }
+  .prose h2 { font-size: 25px; margin: 52px 0 16px; padding-top: 8px; }
+  .prose h3 { font-size: 19px; margin: 36px 0 12px; }
+  .prose h4 { font-size: 16px; margin: 28px 0 8px; }
+  .prose p, .prose ul, .prose ol { margin: 0 0 20px; }
+  .prose li { margin: 6px 0; }
+  .prose a { color: #385d3e; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+  .prose a:hover { color: #c15430; }
+  .prose code { font-family: ui-monospace, monospace; font-size: 0.86em; background: #f0f0ea; padding: 2px 6px; border-radius: 6px; }
+  .prose img { max-width: 100%; height: auto; border-radius: 12px; box-shadow: 0 8px 24px rgba(32, 36, 31, 0.08); border: 1px solid #e4e4de; margin: 24px 0; display: block; }
+  .prose pre { overflow: auto; padding: 22px 24px; border-radius: 12px; margin: 24px 0; background: #242d25 !important; color: #f5f4ee; border: 1px solid #2f3a30; }
+  .prose pre code { background: none; padding: 0; font-size: 13.5px; overflow-wrap: normal; }
+  .prose table { display: block; overflow: auto; border-collapse: collapse; margin: 24px 0; width: 100%; }
+  .prose th, .prose td { padding: 12px 14px; border: 1px solid #e4e4de; text-align: left; vertical-align: top; }
+  .prose th { background: #f4f4ef; font-size: 13.5px; letter-spacing: 0.01em; }
+  .prose blockquote { margin: 24px 0; padding: 16px 22px; background: #eef1e9; border-left: 3px solid #9fb398; border-radius: 10px; }
+  .prose blockquote p:last-child { margin: 0; }
+  .prose hr { border: 0; border-top: 1px solid #e4e4de; margin: 40px 0; }
+
+  .page-end {
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    border-top: 1px solid #e4e4de;
+    margin-top: 64px;
+    padding-top: 24px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #9a9e93;
+  }
+  .page-end a { color: #434b40; text-decoration: none; }
+  .page-end a:hover { color: #20241f; }
+
+  /* ---------- On this page ---------- */
+  .toc { position: sticky; top: 96px; padding: 44px 0 40px; }
+  .toc-title { margin: 0 0 14px; font-size: 11px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: #9a9e93; }
+  .toc ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; border-left: 1px solid #e7e7e1; }
+  .toc a { display: block; padding: 5px 12px; margin-left: -1px; border-left: 1px solid transparent; font-size: 12.5px; line-height: 1.5; color: #8b8f85; text-decoration: none; }
+  .toc a:hover { color: #20241f; border-left-color: #c7cbc0; }
+  .toc .toc-depth-3 a { padding-left: 26px; }
+
+  /* ---------- Footer ---------- */
+  .footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    border-top: 1px solid #e4e4de;
+    padding: 32px 0 48px;
+    font-size: 12px;
+    color: #8b8f85;
+  }
+  .footer a { color: #434b40; font-weight: 700; text-decoration: none; }
+  .footer a:hover { color: #20241f; }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 1180px) {
+    .layout { grid-template-columns: 280px minmax(0, 1fr); gap: 40px; }
+    .toc { display: none; }
+  }
+  @media (max-width: 900px) {
+    .shell { width: min(100% - 40px, 1360px); }
+    .header-inner { height: 64px; gap: 12px; }
+    .header nav { gap: 6px; font-size: 13px; }
+    .header nav a { padding: 7px 10px; }
+    .pill-dark span { margin-left: 6px; }
+    .header nav a:not(.pill) { display: none; }
+    .layout { display: block; }
+    .sidebar { position: static; max-height: none; padding: 24px 0 0; }
+    .sidebar-toggle {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      cursor: pointer;
+      list-style: none;
+      padding: 14px 18px;
+      margin-bottom: 12px;
+      border: 1px solid #e4e4de;
+      border-radius: 12px;
+      background: #fff;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .sidebar-toggle::-webkit-details-marker { display: none; }
+    .sidebar-collapse[open] > .sidebar-toggle { margin-bottom: 12px; }
+    .main { padding: 32px 0 64px; }
+    .prose h1 { font-size: 32px; }
+    .prose > h1 + p { font-size: 17px; }
+    .footer { flex-direction: column; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    :root { scroll-behavior: auto; }
+    .nav-group summary svg { transition: none; }
+  }
 </style>
