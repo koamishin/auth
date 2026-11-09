@@ -99,7 +99,7 @@ class SocialAuthController extends Controller
         $signedIn = $request->user();
 
         if (is_string($linking) && $linking === $providerEnum->value && $signedIn instanceof User) {
-            return $this->linkAccount($request, $providerEnum, $socialUser, $credentials, $signedIn);
+            return $this->linkAccount($providerEnum, $socialUser, $credentials, $signedIn);
         }
 
         $user = DB::transaction(function () use ($providerEnum, $socialUser, $credentials, $verifiedEmail): User {
@@ -246,7 +246,7 @@ class SocialAuthController extends Controller
      * A social identity already claimed by another user stays claimed: linking
      * must never move an account between users.
      */
-    private function linkAccount(Request $request, SocialLoginProvider $providerEnum, SocialiteUser $socialUser, array $credentials, User $user): RedirectResponse
+    private function linkAccount(SocialLoginProvider $providerEnum, SocialiteUser $socialUser, array $credentials, User $user): RedirectResponse
     {
         $existing = SocialAccount::query()
             ->where('provider', $providerEnum->value)
