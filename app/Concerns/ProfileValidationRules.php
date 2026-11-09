@@ -21,6 +21,32 @@ trait ProfileValidationRules
             'email' => $this->emailRules($userId, $identityNamespace),
             ...$this->namePartRules(),
             ...$this->usernameFieldRules($userId, $identityNamespace),
+            ...$this->phoneFieldRules(),
+        ];
+    }
+
+    /**
+     * Rules for the phone number, only when the application in context
+     * collects one — required of every user or optional. Numbers are E.164;
+     * SMS verification is not built yet, so nothing here proves ownership.
+     *
+     * @return array<string, array<int, \Illuminate\Contracts\Validation\Rule|array<mixed>|string>>
+     */
+    protected function phoneFieldRules(): array
+    {
+        $environment = ApplicationContext::environment();
+
+        if (! $environment instanceof TenantApplicationEnvironment || ! $environment->collectsPhone()) {
+            return [];
+        }
+
+        return [
+            'phone_number' => [
+                $environment->requiresPhone() ? 'required' : 'nullable',
+                'string',
+                'max:32',
+                'regex:/^\+[1-9]\d{6,14}$/',
+            ],
         ];
     }
 

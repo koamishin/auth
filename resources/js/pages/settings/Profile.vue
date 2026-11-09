@@ -21,6 +21,7 @@ const form = useForm({
     name: user.name,
     email: user.email,
     username: user.username ?? '',
+    phone_number: user.phone_number ?? '',
 });
 
 const photoInput = ref<HTMLInputElement | null>(null);
@@ -113,6 +114,8 @@ const props = defineProps<{
     allowsAccountDeletion: boolean;
     collectsUsername: boolean;
     requiresUsername: boolean;
+    collectsPhone: boolean;
+    requiresPhone: boolean;
 }>();
 
 const { mustVerifyEmail, status } = toRefs(props);
@@ -231,6 +234,19 @@ const { mustVerifyEmail, status } = toRefs(props);
                             placeholder="e.g. octocat"
                         />
                         <InputError :message="form.errors.username" />
+                    </div>
+
+                    <div v-if="collectsPhone" class="grid gap-2">
+                        <Label for="phone_number">Phone number</Label>
+                        <Input
+                            id="phone_number"
+                            type="tel"
+                            v-model="form.phone_number"
+                            :required="requiresPhone"
+                            autocomplete="tel"
+                            placeholder="+14155550123"
+                        />
+                        <InputError :message="form.errors.phone_number" />
                     </div>
 
                     <div

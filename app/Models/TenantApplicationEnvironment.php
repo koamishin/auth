@@ -336,6 +336,25 @@ class TenantApplicationEnvironment extends Model
         return $this->usernameMode() === FieldMode::Required;
     }
 
+    /**
+     * How this application treats phone numbers: never collected, optional,
+     * or demanded of every user.
+     */
+    public function phoneMode(): FieldMode
+    {
+        return FieldMode::fromSetting($this->getSetting('phone_mode'));
+    }
+
+    public function collectsPhone(): bool
+    {
+        return $this->phoneMode() !== FieldMode::Disabled;
+    }
+
+    public function requiresPhone(): bool
+    {
+        return $this->phoneMode() === FieldMode::Required;
+    }
+
     public function blocksDisposableEmails(): bool
     {
         return $this->getSetting('block_disposable_emails', false) === true;

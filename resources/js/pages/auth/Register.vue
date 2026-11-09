@@ -21,6 +21,8 @@ const props = defineProps<{
         waitlist?: boolean;
         collectsUsername?: boolean;
         requiresUsername?: boolean;
+        collectsPhone?: boolean;
+        requiresPhone?: boolean;
     } | null;
     flow?: string | null;
     hosted?: boolean;
@@ -129,6 +131,18 @@ const props = defineProps<{
                         placeholder="e.g. octocat"
                     />
                     <InputError :message="errors.username" />
+                </div>
+                <div v-if="application?.collectsPhone" class="grid gap-2">
+                    <Label for="phone_number">Phone number</Label>
+                    <Input
+                        id="phone_number"
+                        type="tel"
+                        name="phone_number"
+                        :required="application?.requiresPhone"
+                        autocomplete="tel"
+                        placeholder="+14155550123"
+                    />
+                    <InputError :message="errors.phone_number" />
                 </div>
                 <!-- Applications can collect a first and last name instead of one field. -->
                 <div v-if="collectsNameParts" class="grid gap-6 sm:grid-cols-2">

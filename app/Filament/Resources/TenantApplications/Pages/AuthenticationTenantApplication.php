@@ -242,12 +242,17 @@ class AuthenticationTenantApplication extends EditRecord
     {
         return [
             Section::make('Phone number')
-                ->description('Coming soon. Phone sign-up and SMS codes are not built yet, so nothing on this tab is enforced.')
-                ->icon('heroicon-o-clock')
+                ->description('Collect a phone number from users as part of their profile.')
+                ->icon('heroicon-o-device-phone-mobile')
                 ->contained(false)
                 ->components([
-                    Text::make('Sign-up and sign-in with a phone number, verified by an SMS code, needs an SMS provider to be configured first.'),
-                    Text::make('The phone number stored on a user is editable by administrators today, but it cannot be used to authenticate.'),
+                    Select::make('phone_mode')
+                        ->label('Phone number')
+                        ->options(FieldMode::options())
+                        ->default(FieldMode::Disabled->value)
+                        ->required()
+                        ->rules(['in:disabled,optional,required'])
+                        ->helperText('Numbers are stored in international format, like +14155550123. SMS verification codes are coming soon, so numbers are collected but cannot yet be verified or used to sign in.'),
                 ]),
         ];
     }
@@ -619,6 +624,19 @@ class AuthenticationTenantApplication extends EditRecord
         }
 
         unset($data['username_mode']);
+
+        $phoneMode = $data['phone_mode'] ?? FieldMode::Disabled->value;
+        if (! array_key_exists($phoneMode, FieldMode::options())) {
+            throw ValidationException::withMessages(['phone_mode' => 'Choose a valid phone number setting.']);
+        }
+
+        if ($phoneMode === FieldMode::Disabled->value) {
+            unset($settings['phone_mode']);
+        } else {
+            $settings['phone_mode'] = $phoneMode;
+        }
+
+        unset($data['phone_mode']);
 
         $linkTtl = (int) ($data['email_verification_link_ttl'] ?? TenantApplicationEnvironment::DEFAULT_VERIFICATION_LINK_TTL);
         if ($linkTtl < 5 || $linkTtl > 1440) {

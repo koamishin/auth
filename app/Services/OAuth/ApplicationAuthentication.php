@@ -192,6 +192,8 @@ class ApplicationAuthentication
             'waitlist' => $environment->accessMode() === AccessMode::Waitlist,
             'collectsUsername' => $environment->collectsUsername(),
             'requiresUsername' => $environment->requiresUsername(),
+            'collectsPhone' => $environment->collectsPhone(),
+            'requiresPhone' => $environment->requiresPhone(),
             'passkeysEnabled' => $environment->allowsPasskeys(),
             'loginTitle' => $environment->getSetting('login_title'),
             'loginDescription' => $environment->getSetting('login_description'),

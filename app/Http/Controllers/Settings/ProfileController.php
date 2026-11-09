@@ -31,6 +31,8 @@ class ProfileController extends Controller
             'collectsNameParts' => $this->environment($request)?->collectsNameParts() ?? false,
             'collectsUsername' => $this->environment($request)?->collectsUsername() ?? false,
             'requiresUsername' => $this->environment($request)?->requiresUsername() ?? false,
+            'collectsPhone' => $this->environment($request)?->collectsPhone() ?? false,
+            'requiresPhone' => $this->environment($request)?->requiresPhone() ?? false,
             'allowsAccountDeletion' => $this->environment($request)?->allowsAccountDeletion() ?? true,
         ]);
     }
