@@ -335,7 +335,7 @@ class ListApplicationUsers extends Page implements HasTable
 
                 TextColumn::make('pivot.created_at')
                     ->label('Enrolled')
-                    ->dateTime('M j, Y')
+                    ->dateTime('M j, Y g:i')
                     ->sortable(),
             ])
             ->filters([
