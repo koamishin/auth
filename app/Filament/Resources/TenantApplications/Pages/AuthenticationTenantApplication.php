@@ -488,6 +488,25 @@ class AuthenticationTenantApplication extends EditRecord
 
                     Text::make('Changes apply to new sessions only. Sessions that are already signed in keep the limits they started with, so lowering a limit does not sign anybody out. To end a session now, revoke it from the user\'s profile.'),
                 ]),
+
+            Section::make('Sign-in alerts')
+                ->description('Warn account owners when their account signs in from a device it has not used before.')
+                ->icon('heroicon-o-bell-alert')
+                ->contained(false)
+                ->components([
+                    Toggle::make('unauthorized_signin_alerts')
+                        ->label('Email owners about sign-ins from unrecognized devices')
+                        ->helperText('The email describes the device and carries a one-click button that signs the new session out immediately.')
+                        ->default(true)
+                        ->rules(['boolean']),
+
+                    TextInput::make('support_email')
+                        ->label('Support email')
+                        ->email()
+                        ->maxLength(255)
+                        ->nullable()
+                        ->helperText('Named in the alert so users know who to contact. Without one, the alert points users at their password instead.'),
+                ]),
         ];
     }
 
@@ -585,6 +604,7 @@ class AuthenticationTenantApplication extends EditRecord
             'passkeys_enabled' => true,
             'passkey_platform_authenticators' => true,
             'passkey_require_user_verification' => true,
+            'unauthorized_signin_alerts' => true,
         ] as $key => $default) {
             if (! is_bool($data[$key] ?? null)) {
                 throw ValidationException::withMessages([$key => 'Choose whether this option is enabled.']);
@@ -690,6 +710,19 @@ class AuthenticationTenantApplication extends EditRecord
         }
 
         unset($data['session_inactivity_timeout'], $data['session_max_lifetime']);
+
+        $supportEmail = $data['support_email'] ?? null;
+        if (is_string($supportEmail) && $supportEmail !== '') {
+            if (! filter_var($supportEmail, FILTER_VALIDATE_EMAIL)) {
+                throw ValidationException::withMessages(['support_email' => 'Provide a valid support email address.']);
+            }
+
+            $settings['support_email'] = $supportEmail;
+        } else {
+            unset($settings['support_email']);
+        }
+
+        unset($data['support_email']);
 
         $accessMode = $data['access_mode'] ?? null;
         if (! is_string($accessMode) || ! AccessMode::tryFrom($accessMode) instanceof AccessMode) {

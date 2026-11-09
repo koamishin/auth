@@ -355,6 +355,25 @@ class TenantApplicationEnvironment extends Model
         return $this->phoneMode() === FieldMode::Required;
     }
 
+    /**
+     * Whether owners are emailed when their account signs in from a device it
+     * has not used before.
+     */
+    public function alertsOnUnrecognizedDeviceSignin(): bool
+    {
+        return $this->getSetting('unauthorized_signin_alerts', true) !== false;
+    }
+
+    /**
+     * Where alert emails point users who need help.
+     */
+    public function supportEmail(): ?string
+    {
+        $email = $this->getSetting('support_email');
+
+        return is_string($email) && $email !== '' ? $email : null;
+    }
+
     public function blocksDisposableEmails(): bool
     {
         return $this->getSetting('block_disposable_emails', false) === true;

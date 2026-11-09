@@ -52,7 +52,12 @@ class Session extends Model
      */
     public function getDeviceName(): string
     {
-        $agent = (string) $this->user_agent;
+        return self::deviceName($this->user_agent);
+    }
+
+    public static function deviceName(?string $agent): string
+    {
+        $agent = (string) $agent;
 
         if (empty($agent)) {
             return 'Unknown Device';

@@ -11,21 +11,33 @@ const props = defineProps<{
         environment: string;
     } | null;
     flow?: string | null;
+    revoked?: boolean;
 }>();
 </script>
 
 <template>
     <AuthBase
-        title="Sign-in cancelled"
+        :title="revoked ? 'Sign-in stopped' : 'Sign-in cancelled'"
         :description="
             application
                 ? `For your security, ${application.name} stopped this sign-in attempt.`
                 : 'For your security, this sign-in attempt was stopped.'
         "
     >
-        <Head title="Sign-in cancelled" />
+        <Head :title="revoked ? 'Sign-in stopped' : 'Sign-in cancelled'" />
 
-        <div class="space-y-4 text-center text-sm text-muted-foreground">
+        <div v-if="revoked" class="space-y-4 text-center text-sm text-muted-foreground">
+            <p>
+                The session from the unrecognized device has been signed out,
+                and that device can no longer use your account.
+            </p>
+            <p>
+                If this was not you, change your password to keep whoever
+                tried it out.
+            </p>
+        </div>
+
+        <div v-else class="space-y-4 text-center text-sm text-muted-foreground">
             <p>
                 The link was opened on a different device or browser from the
                 one that requested it, so nothing was signed in here.

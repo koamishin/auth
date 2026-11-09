@@ -10,6 +10,7 @@ use App\Http\Controllers\Auth\MfaSetupController;
 use App\Http\Controllers\Auth\MultiSessionController;
 use App\Http\Controllers\Auth\OpenIdConnectController;
 use App\Http\Controllers\Auth\SessionTokenController;
+use App\Http\Controllers\Auth\SigninAlertController;
 use App\Http\Controllers\Auth\SocialAuthController;
 use App\Http\Controllers\Auth\VerifyEmailCodeController;
 use App\Http\Controllers\Auth\WaitlistController;
@@ -98,6 +99,14 @@ Route::get('invitations/{token}', [ApplicationInvitationController::class, 'show
 Route::post('auth/waitlist', [WaitlistController::class, 'store'])
     ->middleware('throttle:6,1')
     ->name('auth.waitlist');
+
+// Signing out a suspicious session from a new-device alert email. The signed
+// link is the authority, so no session is required to use it.
+Route::get('signin-alert/{user}/{session}', [SigninAlertController::class, 'revoke'])
+    ->middleware(['signed', 'throttle:6,1'])
+    ->whereNumber('user')
+    ->where('session', '[A-Za-z0-9]+')
+    ->name('signin-alert.revoke');
 Route::post('invitations/{token}/accept', [ApplicationInvitationController::class, 'accept'])
     ->middleware('throttle:10,1')
     ->name('invitations.accept');

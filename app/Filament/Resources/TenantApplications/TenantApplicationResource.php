@@ -296,6 +296,8 @@ class TenantApplicationResource extends Resource
             'allow_account_deletion' => $config?->getSetting('allow_account_deletion', true) === true,
             'session_inactivity_timeout' => (int) ($config?->getSetting('session_inactivity_timeout') ?? 0),
             'session_max_lifetime' => (int) ($config?->getSetting('session_max_lifetime') ?? TenantApplicationEnvironment::DEFAULT_SESSION_MAX_LIFETIME),
+            'unauthorized_signin_alerts' => $config?->getSetting('unauthorized_signin_alerts', true) !== false,
+            'support_email' => $config?->getSetting('support_email'),
             'auth_password_enabled' => $config?->getSetting('auth_password_enabled', true) === true,
             'auth_password_min_length' => (int) $config?->getSetting('auth_password_min_length', 8),
             'passkey_platform_authenticators' => $config?->getSetting('passkey_platform_authenticators', true) === true,
