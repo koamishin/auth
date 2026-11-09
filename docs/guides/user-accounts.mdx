@@ -1,59 +1,77 @@
 ---
 title: User Accounts
-description: What users can manage about themselves — profile fields, connected accounts, devices, and account deletion — and where applications configure each.
+description: Configure what users manage about themselves — profile fields, connected accounts, devices, and account deletion.
 ---
 
-# User Accounts
+# User accounts
 
-Users manage their own account from the Portal's settings pages. What they see there follows the application they belong to: each profile field is configured per application environment, so one application can demand a username while another never collects one.
+User accounts give users a self-service page to manage their profile, security methods, and account lifetime. What the page offers is controlled by the application the user belongs to: each option is configured per application environment, so one application can require a username while another never collects one.
+
+Users find these controls in the Portal under **Settings**.
 
 ## Profile fields
 
-| Field | Configuration | Notes |
-| --- | --- | --- |
-| Display name | Always | Applications that collect name parts derive the display name from a first and last name instead. |
-| First and last name | **User permissions** tab: *Collect a first and last name* | The display name is kept in step with the parts. |
-| Email address | Always | Changing it marks the address unverified again. |
-| Username | **Username** tab: Disabled / Optional / Required | 4–64 letters, numbers, hyphens, and underscores; unique per application environment. |
-| Phone number | **Phone number** tab: Disabled / Optional / Required | Stored in international format, e.g. `+14155550123`. |
-| Avatar | Always | — |
+The following fields are available to users. Each optional field follows the same three-state rule: **Disabled** keeps the field hidden and unenforced, **Optional** lets users fill it in, and **Required** demands it of every new user and keeps profile validation asking for it.
 
-Both optional fields follow the same three-state rule: **Disabled** keeps the field hidden and unenforced, **Optional** lets users fill it in, and **Required** demands it of every new user and keeps profile validation asking for it.
+| Field | Description | Example |
+| ----- | ----------- | ------- |
+| Display name | The name shown for the user. Applications that collect name parts derive it from them. | `Octo Cat` |
+| First and last name | Collected instead of a single display name when the application asks for name parts. | `Octo` / `Cat` |
+| Email address | The address the user signs in with and verifies. Changing it marks the address unverified again. | `octo@example.com` |
+| Username | 4–64 letters, numbers, hyphens, and underscores, unique per application environment. | `octocat` |
+| Phone number | Stored in international format. Not yet verified — SMS codes are still to come — so nothing treats a number as proof of ownership. | `+14155550123` |
+| Avatar | The profile image. | — |
 
-While usernames are on, **a username works wherever an email address does on the sign-in form**; turning them off stops that too. Phone numbers are collected but not yet verified — SMS codes are still to come — so nothing treats a number as proof of ownership, and it cannot be used to sign in. Sign-up collects these fields when the application allows it; profile settings edit them afterwards.
+While usernames are on, a username works wherever an email address does on the sign-in form. Turning usernames off stops that too.
+
+### Configure profile fields
+
+To choose which fields an application collects:
+
+1. In the admin panel, navigate to **Applications** and select the application.
+2. Open **Users & authentication** and select the **Username** or **Phone number** tab.
+3. Choose **Disabled**, **Optional**, or **Required**.
+4. Select **Save**.
+
+Name parts and account deletion are configured on the **User permissions** tab of the same page.
 
 ## Connected accounts
 
-Users link social providers from the security page and disconnect them again. Connecting runs the ordinary provider sign-in flow and attaches the identity to the signed-in account instead of signing anyone in.
+Users connect social providers from the security page and disconnect them again. Connecting runs the provider's sign-in flow and attaches the identity to the signed-in account — it never signs anyone in as a different user.
 
-Two rules govern the list:
+Two protections apply to the list:
 
-- A provider identity already claimed by another user **stays claimed** — linking can never move an account between users.
-- **The last way to sign in is never disconnected.** A user with no password and a single connection keeps it until a password is set or another provider is connected.
+- A provider identity already claimed by another user stays claimed. Connecting can never move an account between users.
+- The last way to sign in is never disconnected. A user with no password and a single connection keeps it until a password is set or another provider is connected.
 
-Which providers appear follows the application's social connection configuration; the admin panel's social connection settings are the only place that list changes.
+Which providers appear follows the application's social connection configuration. To change the list, configure the application's social connections in the admin panel; users cannot add providers themselves.
 
 ## Active devices
 
-The security page lists every browser session the account has open — device, address, last activity, and which one is this device. Users sign out any single device or all the others at once. Sign-in alerts (see [security](security.mdx)) notify owners when a new device appears.
+The security page lists every browser session the account has open — device, address, last activity, and which one is the current device. Users sign out any single device, or all the others at once.
+
+For notifications when a new device appears, see [Sign-in alerts](security.mdx#know-when-a-new-device-signs-in).
 
 ## Account deletion
 
-The **User permissions** tab carries *Allow users to delete their accounts*, on by default. Turning it off removes the delete section from the profile page and refuses the action server-side; administrators can still delete a user from the panel.
+Users can delete their own accounts when both gates allow it:
 
-Deleting an account requires the account's password and removes the account and everything hanging off it: sessions, OAuth tokens, switch tokens for [multi-session](multi-session.mdx), passkeys, social connections, memberships, and metadata. The account cannot sign in again.
+1. The **Account Deletion** role feature is on for the user's role.
+2. The application's **User permissions** tab has *Allow users to delete their accounts* on.
 
-A second gate sits above the application setting: account deletion is a role feature (*Account Deletion*) that operators can turn off for particular roles. Both the feature and the application setting must allow it before the control appears.
+When either gate closes, the delete section disappears from the profile page and the action is refused server-side. Administrators can still delete a user from the panel.
 
-## Where to configure it
+Deleting an account requires the account's password and removes the account and everything attached to it: sessions, OAuth tokens, multi-session switch tokens, passkeys, social connections, memberships, and metadata. The account cannot sign in again.
 
-Everything above lives in the application's **Users & authentication** page in the admin panel:
+To allow or forbid account deletion:
 
-| Tab | Configures |
-| --- | --- |
-| Phone number | Whether phone numbers are collected |
-| Username | Whether usernames are collected, and whether they sign in |
-| User permissions | Name parts and account deletion |
-| Sessions | Session lifetime and [sign-in alerts](security.mdx) |
+1. In the admin panel, navigate to **Applications** and select the application.
+2. Open **Users & authentication** and select the **User permissions** tab.
+3. Turn **Allow users to delete their accounts** on or off.
+4. Select **Save**.
 
-Users see only what these settings allow; the controls themselves are never shown in a state they cannot honor.
+## Next steps
+
+- To understand what happens on a new device, see [Sign-in alerts](security.mdx#know-when-a-new-device-signs-in).
+- To manage several signed-in accounts in one browser, see [Multi-session accounts](multi-session.mdx).
+- For the settings behind user data, see [User metadata](user-metadata.mdx).

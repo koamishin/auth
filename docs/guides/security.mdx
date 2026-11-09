@@ -23,9 +23,25 @@ Application environments can add an email verification requirement, disable pass
 
 ## Know when a new device signs in
 
-Each application's **Sessions** tab carries *Sign-in alerts*: when an account signs in from a browser it has not used before, the owner receives an email describing the device, its address, and the time — and a button that signs that session out immediately. The button is a signed link that expires after a day and revokes exactly the session the alert names, never the session of whoever clicked it. Clicking it lands on a page confirming the suspicious session was signed out.
+The application detects sign-in attempts from unrecognized devices to protect users from unauthorized access to their accounts.
 
-Recognition is per account: a browser familiar to one account is still new to another. Devices are remembered whatever the alert setting says, so turning alerts on later does not re-report existing ones, and impersonation never counts as a sign-in. The same tab's **Support email** is named in the alert so users know who to contact; without one, the alert points users at their password instead. Users can also review and sign out devices themselves from the [security page](user-accounts.mdx).
+### Email notification for unrecognized devices
+
+When an account signs in from a browser it has not used before, the owner receives an email describing the device, its address, and the time. The email includes a button that signs the new session out immediately.
+
+Recognition is per account: a browser familiar to one account is still new to another. Devices are remembered whatever the alert setting says, so turning alerts on later does not re-report existing ones, and impersonation never counts as a sign-in. Users can also review and sign out devices themselves from the [security page](user-accounts.mdx).
+
+To configure sign-in alerts:
+
+1. In the admin panel, navigate to **Applications** and select the application.
+2. Open **Users & authentication** and select the **Sessions** tab.
+3. Turn **Email owners about sign-ins from unrecognized devices** on or off.
+4. Optionally, set the **Support email** named in the alert. Without one, the alert points users at their password instead.
+5. Select **Save**.
+
+### Revoke sessions for unrecognized sign-ins
+
+Users can revoke the suspicious session directly from the email notification. With a single click the session is revoked and the user is redirected to the unauthorized sign-in page, which confirms the device has been signed out. The button is a signed link that expires after a day and revokes exactly the session the alert names — never the session of whoever clicked it. After revoking, the affected device must sign in again.
 
 When an application enables device binding for email verification, a verification link opened on a different browser is refused and shows the same page family: the attempt was cancelled and nothing was signed in there. Open the link on the device that requested it.
 

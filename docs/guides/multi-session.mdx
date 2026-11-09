@@ -1,61 +1,63 @@
 ---
 title: Multi-Session Accounts
-description: Let one browser hold several signed-in accounts at once, switch between them without signing out, and control how long switch access lasts.
+description: Let one browser hold several signed-in accounts at once and switch between them without signing out.
 ---
 
-# Multi-Session Accounts
+# Multi-session accounts
 
-A browser can hold several signed-in accounts at once and switch between them without entering a password again. Signing in as another account does not replace the one already there: both stay available, and the browser remembers which one is active. This guide explains how the registry works, when its access is revoked, and which endpoints drive it.
+Multi-session lets a browser hold several signed-in accounts at once and switch between them without entering a password again. Signing in as another account does not replace the one already there: both stay available, and the browser remembers which one is active.
 
-## How it works
+## How multi-session works
 
-Every completed sign-in — password, passkey, emailed code, social connection, or invitation — registers the account on the browser. Registration happens on the shared login event, so every sign-in method behaves the same way.
+Every completed sign-in — password, passkey, emailed code, social connection, or invitation — registers the account on the browser. A browser can hold up to **8 accounts**; the oldest are dropped beyond that.
 
-```
-                        Browser (encrypted cookie: koamishin_accounts)
-                        +--------------------------------------------------+
-                        |  switch token: a1b2...  ->  [REDACTED]           |
-                        |  switch token: c3d4...  ->  marketing@example    |
-                        +--------------------------------------------------+
-                                          |
-                        server stores only SHA-256(token) per browser,
-                        expiring after 30 days (multi_session_accounts)
-```
+Each registered account holds a **switch token**:
 
-- The registry cookie is encrypted, `HttpOnly`, and holds up to **8 accounts** per browser. The oldest are dropped beyond that.
-- Each account holds a **switch token**. The raw token only ever lives in the browser cookie; the server keeps its SHA-256 hash, so a leaked database cannot be used to switch into accounts.
-- Switch tokens are valid for **30 days**. Every new sign-in mints a fresh token for that account, so actively signing in keeps access alive.
-- Exactly one account is active at a time. The rest stay signed in in the background and can be switched to instantly.
+| Property | Description |
+| -------- | ----------- |
+| Storage | An encrypted, `HttpOnly` cookie on the browser. The raw token never reaches the server's database. |
+| Server record | A SHA-256 hash per account, in `multi_session_accounts`. A leaked database cannot be used to switch into accounts. |
+| Lifetime | 30 days. Every new sign-in mints a fresh token, so actively signing in keeps access alive. |
+| Scope | Per account. A device familiar to one account can still be new to another. |
 
-## Signing in to another account
+Exactly one account is active at a time. The rest stay signed in in the background and can be switched to instantly.
 
-While signed in, use **Add account** in the account switcher (or open `/login?add=1`). The sign-in form appears with a note that signing in adds another account to this browser; completing it switches to the new account while the previous one remains available.
+## Sign in to another account
 
-Without the `add` parameter, the sign-in page keeps redirecting signed-in users away as usual.
+To add an account to the current browser:
 
-## Switching accounts
+1. Open the account switcher and select **Add account**, or open `/login?add=1`.
+2. Sign in as usual.
 
-Choosing an account signs the browser in as that user and returns to the dashboard. Two properties are deliberate:
+The sign-in form notes that signing in adds another account to this browser. Completing it switches to the new account while the previous one remains available. Without the `add` parameter, the sign-in page keeps redirecting signed-in users away as usual.
+
+## Switch accounts
+
+To switch, select an account from the account switcher. The browser signs in as that account and returns to the dashboard.
+
+Two behaviors are deliberate:
 
 - **No state leaks between accounts.** The previous account's session data is dropped before the switch, so intended URLs, verification flags, and similar state never carry over.
 - **The session's lifetime limits are kept.** The inactivity timeout and maximum lifetime pinned to the session survive a switch, matching the rule that changing session settings only affects sessions created afterwards.
 
-A switch re-establishes an ordinary session. It does **not** carry over a multi-factor check: an application that requires MFA asks again after switching, because the switch itself proves nothing.
+> A switch re-establishes an ordinary session. It does not carry over a multi-factor check: an application that requires MFA asks again after switching, because the switch itself proves nothing. Factor verification ages reset for the same reason — see [session tokens](session-tokens.mdx).
 
 ## Signing out
 
 | Action | Effect |
-| --- | --- |
+| ------ | ------ |
 | **Log out** | Signs out the current account and removes it from this browser. Other accounts remain and are offered on the sign-in page to continue as. |
 | **Remove** (× on an account) | Drops that account from this browser without touching the current session. Removing the current account also ends the session. |
 | **Sign out of all accounts** | Clears the registry and ends the session entirely. |
 
+Signing out of one account therefore leaves the others signed in — that is what makes *Continue as* work.
+
 ## When switch access is revoked
 
-- **Signing out of an account** removes only that account's switch token on that browser.
-- **Revoking a user's sessions** (`User::revokeAllSessions()`) — which banning a user also performs — deletes every switch token that user holds, on every browser. A revoked account cannot be switched back into.
-- **Banned accounts** are refused at switch time even if a token is still present.
-- **Expired tokens** are refused and pruned; the account must sign in again.
+- Signing out of an account removes its switch token on that browser.
+- Revoking a user's sessions (`revokeAllSessions()`) — which banning a user also performs — deletes every switch token the user holds, on **every** browser. A revoked account cannot be switched back into.
+- Banned accounts are refused at switch time even if a token is still present.
+- Expired tokens are refused and pruned; the account must sign in again.
 
 ## Where the switcher lives
 
@@ -63,19 +65,22 @@ A switch re-establishes an ordinary session. It does **not** carry over a multi-
 - **Portal**: the user menu lists the signed-in accounts, with *Add account* and *Sign out of all accounts*.
 - **Sign-in page**: *Continue as* offers the remaining accounts after signing out of one.
 
-## HTTP endpoints
+## Endpoints
+
+The switcher drives three session routes. They are CSRF-protected POSTs reachable while signed out as well as signed in: the registry cookie is what authorizes a switch.
 
 | Endpoint | Body | Effect |
-| --- | --- | --- |
+| -------- | ---- | ------ |
 | `POST /accounts/switch` | `user_id` | Sign the browser in as one of its held accounts. |
 | `POST /accounts/remove` | `user_id` | Drop one account from this browser. |
 | `POST /accounts/sign-out-all` | — | Clear the registry and end the session. |
 
-All three are CSRF-protected POST routes reachable while signed out as well as signed in: the registry cookie is what authorizes a switch, which is what makes *Continue as* work after signing out of the current account.
-
 ## Current limits
 
-- **Hosted application sign-ins** register on the browser like any other sign-in, but switching between accounts in the middle of an application's hosted flow is not supported; switch outside the flow instead.
-- The [PHP](../packages/koamishin-auth-php/README.md) and [JavaScript](../packages/koamishin-auth-js/README.md) clients do not expose account-switching helpers yet; the endpoints above are plain authenticated POSTs and can be called directly. Both clients do support [session tokens](session-tokens.mdx).
+- Hosted application sign-ins register on the browser like any other sign-in, but switching in the middle of an application's hosted flow is not supported; switch outside the flow instead.
+- The [PHP](../packages/koamishin-auth-php/README.md) and [JavaScript](../packages/koamishin-auth-js/README.md) clients do not expose account-switching helpers yet; the endpoints above can be called directly. Both clients support [session tokens](session-tokens.mdx).
 
-For hardening guidance for your deployment, see [security](security.mdx).
+## Next steps
+
+- To understand what a session token reports after a switch, see [session tokens](session-tokens.mdx).
+- To review and sign out devices, see [User accounts](user-accounts.mdx).
