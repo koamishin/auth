@@ -29,7 +29,7 @@ test('users can authenticate using the login screen', function (): void {
 });
 
 test('system admins logging in are redirected to filament admin', function (): void {
-    Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+    Role::query()->firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
     $user = User::factory()->create();
     $user->assignRole('super_admin');
 
@@ -44,7 +44,7 @@ test('system admins logging in are redirected to filament admin', function (): v
 });
 
 test('system admins logging in via inertia are redirected to filament admin', function (): void {
-    Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+    Role::query()->firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
     $user = User::factory()->create();
     $user->assignRole('super_admin');
 
@@ -60,7 +60,7 @@ test('system admins logging in via inertia are redirected to filament admin', fu
 });
 
 test('system admins logging in with JSON authenticate the portal guard', function (): void {
-    Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+    Role::query()->firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
     $user = User::factory()->create();
     $user->assignRole('super_admin');
 
@@ -73,7 +73,7 @@ test('system admins logging in with JSON authenticate the portal guard', functio
 });
 
 test('application users can not access the admin panel', function (): void {
-    Role::firstOrCreate(['name' => 'user', 'guard_name' => 'web']);
+    Role::query()->firstOrCreate(['name' => 'user', 'guard_name' => 'web']);
     $user = User::factory()->create();
     $user->assignRole('user');
 

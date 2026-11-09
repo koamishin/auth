@@ -21,9 +21,14 @@ use Illuminate\Support\Str;
  * @property int $tenant_application_environment_id
  * @property string $email
  * @property string $role
+ * @property string $token_hash
  * @property Carbon $expires_at
  * @property Carbon|null $accepted_at
+ * @property int|null $accepted_by
  * @property Carbon|null $revoked_at
+ * @property Carbon $created_at
+ * @property Carbon|null $updated_at
+ * @property-read User|null $inviter
  */
 class ApplicationInvitation extends Model
 {

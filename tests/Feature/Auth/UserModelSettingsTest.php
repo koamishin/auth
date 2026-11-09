@@ -157,11 +157,11 @@ test('an application can forbid its users from deleting their accounts', functio
         'identity_namespace' => $environment->identityNamespace(),
         'tenant_application_environment_id' => $environment->getKey(),
     ]);
-    $role = Role::firstOrCreate(['name' => 'user', 'guard_name' => 'web']);
+    $role = Role::query()->firstOrCreate(['name' => 'user', 'guard_name' => 'web']);
     $user->assignRole($role);
     // With the role feature enabled, only the application's setting stands in
     // the way — so this exercises the setting, not the feature flag.
-    RoleFeature::create(['role_id' => $role->id, 'feature' => 'settings_account_deletion', 'active' => true]);
+    RoleFeature::query()->create(['role_id' => $role->id, 'feature' => 'settings_account_deletion', 'active' => true]);
 
     $this->actingAs($user)
         ->withSession(['auth.password_confirmed_at' => time()])
@@ -174,9 +174,9 @@ test('an application can forbid its users from deleting their accounts', functio
 
 test('deleting an account removes its dependent records', function (): void {
     $user = User::factory()->create();
-    $role = Role::firstOrCreate(['name' => 'user', 'guard_name' => 'web']);
+    $role = Role::query()->firstOrCreate(['name' => 'user', 'guard_name' => 'web']);
     $user->assignRole($role);
-    RoleFeature::create(['role_id' => $role->id, 'feature' => 'settings_account_deletion', 'active' => true]);
+    RoleFeature::query()->create(['role_id' => $role->id, 'feature' => 'settings_account_deletion', 'active' => true]);
 
     $client = app(ClientRepository::class)->createAuthorizationCodeGrantClient('deletion test', ['https://client.test/callback']);
     DB::table('oauth_access_tokens')->insert([
@@ -220,7 +220,7 @@ test('the profile page reflects the account deletion controls', function (): voi
         'identity_namespace' => $environment->identityNamespace(),
         'tenant_application_environment_id' => $environment->getKey(),
     ]);
-    $role = Role::firstOrCreate(['name' => 'user', 'guard_name' => 'web']);
+    $role = Role::query()->firstOrCreate(['name' => 'user', 'guard_name' => 'web']);
     $user->assignRole($role);
 
     // Hidden while the role feature is off, whatever the application allows.
@@ -230,7 +230,7 @@ test('the profile page reflects the account deletion controls', function (): voi
             ->where('allowsAccountDeletion', false)
         );
 
-    RoleFeature::create(['role_id' => $role->id, 'feature' => 'settings_account_deletion', 'active' => true]);
+    RoleFeature::query()->create(['role_id' => $role->id, 'feature' => 'settings_account_deletion', 'active' => true]);
 
     // Visible only when both the feature and the application allow it.
     $this->actingAs($user)->get(route('profile.edit'))

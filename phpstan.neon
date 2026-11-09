@@ -22,6 +22,10 @@ parameters:
         - '#Call to an undefined method Illuminate\\Database\\Eloquent\\Builder#'
         - '#Call to an undefined method Illuminate\\Database\\Query\\Builder#'
         - '#Call to method .+ of internal class Pest\\.+ from outside its root namespace Pest\.#'
+        # Pest and Livewire testing proxies forward every call to the running
+        # test at runtime; the fluent chain is the documented style here.
+        - '#Call to an undefined method Pest\\(PendingCalls\\TestCall|Support\\HigherOrderTapProxy)#'
+        - '#Call to an undefined method Livewire\\Features\\SupportTesting\\Testable#'
     
     # Report unused declarations
     reportUnmatchedIgnoredErrors: false

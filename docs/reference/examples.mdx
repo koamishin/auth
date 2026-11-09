@@ -9,15 +9,15 @@ The Portal exposes OAuth authorization and userinfo for signed-in users, plus a 
 
 ## User authentication
 
-| Endpoint                  | Purpose                                                                           |
-| ------------------------- | --------------------------------------------------------------------------------- |
-| `GET /oauth/authorize`    | Begin the authorization-code flow.                                                |
-| `POST /oauth/token`       | Exchange an authorization code, refresh token, or management client credentials.  |
-| `GET /api/oauth/userinfo` | Return scope-filtered claims for an enrolled user with a valid user bearer token. |
-| `GET /api/user`           | Return the same scoped userinfo claims.                                           |
-| `GET /session/token`      | Mint a short-lived session token for the signed-in browser session.               |
+| Endpoint                        | Purpose                                                                              |
+| ------------------------------- | ------------------------------------------------------------------------------------ |
+| `GET /oauth/authorize`          | Begin the authorization-code flow.                                                   |
+| `POST /oauth/token`             | Exchange an authorization code, refresh token, or management client credentials.     |
+| `GET /api/oauth/userinfo`       | Return scope-filtered claims for an enrolled user with a valid user bearer token.    |
+| `GET /api/user`                 | Return the same scoped userinfo claims.                                              |
+| `GET /session/token`            | Mint a short-lived session token for the signed-in browser session.                  |
 | `POST /api/oauth/session-token` | Mint a session token from a user access token; client-credential tokens are refused. |
-| `POST /auth/waitlist`     | Join the waitlist of an application that is not accepting sign-ups yet.            |
+| `POST /auth/waitlist`           | Join the waitlist of an application that is not accepting sign-ups yet.              |
 
 Userinfo checks the active OAuth client's unique application-environment mapping and the user's organization and environment membership on each request. See [tenancy and OAuth](../guides/core-concepts.mdx) for claims and [the Laravel SDK](../guides/laravel-sdk.mdx) for a complete login example. The Portal does not issue OIDC ID tokens; [session tokens](../guides/session-tokens.mdx) are a separate, short-lived JWT that backends verify offline against the JWKS document.
 

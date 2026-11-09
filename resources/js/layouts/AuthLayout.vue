@@ -59,10 +59,16 @@ const hostedTheme = computed(() => {
 const hostedBackground = computed(() => {
     const background = (page.props as AppPageProps).authBackground;
 
-    return background === 'gradient' || background === 'spotlight' || background === 'grid' ? background : null;
+    return background === 'gradient' ||
+        background === 'spotlight' ||
+        background === 'grid'
+        ? background
+        : null;
 });
 
-const appearancePreview = computed(() => (page.props as AppPageProps).appearancePreview ?? null);
+const appearancePreview = computed(
+    () => (page.props as AppPageProps).appearancePreview ?? null,
+);
 
 const layoutComponent = computed(() => {
     const layout = page.props.authLayout ?? 'simple';
@@ -109,7 +115,8 @@ const layoutComponent = computed(() => {
         >
             <span class="inline-flex items-center gap-1.5">
                 <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-                Previewing <strong>{{ appearancePreview.environment }}</strong> appearance
+                Previewing
+                <strong>{{ appearancePreview.environment }}</strong> appearance
             </span>
             <span class="text-white/60">·</span>
             <span class="font-semibold">Back to editor</span>

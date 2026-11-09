@@ -26,11 +26,11 @@ use Spatie\Permission\Models\Role;
 use function Pest\Laravel\actingAs;
 
 test('admin can create an organization tenant and applications', function (): void {
-    Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+    Role::query()->firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
     $admin = User::factory()->create();
     $admin->assignRole('super_admin');
 
-    $tenant = Tenant::create([
+    $tenant = Tenant::query()->create([
         'name' => 'Koamishin Global',
         'slug' => 'koamishin-global',
         'domain' => 'global.koamishin.com',
@@ -82,7 +82,7 @@ test('admin can create an organization tenant and applications', function (): vo
 });
 
 test('tenant application setup guide generates laravel sdk instructions', function (): void {
-    $tenant = Tenant::create([
+    $tenant = Tenant::query()->create([
         'name' => 'Acme Labs',
         'slug' => 'acme-labs',
     ]);
@@ -711,7 +711,7 @@ test('legacy client migration binds only unambiguous active clients without repl
 });
 
 test('user can register a new tenant organization via filament tenancy registration', function (): void {
-    Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+    Role::query()->firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
     $user = User::factory()->create();
     $user->assignRole('super_admin');
 
@@ -736,12 +736,12 @@ test('user can register a new tenant organization via filament tenancy registrat
 });
 
 test('tenant applications are scoped strictly to the current tenant', function (): void {
-    Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+    Role::query()->firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
     $user = User::factory()->create();
     $user->assignRole('super_admin');
 
-    $tenantA = Tenant::create(['name' => 'Org Alpha', 'slug' => 'org-alpha']);
-    $tenantB = Tenant::create(['name' => 'Org Beta', 'slug' => 'org-beta']);
+    $tenantA = Tenant::query()->create(['name' => 'Org Alpha', 'slug' => 'org-alpha']);
+    $tenantB = Tenant::query()->create(['name' => 'Org Beta', 'slug' => 'org-beta']);
 
     TenantApplication::create([
         'tenant_id' => $tenantA->id,
@@ -771,10 +771,10 @@ test('tenant applications are scoped strictly to the current tenant', function (
 });
 
 test('admin can rotate client secret on application view page', function (): void {
-    Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+    Role::query()->firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
     $admin = User::factory()->create();
     $admin->assignRole('super_admin');
-    $tenant = Tenant::create(['name' => 'Rotate Org', 'slug' => 'rotate-org', 'is_active' => true]);
+    $tenant = Tenant::query()->create(['name' => 'Rotate Org', 'slug' => 'rotate-org', 'is_active' => true]);
 
     $app = app(ApplicationProvisioner::class)->create($tenant, [
         'name' => 'Backend API',

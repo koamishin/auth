@@ -26,14 +26,17 @@ const props = defineProps<{
     >
         <Head :title="revoked ? 'Sign-in stopped' : 'Sign-in cancelled'" />
 
-        <div v-if="revoked" class="space-y-4 text-center text-sm text-muted-foreground">
+        <div
+            v-if="revoked"
+            class="space-y-4 text-center text-sm text-muted-foreground"
+        >
             <p>
                 The session from the unrecognized device has been signed out,
                 and that device can no longer use your account.
             </p>
             <p>
-                If this was not you, change your password to keep whoever
-                tried it out.
+                If this was not you, change your password to keep whoever tried
+                it out.
             </p>
         </div>
 

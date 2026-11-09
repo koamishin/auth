@@ -63,7 +63,7 @@ function resendVerificationCode() {
 
     router.post(
         verificationCode.resend.url(),
-        { ...(props.flow ? { flow: props.flow } : {}) },
+        props.flow ? { flow: props.flow } : {},
         {
             headers: hostedHeaders.value,
             onSuccess: () => {
@@ -97,10 +97,7 @@ function resendVerificationCode() {
             }}
         </div>
 
-        <div
-            v-if="usingCode"
-            class="flex flex-col gap-4"
-        >
+        <div v-if="usingCode" class="flex flex-col gap-4">
             <div class="grid gap-2">
                 <Label for="code">Verification code</Label>
                 <Input

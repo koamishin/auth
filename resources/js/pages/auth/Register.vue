@@ -66,8 +66,7 @@ const props = defineProps<{
             v-if="application?.waitlist && waitlistJoined"
             class="mb-4 text-center text-sm text-muted-foreground"
         >
-            You're on the list. We'll be in touch when your invitation is
-            ready.
+            You're on the list. We'll be in touch when your invitation is ready.
         </div>
 
         <Form

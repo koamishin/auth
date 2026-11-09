@@ -14,9 +14,9 @@ use Livewire\Livewire;
 use Spatie\Permission\Models\Role;
 
 beforeEach(function (): void {
-    Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
-    Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
-    Role::firstOrCreate(['name' => 'user', 'guard_name' => 'web']);
+    Role::query()->firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+    Role::query()->firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+    Role::query()->firstOrCreate(['name' => 'user', 'guard_name' => 'web']);
 
     $this->artisan('migrate', ['--path' => 'database/settings', '--no-interaction' => true]);
 
@@ -24,7 +24,7 @@ beforeEach(function (): void {
     app()->forgetInstance(ApplicationFeaturesSettings::class);
     app()->forgetInstance(ApplicationSecuritySettings::class);
 
-    $this->tenant = Tenant::firstOrCreate(['slug' => 'default'], ['name' => 'Default Organization', 'is_active' => true]);
+    $this->tenant = Tenant::query()->firstOrCreate(['slug' => 'default'], ['name' => 'Default Organization', 'is_active' => true]);
 });
 
 test('settings cluster is registered in the admin panel', function (): void {

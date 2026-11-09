@@ -115,7 +115,8 @@ function requestCode() {
                 codeRequested.value = true;
             },
             onError: (errors) => {
-                codeError.value = errors.email ?? 'Enter a valid email address.';
+                codeError.value =
+                    errors.email ?? 'Enter a valid email address.';
             },
             onFinish: () => {
                 codeProcessing.value = false;
@@ -138,7 +139,8 @@ function submitCode() {
         {
             headers: hostedHeaders.value,
             onError: (errors) => {
-                codeError.value = errors.code ?? errors.email ?? 'That code is not correct.';
+                codeError.value =
+                    errors.code ?? errors.email ?? 'That code is not correct.';
             },
             onFinish: () => {
                 codeProcessing.value = false;
@@ -216,9 +218,9 @@ function submitCode() {
                         {{ account.name.charAt(0).toUpperCase() }}
                     </span>
                     <span class="min-w-0">
-                        <span class="block truncate font-medium"
-                            >{{ account.name }}</span
-                        >
+                        <span class="block truncate font-medium">{{
+                            account.name
+                        }}</span>
                         <span
                             class="block truncate text-xs text-muted-foreground"
                             >{{ account.email }}</span
@@ -337,9 +339,7 @@ function submitCode() {
                     "
                 >
                     {{
-                        application?.waitlist
-                            ? 'Join the waitlist'
-                            : 'Sign up'
+                        application?.waitlist ? 'Join the waitlist' : 'Sign up'
                     }}
                 </button>
                 <TextLink
@@ -351,9 +351,7 @@ function submitCode() {
                     "
                     :tabindex="5"
                     >{{
-                        application?.waitlist
-                            ? 'Join the waitlist'
-                            : 'Sign up'
+                        application?.waitlist ? 'Join the waitlist' : 'Sign up'
                     }}</TextLink
                 >
             </div>
@@ -390,7 +388,10 @@ function submitCode() {
             <div v-else class="grid gap-6">
                 <p class="text-center text-sm text-muted-foreground">
                     We sent a code to
-                    <span class="font-medium text-foreground">{{ codeEmail }}</span>.
+                    <span class="font-medium text-foreground">{{
+                        codeEmail
+                    }}</span
+                    >.
                 </p>
 
                 <div class="grid gap-2">

@@ -13,14 +13,14 @@ Users find these controls in the Portal under **Settings**.
 
 The following fields are available to users. Each optional field follows the same three-state rule: **Disabled** keeps the field hidden and unenforced, **Optional** lets users fill it in, and **Required** demands it of every new user and keeps profile validation asking for it.
 
-| Field | Description | Example |
-| ----- | ----------- | ------- |
-| Display name | The name shown for the user. Applications that collect name parts derive it from them. | `Octo Cat` |
-| First and last name | Collected instead of a single display name when the application asks for name parts. | `Octo` / `Cat` |
-| Email address | The address the user signs in with and verifies. Changing it marks the address unverified again. | `octo@example.com` |
-| Username | 4–64 letters, numbers, hyphens, and underscores, unique per application environment. | `octocat` |
-| Phone number | Stored in international format. Not yet verified — SMS codes are still to come — so nothing treats a number as proof of ownership. | `+14155550123` |
-| Avatar | The profile image. | — |
+| Field               | Description                                                                                                                        | Example            |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
+| Display name        | The name shown for the user. Applications that collect name parts derive it from them.                                             | `Octo Cat`         |
+| First and last name | Collected instead of a single display name when the application asks for name parts.                                               | `Octo` / `Cat`     |
+| Email address       | The address the user signs in with and verifies. Changing it marks the address unverified again.                                   | `octo@example.com` |
+| Username            | 4–64 letters, numbers, hyphens, and underscores, unique per application environment.                                               | `octocat`          |
+| Phone number        | Stored in international format. Not yet verified — SMS codes are still to come — so nothing treats a number as proof of ownership. | `+14155550123`     |
+| Avatar              | The profile image.                                                                                                                 | —                  |
 
 While usernames are on, a username works wherever an email address does on the sign-in form. Turning usernames off stops that too.
 
@@ -57,7 +57,7 @@ For notifications when a new device appears, see [Sign-in alerts](security.mdx#k
 Users can delete their own accounts when both gates allow it:
 
 1. The **Account Deletion** role feature is on for the user's role.
-2. The application's **User permissions** tab has *Allow users to delete their accounts* on.
+2. The application's **User permissions** tab has _Allow users to delete their accounts_ on.
 
 When either gate closes, the delete section disappears from the profile page and the action is refused server-side. Administrators can still delete a user from the panel.
 

@@ -260,7 +260,7 @@ test('signing in for another account is possible while authenticated', function 
 });
 
 test('the account switcher appears in the admin panel', function (): void {
-    Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+    Role::query()->firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
     $admin = User::factory()->create();
     $admin->assignRole('super_admin');
 

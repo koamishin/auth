@@ -315,7 +315,11 @@ const breadcrumbItems: BreadcrumbItem[] = [
                                 "
                                 :options="{ preserveScroll: true }"
                             >
-                                <Button type="submit" variant="outline" size="sm">
+                                <Button
+                                    type="submit"
+                                    variant="outline"
+                                    size="sm"
+                                >
                                     Disconnect
                                 </Button>
                             </Form>
@@ -364,7 +368,9 @@ const breadcrumbItems: BreadcrumbItem[] = [
                             class="flex items-center justify-between gap-4 rounded-lg border border-border p-3"
                         >
                             <div class="min-w-0">
-                                <p class="flex items-center gap-2 text-sm font-medium">
+                                <p
+                                    class="flex items-center gap-2 text-sm font-medium"
+                                >
                                     {{ device.device }}
                                     <span
                                         v-if="device.current"
@@ -377,9 +383,8 @@ const breadcrumbItems: BreadcrumbItem[] = [
                                     <template v-if="device.ip"
                                         >{{ device.ip }} ·
                                     </template>
-                                    Last active {{
-                                        formatDate(device.last_active)
-                                    }}
+                                    Last active
+                                    {{ formatDate(device.last_active) }}
                                 </p>
                             </div>
 
@@ -389,7 +394,11 @@ const breadcrumbItems: BreadcrumbItem[] = [
                                 :action="destroy({ session: device.id }).url"
                                 :options="{ preserveScroll: true }"
                             >
-                                <Button type="submit" variant="outline" size="sm">
+                                <Button
+                                    type="submit"
+                                    variant="outline"
+                                    size="sm"
+                                >
                                     Sign out
                                 </Button>
                             </Form>

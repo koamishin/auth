@@ -8,8 +8,8 @@ use Filament\Facades\Filament;
 use Spatie\Permission\Models\Role;
 
 beforeEach(function (): void {
-    Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
-    $this->tenant = Tenant::firstOrCreate(['slug' => 'default'], ['name' => 'Default Organization', 'is_active' => true]);
+    Role::query()->firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+    $this->tenant = Tenant::query()->firstOrCreate(['slug' => 'default'], ['name' => 'Default Organization', 'is_active' => true]);
 });
 
 test('admin panel uses native sidebar groups instead of drilldowns', function (): void {
@@ -65,7 +65,7 @@ test('application users directory strictly excludes system administrators', func
     $admin->assignRole('super_admin');
 
     $appUser = User::factory()->create(['email' => 'enduser@test.com', 'identity_namespace' => 'environment:1']);
-    $role = Role::firstOrCreate(['name' => 'user', 'guard_name' => 'web']);
+    $role = Role::query()->firstOrCreate(['name' => 'user', 'guard_name' => 'web']);
     $appUser->assignRole($role);
 
     $appUserResults = UserResource::getEloquentQuery()->pluck('email')->all();

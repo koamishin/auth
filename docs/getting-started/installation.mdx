@@ -15,14 +15,14 @@ This guide is a guided, screenshot-by-screenshot walkthrough. Follow it in order
 
 ## At a glance
 
-| Area | What you get |
-| --- | --- |
-| **Centralized account access** | One account server for all your apps |
-| **Isolated app environments** | Separate `development` / `production` user namespaces |
-| **Zero-friction first-party sign-in** | No OAuth consent screen by default |
-| **Modern credentials** | Publishable `pk_...` / Secret `sk_...` keys, S256 PKCE |
-| **SDKs** | `koamishin/auth-php` (Laravel) and `@koamishin/auth-js` (TypeScript) |
-| **Security** | Passkeys, TOTP 2FA, social login hooks, signed webhooks |
+| Area                                  | What you get                                                         |
+| ------------------------------------- | -------------------------------------------------------------------- |
+| **Centralized account access**        | One account server for all your apps                                 |
+| **Isolated app environments**         | Separate `development` / `production` user namespaces                |
+| **Zero-friction first-party sign-in** | No OAuth consent screen by default                                   |
+| **Modern credentials**                | Publishable `pk_...` / Secret `sk_...` keys, S256 PKCE               |
+| **SDKs**                              | `koamishin/auth-php` (Laravel) and `@koamishin/auth-js` (TypeScript) |
+| **Security**                          | Passkeys, TOTP 2FA, social login hooks, signed webhooks              |
 
 ---
 
@@ -30,13 +30,13 @@ This guide is a guided, screenshot-by-screenshot walkthrough. Follow it in order
 
 Make sure your environment meets these requirements:
 
-| Component | Minimum | Notes |
-| --- | --- | --- |
-| **PHP** | 8.4 or 8.5 | Extensions: `pdo`, `mbstring`, `openssl`, `bcmath`, `curl`, `pcntl`, optional `redis` |
-| **Composer** | 2.5+ | PHP dependency manager |
-| **Node.js** | 22.18+ or 24.11+ | Vite asset bundling |
-| **Database** | PostgreSQL 17+, MySQL 8.4+, or SQLite 3.35+ | PostgreSQL is the default in Docker |
-| **Redis** | 7.0+ | Queues, sessions, and cache |
+| Component    | Minimum                                     | Notes                                                                                 |
+| ------------ | ------------------------------------------- | ------------------------------------------------------------------------------------- |
+| **PHP**      | 8.4 or 8.5                                  | Extensions: `pdo`, `mbstring`, `openssl`, `bcmath`, `curl`, `pcntl`, optional `redis` |
+| **Composer** | 2.5+                                        | PHP dependency manager                                                                |
+| **Node.js**  | 22.18+ or 24.11+                            | Vite asset bundling                                                                   |
+| **Database** | PostgreSQL 17+, MySQL 8.4+, or SQLite 3.35+ | PostgreSQL is the default in Docker                                                   |
+| **Redis**    | 7.0+                                        | Queues, sessions, and cache                                                           |
 
 Pick one setup path:
 

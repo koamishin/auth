@@ -14,7 +14,11 @@ const props = defineProps<{
     token?: string;
     email?: string;
     role?: string;
-    application?: { name: string; organization: string; environment: string } | null;
+    application?: {
+        name: string;
+        organization: string;
+        environment: string;
+    } | null;
     expiresAt?: string;
     signedInAs?: string | null;
     matchesSignedInUser?: boolean;
@@ -29,7 +33,11 @@ const form = useForm({
 });
 
 function accept() {
-    router.post(invitation.accept.url({ token: props.token ?? '' }), {}, { preserveScroll: true });
+    router.post(
+        invitation.accept.url({ token: props.token ?? '' }),
+        {},
+        { preserveScroll: true },
+    );
 }
 
 function register() {
@@ -63,7 +71,10 @@ function register() {
             <template v-if="matchesSignedInUser">
                 <p class="text-center text-sm text-muted-foreground">
                     You are signed in as
-                    <span class="font-medium text-foreground">{{ signedInAs }}</span>, which matches this invitation.
+                    <span class="font-medium text-foreground">{{
+                        signedInAs
+                    }}</span
+                    >, which matches this invitation.
                 </p>
 
                 <Button type="button" @click="accept">Accept invitation</Button>
@@ -73,8 +84,12 @@ function register() {
             <template v-else-if="signedInAs">
                 <p class="text-center text-sm text-muted-foreground">
                     You are signed in as
-                    <span class="font-medium text-foreground">{{ signedInAs }}</span>, but this invitation was sent to
-                    <span class="font-medium text-foreground">{{ email }}</span>.
+                    <span class="font-medium text-foreground">{{
+                        signedInAs
+                    }}</span
+                    >, but this invitation was sent to
+                    <span class="font-medium text-foreground">{{ email }}</span
+                    >.
                 </p>
 
                 <Button variant="secondary" @click="router.visit(login.url())">
@@ -98,7 +113,12 @@ function register() {
 
                 <div class="grid gap-2">
                     <Label for="name">Your name</Label>
-                    <Input id="name" v-model="form.name" required autocomplete="name" />
+                    <Input
+                        id="name"
+                        v-model="form.name"
+                        required
+                        autocomplete="name"
+                    />
                     <InputError :message="form.errors.name" />
                 </div>
 
@@ -135,7 +155,8 @@ function register() {
             <template v-else>
                 <p class="text-center text-sm text-muted-foreground">
                     An account already exists for
-                    <span class="font-medium text-foreground">{{ email }}</span>. Sign in to accept the invitation.
+                    <span class="font-medium text-foreground">{{ email }}</span
+                    >. Sign in to accept the invitation.
                 </p>
 
                 <Button variant="secondary" @click="router.visit(login.url())">

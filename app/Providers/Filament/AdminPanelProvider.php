@@ -13,8 +13,10 @@ use App\Filament\Resources\FeatureFlag\FeatureFlagResource;
 use App\Filament\Resources\SystemUsers\SystemUserResource;
 use App\Filament\Resources\Tenants\TenantResource;
 use App\Models\Tenant;
+use App\Models\User;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use BezhanSalleh\FilamentShield\Resources\Roles\RoleResource;
+use Closure;
 use Filament\Actions\Action;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\Auth\MultiFactor\Email\EmailAuthentication;
@@ -75,61 +77,49 @@ class AdminPanelProvider extends PanelProvider
                     ->label('System Settings')
                     ->icon('heroicon-o-cog-6-tooth')
                     ->sort(10)
-                    ->url(function (): string {
-                        $tenant = Filament::getTenant() ?? Auth::user()?->tenants()->first() ?? Tenant::first();
-
-                        return $tenant ? SettingsCluster::getUrl(['tenant' => $tenant]) : '#';
-                    }),
+                    ->url(fn (): string => $this->menuUrl(
+                        fn (Tenant $tenant): string => SettingsCluster::getUrl(['tenant' => $tenant]),
+                    )),
                 'system_users' => MenuItem::make()
                     ->label('System Users')
                     ->icon('heroicon-o-shield-check')
                     ->sort(15)
-                    ->url(function (): string {
-                        $tenant = Filament::getTenant() ?? Auth::user()?->tenants()->first() ?? Tenant::first();
-
-                        return $tenant ? SystemUserResource::getUrl('index', ['tenant' => $tenant]) : '#';
-                    })
-                    ->visible(fn (): bool => Auth::user()?->hasRole('super_admin') ?? false),
+                    ->url(fn (): string => $this->menuUrl(
+                        fn (Tenant $tenant): string => SystemUserResource::getUrl('index', ['tenant' => $tenant]),
+                    ))
+                    ->visible(fn (): bool => $this->menuUser()?->hasRole('super_admin') ?? false),
                 'roles' => MenuItem::make()
                     ->label('Roles & Permissions')
                     ->icon('heroicon-o-shield-check')
                     ->sort(20)
-                    ->url(function (): string {
-                        $tenant = Filament::getTenant() ?? Auth::user()?->tenants()->first() ?? Tenant::first();
-
-                        return $tenant ? RoleResource::getUrl('index', ['tenant' => $tenant]) : '#';
-                    })
-                    ->visible(fn (): bool => Auth::user()?->can('ViewAny:Role') ?? false),
+                    ->url(fn (): string => $this->menuUrl(
+                        fn (Tenant $tenant): string => RoleResource::getUrl('index', ['tenant' => $tenant]),
+                    ))
+                    ->visible(fn (): bool => $this->menuUser()?->can('ViewAny:Role') ?? false),
                 'activity_logs' => MenuItem::make()
                     ->label('Activity Logs')
                     ->icon('heroicon-o-clipboard-document-list')
                     ->sort(30)
-                    ->url(function (): string {
-                        $tenant = Filament::getTenant() ?? Auth::user()?->tenants()->first() ?? Tenant::first();
-
-                        return $tenant ? ActivityLogResource::getUrl('index', ['tenant' => $tenant]) : '#';
-                    })
-                    ->visible(fn (): bool => Auth::user()?->can('ViewAny:Activity') ?? false),
+                    ->url(fn (): string => $this->menuUrl(
+                        fn (Tenant $tenant): string => ActivityLogResource::getUrl('index', ['tenant' => $tenant]),
+                    ))
+                    ->visible(fn (): bool => $this->menuUser()?->can('ViewAny:Activity') ?? false),
                 'feature_flags' => MenuItem::make()
                     ->label('Feature Flags')
                     ->icon('heroicon-o-flag')
                     ->sort(40)
-                    ->url(function (): string {
-                        $tenant = Filament::getTenant() ?? Auth::user()?->tenants()->first() ?? Tenant::first();
-
-                        return $tenant ? FeatureFlagResource::getUrl('index', ['tenant' => $tenant]) : '#';
-                    })
-                    ->visible(fn (): bool => Auth::user()?->hasRole('super_admin') ?? false),
+                    ->url(fn (): string => $this->menuUrl(
+                        fn (Tenant $tenant): string => FeatureFlagResource::getUrl('index', ['tenant' => $tenant]),
+                    ))
+                    ->visible(fn (): bool => $this->menuUser()?->hasRole('super_admin') ?? false),
                 'tenants' => MenuItem::make()
                     ->label('Organizations')
                     ->icon('heroicon-o-building-office-2')
                     ->sort(50)
-                    ->url(function (): string {
-                        $tenant = Filament::getTenant() ?? Auth::user()?->tenants()->first() ?? Tenant::first();
-
-                        return $tenant ? TenantResource::getUrl('index', ['tenant' => $tenant]) : '#';
-                    })
-                    ->visible(fn (): bool => Auth::user()?->hasRole('super_admin') ?? false),
+                    ->url(fn (): string => $this->menuUrl(
+                        fn (Tenant $tenant): string => TenantResource::getUrl('index', ['tenant' => $tenant]),
+                    ))
+                    ->visible(fn (): bool => $this->menuUser()?->hasRole('super_admin') ?? false),
             ])
             ->multiFactorAuthentication([
                 AppAuthentication::make()
@@ -185,5 +175,25 @@ class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ]);
+    }
+
+    /**
+     * Build a user-menu link for the workspace the user is viewing.
+     *
+     * @param  Closure(Tenant): string  $url
+     */
+    private function menuUrl(Closure $url): string
+    {
+        $tenant = Filament::getTenant() ?? $this->menuUser()?->tenants()->first() ?? Tenant::query()->first();
+
+        return $tenant instanceof Tenant ? $url($tenant) : '#';
+    }
+
+    private function menuUser(): ?User
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+
+        return $user;
     }
 }

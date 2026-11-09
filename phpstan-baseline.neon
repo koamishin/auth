@@ -1,10 +1,22 @@
 parameters:
 	ignoreErrors:
 		-
-			rawMessage: 'Call to an undefined static method App\Models\User::create().'
-			identifier: staticMethod.notFound
-			count: 1
+			rawMessage: Using nullsafe method call on non-nullable type Symfony\Component\HttpFoundation\ParameterBag. Use -> instead.
+			identifier: nullsafe.neverNull
+			count: 2
 			path: app/Actions/Fortify/CreateNewUser.php
+
+		-
+			rawMessage: Using nullsafe property access on non-nullable type Illuminate\Http\Request. Use -> instead.
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Actions/Fortify/CreateNewUser.php
+
+		-
+			rawMessage: 'Call to function is_string() with string will always evaluate to true.'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Concerns/ProfileValidationRules.php
 
 		-
 			rawMessage: Access to an undefined property Illuminate\Support\Fluent::$default.
@@ -55,10 +67,184 @@ parameters:
 			path: app/Filament/Clusters/Settings/Pages/ApplicationFeaturesSettingsPage.php
 
 		-
+			rawMessage: 'Call to an undefined method Illuminate\Contracts\Auth\Authenticatable::hasRole().'
+			identifier: method.notFound
+			count: 1
+			path: app/Filament/Clusters/Settings/Pages/SystemAdministrationPage.php
+
+		-
+			rawMessage: 'Method App\Filament\Pages\Dashboard::scopedUsers() never returns Illuminate\Database\Eloquent\Relations\BelongsToMany<App\Models\User, App\Models\Tenant, Illuminate\Database\Eloquent\Relations\Pivot, ''pivot''> so it can be removed from the return type.'
+			identifier: return.unusedType
+			count: 1
+			path: app/Filament/Pages/Dashboard.php
+
+		-
+			rawMessage: 'Method App\Filament\Pages\Dashboard::scopedUsers() never returns Illuminate\Database\Eloquent\Relations\BelongsToMany<App\Models\User, App\Models\TenantApplication, Illuminate\Database\Eloquent\Relations\Pivot, ''pivot''> so it can be removed from the return type.'
+			identifier: return.unusedType
+			count: 1
+			path: app/Filament/Pages/Dashboard.php
+
+		-
+			rawMessage: 'Method App\Filament\Pages\Dashboard::scopedUsers() should return Illuminate\Database\Eloquent\Builder<App\Models\User>|Illuminate\Database\Eloquent\Relations\BelongsToMany<App\Models\User, App\Models\Tenant, Illuminate\Database\Eloquent\Relations\Pivot, ''pivot''>|Illuminate\Database\Eloquent\Relations\BelongsToMany<App\Models\User, App\Models\TenantApplication, Illuminate\Database\Eloquent\Relations\Pivot, ''pivot''> but returns Illuminate\Database\Query\Builder.'
+			identifier: return.type
+			count: 1
+			path: app/Filament/Pages/Dashboard.php
+
+		-
 			rawMessage: Access to an undefined property Illuminate\Support\Fluent::$name.
 			identifier: property.notFound
 			count: 4
 			path: app/Filament/Resources/FeatureFlag/FeatureFlagResource.php
+
+		-
+			rawMessage: 'Call to an undefined method Illuminate\Contracts\Auth\Authenticatable::hasRole().'
+			identifier: method.notFound
+			count: 1
+			path: app/Filament/Resources/SystemUsers/SystemUserResource.php
+
+		-
+			rawMessage: Access to an undefined property Illuminate\Database\Eloquent\Model::$environment.
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Resources/TenantApplications/Pages/AppearanceTenantApplication.php
+
+		-
+			rawMessage: Access to an undefined property Illuminate\Database\Eloquent\Model::$tenant.
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Resources/TenantApplications/Pages/AppearanceTenantApplication.php
+
+		-
+			rawMessage: Access to an undefined property Illuminate\Database\Eloquent\Model::$environment.
+			identifier: property.notFound
+			count: 2
+			path: app/Filament/Resources/TenantApplications/Pages/AuthenticationTenantApplication.php
+
+		-
+			rawMessage: Access to an undefined property Illuminate\Database\Eloquent\Model::$tenant.
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Resources/TenantApplications/Pages/AuthenticationTenantApplication.php
+
+		-
+			rawMessage: 'Call to an undefined method Illuminate\Database\Eloquent\Model::environments().'
+			identifier: method.notFound
+			count: 1
+			path: app/Filament/Resources/TenantApplications/Pages/AuthenticationTenantApplication.php
+
+		-
+			rawMessage: 'Call to function is_array() with array<string, mixed> will always evaluate to true.'
+			identifier: function.alreadyNarrowedType
+			count: 2
+			path: app/Filament/Resources/TenantApplications/Pages/AuthenticationTenantApplication.php
+
+		-
+			rawMessage: Offset 'value' on non-empty-array on left side of ?? always exists and is not nullable.
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Filament/Resources/TenantApplications/Pages/AuthenticationTenantApplication.php
+
+		-
+			rawMessage: Access to an undefined property Illuminate\Database\Eloquent\Model::$environment.
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Resources/TenantApplications/Pages/EditTenantApplication.php
+
+		-
+			rawMessage: Access to an undefined property Illuminate\Database\Eloquent\Model::$name.
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Resources/TenantApplications/Pages/EditTenantApplication.php
+
+		-
+			rawMessage: Access to an undefined property Illuminate\Database\Eloquent\Model::$environment.
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Resources/TenantApplications/Pages/ListApplicationUsers.php
+
+		-
+			rawMessage: Access to an undefined property Illuminate\Database\Eloquent\Model::$name.
+			identifier: property.notFound
+			count: 2
+			path: app/Filament/Resources/TenantApplications/Pages/ListApplicationUsers.php
+
+		-
+			rawMessage: Access to an undefined property Illuminate\Database\Eloquent\Model::$tenant.
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Resources/TenantApplications/Pages/ListApplicationUsers.php
+
+		-
+			rawMessage: Attribute class App\Filament\Resources\TenantApplications\Pages\Override does not exist.
+			identifier: attribute.notFound
+			count: 1
+			path: app/Filament/Resources/TenantApplications/Pages/ListApplicationUsers.php
+
+		-
+			rawMessage: Instanceof between App\Models\TenantApplicationEnvironment and App\Models\TenantApplicationEnvironment will always evaluate to true.
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Filament/Resources/TenantApplications/Pages/ListApplicationUsers.php
+
+		-
+			rawMessage: Access to an undefined property Illuminate\Database\Eloquent\Model::$environment.
+			identifier: property.notFound
+			count: 2
+			path: app/Filament/Resources/TenantApplications/Pages/SocialConnectionsTenantApplication.php
+
+		-
+			rawMessage: Access to an undefined property Illuminate\Database\Eloquent\Model::$tenant.
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Resources/TenantApplications/Pages/SocialConnectionsTenantApplication.php
+
+		-
+			rawMessage: 'Call to an undefined method Illuminate\Database\Eloquent\Model::environments().'
+			identifier: method.notFound
+			count: 1
+			path: app/Filament/Resources/TenantApplications/Pages/SocialConnectionsTenantApplication.php
+
+		-
+			rawMessage: Attribute class Filament\Support\Components\Attributes\Unexposed does not have the property target.
+			identifier: attribute.target
+			count: 1
+			path: app/Filament/Resources/TenantApplications/Pages/ViewApplicationUser.php
+
+		-
+			rawMessage: 'Method App\Filament\Resources\TenantApplications\Pages\ViewApplicationUser::activeSessions() should return Illuminate\Support\Collection<int, App\Models\Session> but returns Illuminate\Support\Collection<int, stdClass>.'
+			identifier: return.type
+			count: 1
+			path: app/Filament/Resources/TenantApplications/Pages/ViewApplicationUser.php
+
+		-
+			rawMessage: Access to an undefined property Illuminate\Database\Eloquent\Model::$environment.
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Resources/TenantApplications/Pages/ViewTenantApplication.php
+
+		-
+			rawMessage: Access to an undefined property Illuminate\Database\Eloquent\Model::$name.
+			identifier: property.notFound
+			count: 1
+			path: app/Filament/Resources/TenantApplications/Pages/ViewTenantApplication.php
+
+		-
+			rawMessage: Access to an undefined property App\Models\ApplicationInvitation::$environment.
+			identifier: property.notFound
+			count: 3
+			path: app/Http/Controllers/Auth/ApplicationInvitationController.php
+
+		-
+			rawMessage: 'Call to an undefined method Illuminate\Contracts\Auth\Guard::login().'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Auth/ApplicationInvitationController.php
+
+		-
+			rawMessage: Using nullsafe method call on non-nullable type Illuminate\Validation\Rules\Password. Use -> instead.
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Auth/ApplicationInvitationController.php
 
 		-
 			rawMessage: Access to an undefined property Laravel\Socialite\Contracts\User::$expiresIn.
@@ -75,6 +261,12 @@ parameters:
 		-
 			rawMessage: Access to an undefined property Laravel\Socialite\Contracts\User::$token.
 			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Auth/SocialAuthController.php
+
+		-
+			rawMessage: 'Parameter #2 $socialUser of method App\Http\Controllers\Auth\SocialAuthController::linkAccount() expects Laravel\Socialite\Two\User, Laravel\Socialite\Contracts\User given.'
+			identifier: argument.type
 			count: 1
 			path: app/Http/Controllers/Auth/SocialAuthController.php
 
@@ -115,10 +307,172 @@ parameters:
 			path: app/Http/Controllers/Settings/SecurityController.php
 
 		-
+			rawMessage: 'Parameter #1 $callback of method Illuminate\Support\Collection<int,stdClass>::map() expects callable(stdClass, int): array{id: string, device: string, ip: string|null, last_active: string, current: bool}, Closure(App\Models\Session): array{id: string, device: string, ip: string|null, last_active: string, current: bool} given.'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Settings/SecurityController.php
+
+		-
+			rawMessage: 'Call to an undefined method Illuminate\Contracts\Auth\Guard::login().'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Setup/SetupController.php
+
+		-
+			rawMessage: 'Call to an undefined method Illuminate\Contracts\Auth\Guard::logout().'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Middleware/EnforceSessionLifetime.php
+
+		-
+			rawMessage: Using nullsafe method call on non-nullable type Symfony\Component\HttpFoundation\ParameterBag. Use -> instead.
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Requests/Settings/ProfileUpdateRequest.php
+
+		-
+			rawMessage: Using nullsafe property access on non-nullable type Illuminate\Http\Request. Use -> instead.
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Requests/Settings/ProfileUpdateRequest.php
+
+		-
+			rawMessage: 'Call to an undefined method Illuminate\Contracts\Auth\Guard::login().'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Responses/ApplicationLoginResponse.php
+
+		-
+			rawMessage: 'Call to an undefined method Illuminate\Contracts\Auth\Guard::login().'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Responses/ApplicationPasskeyLoginResponse.php
+
+		-
+			rawMessage: 'Call to an undefined method Illuminate\Contracts\Auth\Guard::login().'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Responses/ApplicationTwoFactorLoginResponse.php
+
+		-
+			rawMessage: 'Method App\Models\ApplicationInvitation::scopePending() should return Illuminate\Database\Eloquent\Builder<App\Models\ApplicationInvitation> but returns Illuminate\Database\Query\Builder.'
+			identifier: return.type
+			count: 1
+			path: app/Models/ApplicationInvitation.php
+
+		-
+			rawMessage: 'Method App\Models\ApplicationWaitlistEntry::scopeWaiting() should return Illuminate\Database\Eloquent\Builder<App\Models\ApplicationWaitlistEntry> but returns Illuminate\Database\Query\Builder.'
+			identifier: return.type
+			count: 1
+			path: app/Models/ApplicationWaitlistEntry.php
+
+		-
+			rawMessage: 'Parameter #2 $scopes (array<int, string>) of method App\Models\Client::skipsAuthorization() should be compatible with parameter $scopes (array<Laravel\Passport\Scope>) of method Laravel\Passport\Client::skipsAuthorization()'
+			identifier: method.childParameterType
+			count: 1
+			path: app/Models/Client.php
+
+		-
+			rawMessage: 'Method App\Models\EmailVerificationCode::scopeLive() should return Illuminate\Database\Eloquent\Builder<App\Models\EmailVerificationCode> but returns Illuminate\Database\Query\Builder.'
+			identifier: return.type
+			count: 1
+			path: app/Models/EmailVerificationCode.php
+
+		-
+			rawMessage: 'Strict comparison using === between string and null will always evaluate to false.'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Models/User.php
+
+		-
 			rawMessage: Access to an undefined property Illuminate\Http\Request::$email.
 			identifier: property.notFound
 			count: 1
 			path: app/Providers/FortifyServiceProvider.php
+
+		-
+			rawMessage: Access to an undefined property App\Models\ApplicationInvitation::$environment.
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Auth/ApplicationInvitationService.php
+
+		-
+			rawMessage: Access to an undefined property App\Models\EmailVerificationCode::$created_at.
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Auth/EmailCodeService.php
+
+		-
+			rawMessage: 'Call to protected method increment() of class Illuminate\Database\Eloquent\Model.'
+			identifier: method.protected
+			count: 1
+			path: app/Services/Auth/EmailCodeService.php
+
+		-
+			rawMessage: 'Comparison operation ">=" between int<min, 4> and 5 is always false.'
+			identifier: greaterOrEqual.alwaysFalse
+			count: 1
+			path: app/Services/Auth/EmailCodeService.php
+
+		-
+			rawMessage: 'Call to an undefined method Illuminate\Contracts\Auth\Guard::login().'
+			identifier: method.notFound
+			count: 2
+			path: app/Services/Auth/MultiSession.php
+
+		-
+			rawMessage: 'Call to an undefined method Illuminate\Contracts\Auth\Guard::logout().'
+			identifier: method.notFound
+			count: 5
+			path: app/Services/Auth/MultiSession.php
+
+		-
+			rawMessage: 'Cannot call method isExpired() on stdClass.'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/Auth/MultiSession.php
+
+		-
+			rawMessage: 'Method App\Services\Auth\MultiSession::entries() should return array<int, array{id: int, name: string, email: string, token: string}> but returns list<non-empty-array>.'
+			identifier: return.type
+			count: 1
+			path: app/Services/Auth/MultiSession.php
+
+		-
+			rawMessage: 'Method App\Services\Auth\SessionTokenService::mint() has an unused parameter $request.'
+			identifier: method.unusedParameter
+			count: 1
+			path: app/Services/Auth/SessionTokenService.php
+
+		-
+			rawMessage: Using nullsafe method call on non-nullable type Illuminate\Http\Request. Use -> instead.
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Support/ApplicationContext.php
+
+		-
+			rawMessage: Using nullsafe method call on non-nullable type Symfony\Component\HttpFoundation\ParameterBag. Use -> instead.
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Support/ApplicationContext.php
+
+		-
+			rawMessage: Using nullsafe property access on non-nullable type Illuminate\Http\Request. Use -> instead.
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Support/ApplicationContext.php
+
+		-
+			rawMessage: 'Parameter #1 $item of static method App\Support\ApplicationNavigation::activeExpression() expects array{active: bool, fragment: string|null}, array{label: string, icon: string, url: string, active: bool, fragment: string|null} given.'
+			identifier: argument.type
+			count: 2
+			path: app/Support/ApplicationNavigation.php
+
+		-
+			rawMessage: Instanceof between Illuminate\Validation\Rules\Password and Illuminate\Validation\Rules\Password will always evaluate to true.
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Support/PasswordPolicy.php
 
 		-
 			rawMessage: 'Undefined variable: $this'
@@ -127,51 +481,93 @@ parameters:
 			path: routes/console.php
 
 		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::actingAs().'
+			rawMessage: Access to an undefined property Laravel\Passport\Client::$redirect_uris.
+			identifier: property.notFound
+			count: 1
+			path: tests/Feature/ApplicationKeysTest.php
+
+		-
+			rawMessage: Access to an undefined property Laravel\Passport\Client::$secret.
+			identifier: property.notFound
+			count: 2
+			path: tests/Feature/ApplicationKeysTest.php
+
+		-
+			rawMessage: Access to an undefined property App\Models\ApplicationInvitation::$invited_by.
+			identifier: property.notFound
+			count: 1
+			path: tests/Feature/Auth/ApplicationInvitationTest.php
+
+		-
+			rawMessage: Access to an undefined property Illuminate\Database\Eloquent\Relations\Pivot::$role.
+			identifier: property.notFound
+			count: 2
+			path: tests/Feature/Auth/ApplicationInvitationTest.php
+
+		-
+			rawMessage: 'Call to an undefined method Livewire\Component::pendingInvitations().'
+			identifier: method.notFound
+			count: 2
+			path: tests/Feature/Auth/ApplicationInvitationTest.php
+
+		-
+			rawMessage: Variable $admin is never read.
+			identifier: variable.unused
+			count: 1
+			path: tests/Feature/Auth/ApplicationInvitationTest.php
+
+		-
+			rawMessage: Variable $environment is never read.
+			identifier: variable.unused
+			count: 1
+			path: tests/Feature/Auth/ApplicationInvitationTest.php
+
+		-
+			rawMessage: Using nullsafe method call on non-nullable type Symfony\Component\HttpFoundation\ParameterBag. Use -> instead.
+			identifier: nullsafe.neverNull
+			count: 1
+			path: tests/Feature/Auth/AuthPolicyTest.php
+
+		-
+			rawMessage: Using nullsafe property access on non-nullable type Illuminate\Http\Request. Use -> instead.
+			identifier: nullsafe.neverNull
+			count: 1
+			path: tests/Feature/Auth/AuthPolicyTest.php
+
+		-
+			rawMessage: Value assigned to variable $fails is never read before being overwritten.
+			identifier: assign.overwritten
+			count: 1
+			path: tests/Feature/Auth/AuthPolicyTest.php
+
+		-
+			rawMessage: Variable $fails is assigned value false but it already has that value.
+			identifier: assign.redundant
+			count: 1
+			path: tests/Feature/Auth/AuthPolicyTest.php
+
+		-
+			rawMessage: Access to an undefined property Laravel\Passport\Client::$name.
+			identifier: property.notFound
+			count: 1
+			path: tests/Feature/Auth/AuthenticationTest.php
+
+		-
+			rawMessage: 'Call to an undefined method Illuminate\Contracts\Auth\Factory::id().'
 			identifier: method.notFound
 			count: 1
 			path: tests/Feature/Auth/AuthenticationTest.php
 
 		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::assertAuthenticated().'
-			identifier: method.notFound
+			rawMessage: Access to an undefined property Pest\Mixins\Expectation<mixed>::$not.
+			identifier: property.notFound
 			count: 1
-			path: tests/Feature/Auth/AuthenticationTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::assertGuest().'
-			identifier: method.notFound
-			count: 3
-			path: tests/Feature/Auth/AuthenticationTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::get().'
-			identifier: method.notFound
-			count: 1
-			path: tests/Feature/Auth/AuthenticationTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::post().'
-			identifier: method.notFound
-			count: 4
-			path: tests/Feature/Auth/AuthenticationTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::actingAs().'
-			identifier: method.notFound
-			count: 6
-			path: tests/Feature/Auth/EmailVerificationTest.php
+			path: tests/Feature/Auth/NewDeviceSignInTest.php
 
 		-
 			rawMessage: Access to an undefined property Laravel\Passport\Client::$grant_types.
 			identifier: property.notFound
 			count: 1
-			path: tests/Feature/Auth/OpenIdConnectTest.php
-
-		-
-			rawMessage: Access to an undefined property Laravel\Passport\Client::$id.
-			identifier: property.notFound
-			count: 3
 			path: tests/Feature/Auth/OpenIdConnectTest.php
 
 		-
@@ -199,136 +595,100 @@ parameters:
 			path: tests/Feature/Auth/OpenIdConnectTest.php
 
 		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::actingAs().'
-			identifier: method.notFound
-			count: 2
-			path: tests/Feature/Auth/OpenIdConnectTest.php
+			rawMessage: Access to an undefined property Pest\Mixins\Expectation<mixed>::$not.
+			identifier: property.notFound
+			count: 1
+			path: tests/Feature/Auth/PhoneSettingsTest.php
 
 		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::getJson().'
-			identifier: method.notFound
+			rawMessage: Variable $environment is never read.
+			identifier: variable.unused
+			count: 1
+			path: tests/Feature/Auth/RegistrationEnrollmentTest.php
+
+		-
+			rawMessage: Variable $environmentA is never read.
+			identifier: variable.unused
+			count: 1
+			path: tests/Feature/Auth/RegistrationEnrollmentTest.php
+
+		-
+			rawMessage: Access to an undefined property Pest\Mixins\Expectation<mixed>::$not.
+			identifier: property.notFound
+			count: 2
+			path: tests/Feature/Auth/SessionTokenTest.php
+
+		-
+			rawMessage: Access to an undefined property Pest\Mixins\Expectation<mixed>::$not.
+			identifier: property.notFound
+			count: 1
+			path: tests/Feature/Auth/UsernameSettingsTest.php
+
+		-
+			rawMessage: Access to an undefined property Pest\Mixins\Expectation<mixed>::$not.
+			identifier: property.notFound
+			count: 1
+			path: tests/Feature/Auth/WaitlistTest.php
+
+		-
+			rawMessage: Variable $environment is never read.
+			identifier: variable.unused
+			count: 1
+			path: tests/Feature/Auth/WaitlistTest.php
+
+		-
+			rawMessage: Access to an undefined property Pest\PendingCalls\TestCall::$tenant.
+			identifier: property.notFound
 			count: 3
-			path: tests/Feature/Auth/OpenIdConnectTest.php
+			path: tests/Feature/Filament/AdminNavigationTest.php
 
 		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::postJson().'
+			rawMessage: Access to an undefined property Pest\Mixins\Expectation<string|null>::$not.
+			identifier: property.notFound
+			count: 4
+			path: tests/Feature/Filament/ApplicationNavigationTest.php
+
+		-
+			rawMessage: 'Call to an undefined method DOMNameSpaceNode|DOMNode::getAttribute().'
 			identifier: method.notFound
-			count: 1
-			path: tests/Feature/Auth/OpenIdConnectTest.php
+			count: 4
+			path: tests/Feature/Filament/ApplicationNavigationTest.php
 
 		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::withToken().'
-			identifier: method.notFound
-			count: 1
-			path: tests/Feature/Auth/OpenIdConnectTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::actingAs().'
-			identifier: method.notFound
-			count: 1
-			path: tests/Feature/Auth/PasswordConfirmationTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::get().'
-			identifier: method.notFound
-			count: 1
-			path: tests/Feature/Auth/PasswordConfirmationTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::get().'
+			rawMessage: 'Call to an undefined method DOMNode::getAttribute().'
 			identifier: method.notFound
 			count: 2
-			path: tests/Feature/Auth/PasswordResetTest.php
+			path: tests/Feature/Filament/ApplicationNavigationTest.php
 
 		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::post().'
-			identifier: method.notFound
-			count: 5
-			path: tests/Feature/Auth/PasswordResetTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::assertAuthenticated().'
-			identifier: method.notFound
-			count: 1
-			path: tests/Feature/Auth/RegistrationTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::get().'
-			identifier: method.notFound
-			count: 1
-			path: tests/Feature/Auth/RegistrationTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::post().'
-			identifier: method.notFound
-			count: 2
-			path: tests/Feature/Auth/RegistrationTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::artisan().'
-			identifier: method.notFound
-			count: 1
-			path: tests/Feature/Auth/SocialLoginTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::assertAuthenticated().'
-			identifier: method.notFound
-			count: 1
-			path: tests/Feature/Auth/SocialLoginTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::assertAuthenticatedAs().'
-			identifier: method.notFound
-			count: 2
-			path: tests/Feature/Auth/SocialLoginTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::assertGuest().'
-			identifier: method.notFound
-			count: 1
-			path: tests/Feature/Auth/SocialLoginTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::get().'
-			identifier: method.notFound
+			rawMessage: Access to an undefined property Pest\PendingCalls\TestCall::$tenant.
+			identifier: property.notFound
 			count: 9
-			path: tests/Feature/Auth/SocialLoginTest.php
+			path: tests/Feature/Filament/ApplicationQuickstartWidgetTest.php
 
 		-
-			rawMessage: 'Call to an undefined static method Spatie\Permission\Models\Role::firstOrCreate().'
+			rawMessage: Variable $member is never read.
+			identifier: variable.unused
+			count: 1
+			path: tests/Feature/Filament/ApplicationUserManagementTest.php
+
+		-
+			rawMessage: Variable $tenant is never read.
+			identifier: variable.unused
+			count: 4
+			path: tests/Feature/Filament/ApplicationUserManagementTest.php
+
+		-
+			rawMessage: Access to an undefined property Pest\PendingCalls\TestCall::$tenant.
+			identifier: property.notFound
+			count: 2
+			path: tests/Feature/Filament/CreateApplicationTest.php
+
+		-
+			rawMessage: 'Call to an undefined static method App\Models\TenantApplication::where().'
 			identifier: staticMethod.notFound
 			count: 1
-			path: tests/Feature/Auth/SocialLoginTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::actingAs().'
-			identifier: method.notFound
-			count: 2
-			path: tests/Feature/Auth/VerificationNotificationTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::actingAs().'
-			identifier: method.notFound
-			count: 1
-			path: tests/Feature/DashboardTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::get().'
-			identifier: method.notFound
-			count: 2
-			path: tests/Feature/DashboardTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::seed().'
-			identifier: method.notFound
-			count: 1
-			path: tests/Feature/DatabaseSeederTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::get().'
-			identifier: method.notFound
-			count: 1
-			path: tests/Feature/ExampleTest.php
+			path: tests/Feature/Filament/CreateApplicationTest.php
 
 		-
 			rawMessage: Access to an undefined property Pest\PendingCalls\TestCall::$tenant.
@@ -337,160 +697,16 @@ parameters:
 			path: tests/Feature/Filament/SettingsClusterTest.php
 
 		-
-			rawMessage: 'Call to an undefined method Livewire\Features\SupportTesting\Testable::fillForm().'
-			identifier: method.notFound
-			count: 6
-			path: tests/Feature/Filament/SettingsClusterTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::actingAs().'
-			identifier: method.notFound
-			count: 9
-			path: tests/Feature/Filament/SettingsClusterTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::artisan().'
-			identifier: method.notFound
-			count: 1
-			path: tests/Feature/Filament/SettingsClusterTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::get().'
-			identifier: method.notFound
-			count: 3
-			path: tests/Feature/Filament/SettingsClusterTest.php
-
-		-
-			rawMessage: 'Call to an undefined static method App\Models\Tenant::firstOrCreate().'
-			identifier: staticMethod.notFound
-			count: 1
-			path: tests/Feature/Filament/SettingsClusterTest.php
-
-		-
-			rawMessage: 'Call to an undefined static method Spatie\Permission\Models\Role::firstOrCreate().'
-			identifier: staticMethod.notFound
-			count: 3
-			path: tests/Feature/Filament/SettingsClusterTest.php
-
-		-
 			rawMessage: Access to an undefined property Pest\PendingCalls\TestCall::$tenant.
 			identifier: property.notFound
 			count: 6
 			path: tests/Feature/Filament/SocialLoginSettingsPageTest.php
 
 		-
-			rawMessage: 'Call to an undefined method Livewire\Features\SupportTesting\Testable::fillForm().'
-			identifier: method.notFound
-			count: 2
-			path: tests/Feature/Filament/SocialLoginSettingsPageTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::actingAs().'
-			identifier: method.notFound
-			count: 4
-			path: tests/Feature/Filament/SocialLoginSettingsPageTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::artisan().'
-			identifier: method.notFound
-			count: 1
-			path: tests/Feature/Filament/SocialLoginSettingsPageTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::get().'
-			identifier: method.notFound
-			count: 1
-			path: tests/Feature/Filament/SocialLoginSettingsPageTest.php
-
-		-
-			rawMessage: 'Call to an undefined static method App\Models\Tenant::firstOrCreate().'
-			identifier: staticMethod.notFound
-			count: 1
-			path: tests/Feature/Filament/SocialLoginSettingsPageTest.php
-
-		-
-			rawMessage: 'Call to an undefined static method Spatie\Permission\Models\Role::firstOrCreate().'
-			identifier: staticMethod.notFound
-			count: 3
-			path: tests/Feature/Filament/SocialLoginSettingsPageTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::actingAs().'
-			identifier: method.notFound
-			count: 1
-			path: tests/Feature/FilamentProfilePageTest.php
-
-		-
 			rawMessage: Access to an undefined property Pest\Mixins\Expectation<string|null>::$not.
 			identifier: property.notFound
 			count: 1
 			path: tests/Feature/InertiaLayoutResolverTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::actingAs().'
-			identifier: method.notFound
-			count: 3
-			path: tests/Feature/Settings/PasskeySettingsTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::actingAs().'
-			identifier: method.notFound
-			count: 3
-			path: tests/Feature/Settings/PasswordUpdateTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::actingAs().'
-			identifier: method.notFound
-			count: 5
-			path: tests/Feature/Settings/ProfileUpdateTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::assertGuest().'
-			identifier: method.notFound
-			count: 1
-			path: tests/Feature/Settings/ProfileUpdateTest.php
-
-		-
-			rawMessage: 'Call to an undefined static method App\Models\RoleFeature::create().'
-			identifier: staticMethod.notFound
-			count: 1
-			path: tests/Feature/Settings/ProfileUpdateTest.php
-
-		-
-			rawMessage: 'Call to an undefined static method Spatie\Permission\Models\Role::firstOrCreate().'
-			identifier: staticMethod.notFound
-			count: 1
-			path: tests/Feature/Settings/ProfileUpdateTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::artisan().'
-			identifier: method.notFound
-			count: 1
-			path: tests/Feature/Settings/SocialLoginSettingsTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::actingAs().'
-			identifier: method.notFound
-			count: 4
-			path: tests/Feature/Settings/TwoFactorAuthenticationTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::call().'
-			identifier: method.notFound
-			count: 1
-			path: tests/Feature/Settings/TwoFactorAuthenticationTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::deleteJson().'
-			identifier: method.notFound
-			count: 2
-			path: tests/Feature/Settings/TwoFactorAuthenticationTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::postJson().'
-			identifier: method.notFound
-			count: 5
-			path: tests/Feature/Settings/TwoFactorAuthenticationTest.php
 
 		-
 			rawMessage: Access to an undefined property Pest\Mixins\Expectation<mixed>::$name.
@@ -505,33 +721,9 @@ parameters:
 			path: tests/Feature/Setup/SetupTest.php
 
 		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::get().'
-			identifier: method.notFound
-			count: 2
-			path: tests/Feature/Setup/SetupTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::post().'
-			identifier: method.notFound
-			count: 1
-			path: tests/Feature/Setup/SetupTest.php
-
-		-
-			rawMessage: 'Call to an undefined static method Spatie\Permission\Models\Role::firstOrCreate().'
-			identifier: staticMethod.notFound
-			count: 1
-			path: tests/Feature/Setup/SetupTest.php
-
-		-
 			rawMessage: Access to an undefined property App\Console\Commands\SetupStarterKit@anonymous/tests/Feature/SetupStarterKitTest.php:786::$calls.
 			identifier: property.notFound
 			count: 2
-			path: tests/Feature/SetupStarterKitTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::markTestSkipped().'
-			identifier: method.notFound
-			count: 1
 			path: tests/Feature/SetupStarterKitTest.php
 
 		-
@@ -543,7 +735,7 @@ parameters:
 		-
 			rawMessage: Access to an undefined property Laravel\Passport\Client::$id.
 			identifier: property.notFound
-			count: 2
+			count: 1
 			path: tests/Feature/Tenancy/TenancyTest.php
 
 		-
@@ -583,24 +775,6 @@ parameters:
 			path: tests/Feature/Tenancy/TenancyTest.php
 
 		-
-			rawMessage: 'Call to an undefined method Livewire\Features\SupportTesting\Testable<Livewire\Component>::fillForm().'
-			identifier: method.notFound
-			count: 2
-			path: tests/Feature/Tenancy/TenancyTest.php
-
-		-
-			rawMessage: 'Call to an undefined method Pest\PendingCalls\TestCall::actingAs().'
-			identifier: method.notFound
-			count: 3
-			path: tests/Feature/Tenancy/TenancyTest.php
-
-		-
-			rawMessage: 'Call to an undefined static method App\Models\Tenant::create().'
-			identifier: staticMethod.notFound
-			count: 4
-			path: tests/Feature/Tenancy/TenancyTest.php
-
-		-
 			rawMessage: 'Call to an undefined static method App\Models\TenantApplication::create().'
 			identifier: staticMethod.notFound
 			count: 3
@@ -615,23 +789,17 @@ parameters:
 		-
 			rawMessage: 'Call to an undefined static method Laravel\Passport\Client::find().'
 			identifier: staticMethod.notFound
-			count: 1
+			count: 2
 			path: tests/Feature/Tenancy/TenancyTest.php
 
 		-
-			rawMessage: 'Call to an undefined static method Spatie\Permission\Models\Role::firstOrCreate().'
-			identifier: staticMethod.notFound
-			count: 3
-			path: tests/Feature/Tenancy/TenancyTest.php
+			rawMessage: Access to an undefined property Pest\Mixins\Expectation<mixed>::$not.
+			identifier: property.notFound
+			count: 1
+			path: tests/Feature/Users/UserImportAndEnvironmentTest.php
 
 		-
 			rawMessage: Access to an undefined property Pest\Mixins\Expectation<mixed>::$status.
 			identifier: property.notFound
 			count: 1
-			path: tests/Feature/Webhooks/WebhookTest.php
-
-		-
-			rawMessage: 'Call to an undefined static method App\Models\WebhookEndpoint::create().'
-			identifier: staticMethod.notFound
-			count: 2
 			path: tests/Feature/Webhooks/WebhookTest.php

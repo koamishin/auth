@@ -54,11 +54,11 @@ test('email verification status is unchanged when the email address is unchanged
 
 test('user can delete their account', function (): void {
     $user = User::factory()->create();
-    $role = Role::firstOrCreate(['name' => 'user', 'guard_name' => 'web']);
+    $role = Role::query()->firstOrCreate(['name' => 'user', 'guard_name' => 'web']);
 
     $user->assignRole($role);
 
-    RoleFeature::create([
+    RoleFeature::query()->create([
         'role_id' => $role->id,
         'feature' => 'settings_account_deletion',
         'active' => true,

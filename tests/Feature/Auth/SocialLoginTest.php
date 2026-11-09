@@ -18,7 +18,7 @@ beforeEach(function (): void {
     $this->artisan('migrate', ['--path' => 'database/settings', '--no-interaction' => true]);
     app()->forgetInstance(SocialLoginSettings::class);
 
-    Role::firstOrCreate(['name' => 'user', 'guard_name' => 'web']);
+    Role::query()->firstOrCreate(['name' => 'user', 'guard_name' => 'web']);
 
     config()->set('services.github.client_id', 'test-id');
     config()->set('services.github.client_secret', 'test-secret');

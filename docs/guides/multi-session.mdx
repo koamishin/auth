@@ -13,12 +13,12 @@ Every completed sign-in — password, passkey, emailed code, social connection, 
 
 Each registered account holds a **switch token**:
 
-| Property | Description |
-| -------- | ----------- |
-| Storage | An encrypted, `HttpOnly` cookie on the browser. The raw token never reaches the server's database. |
+| Property      | Description                                                                                                        |
+| ------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Storage       | An encrypted, `HttpOnly` cookie on the browser. The raw token never reaches the server's database.                 |
 | Server record | A SHA-256 hash per account, in `multi_session_accounts`. A leaked database cannot be used to switch into accounts. |
-| Lifetime | 30 days. Every new sign-in mints a fresh token, so actively signing in keeps access alive. |
-| Scope | Per account. A device familiar to one account can still be new to another. |
+| Lifetime      | 30 days. Every new sign-in mints a fresh token, so actively signing in keeps access alive.                         |
+| Scope         | Per account. A device familiar to one account can still be new to another.                                         |
 
 Exactly one account is active at a time. The rest stay signed in in the background and can be switched to instantly.
 
@@ -44,13 +44,13 @@ Two behaviors are deliberate:
 
 ## Signing out
 
-| Action | Effect |
-| ------ | ------ |
-| **Log out** | Signs out the current account and removes it from this browser. Other accounts remain and are offered on the sign-in page to continue as. |
-| **Remove** (× on an account) | Drops that account from this browser without touching the current session. Removing the current account also ends the session. |
-| **Sign out of all accounts** | Clears the registry and ends the session entirely. |
+| Action                       | Effect                                                                                                                                    |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| **Log out**                  | Signs out the current account and removes it from this browser. Other accounts remain and are offered on the sign-in page to continue as. |
+| **Remove** (× on an account) | Drops that account from this browser without touching the current session. Removing the current account also ends the session.            |
+| **Sign out of all accounts** | Clears the registry and ends the session entirely.                                                                                        |
 
-Signing out of one account therefore leaves the others signed in — that is what makes *Continue as* work.
+Signing out of one account therefore leaves the others signed in — that is what makes _Continue as_ work.
 
 ## When switch access is revoked
 
@@ -61,19 +61,19 @@ Signing out of one account therefore leaves the others signed in — that is wha
 
 ## Where the switcher lives
 
-- **Admin panel**: the *Accounts* menu in the topbar, next to the user menu.
-- **Portal**: the user menu lists the signed-in accounts, with *Add account* and *Sign out of all accounts*.
-- **Sign-in page**: *Continue as* offers the remaining accounts after signing out of one.
+- **Admin panel**: the _Accounts_ menu in the topbar, next to the user menu.
+- **Portal**: the user menu lists the signed-in accounts, with _Add account_ and _Sign out of all accounts_.
+- **Sign-in page**: _Continue as_ offers the remaining accounts after signing out of one.
 
 ## Endpoints
 
 The switcher drives three session routes. They are CSRF-protected POSTs reachable while signed out as well as signed in: the registry cookie is what authorizes a switch.
 
-| Endpoint | Body | Effect |
-| -------- | ---- | ------ |
-| `POST /accounts/switch` | `user_id` | Sign the browser in as one of its held accounts. |
-| `POST /accounts/remove` | `user_id` | Drop one account from this browser. |
-| `POST /accounts/sign-out-all` | — | Clear the registry and end the session. |
+| Endpoint                      | Body      | Effect                                           |
+| ----------------------------- | --------- | ------------------------------------------------ |
+| `POST /accounts/switch`       | `user_id` | Sign the browser in as one of its held accounts. |
+| `POST /accounts/remove`       | `user_id` | Drop one account from this browser.              |
+| `POST /accounts/sign-out-all` | —         | Clear the registry and end the session.          |
 
 ## Current limits
 

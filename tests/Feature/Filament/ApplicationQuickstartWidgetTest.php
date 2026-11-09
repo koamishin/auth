@@ -10,8 +10,8 @@ use Livewire\Livewire;
 use Spatie\Permission\Models\Role;
 
 beforeEach(function (): void {
-    Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
-    $this->tenant = Tenant::firstOrCreate(['slug' => 'default'], ['name' => 'Default Organization', 'is_active' => true]);
+    Role::query()->firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+    $this->tenant = Tenant::query()->firstOrCreate(['slug' => 'default'], ['name' => 'Default Organization', 'is_active' => true]);
 });
 
 test('quickstart widget initializes with application framework and renders step by step instructions', function (): void {

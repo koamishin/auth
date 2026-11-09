@@ -23,10 +23,14 @@ const handleLogout = () => {
 };
 
 const page = usePage<AppPageProps>();
-const accounts = computed<SwitchableAccount[]>(() => page.props.auth?.accounts ?? []);
+const accounts = computed<SwitchableAccount[]>(
+    () => page.props.auth?.accounts ?? [],
+);
 
-const switchAccount = (id: number) => router.post(switchMethod.url(), { user_id: id });
-const removeAccount = (id: number) => router.post(remove.url(), { user_id: id });
+const switchAccount = (id: number) =>
+    router.post(switchMethod.url(), { user_id: id });
+const removeAccount = (id: number) =>
+    router.post(remove.url(), { user_id: id });
 const signOutAll = () => router.post(flush.url());
 
 defineProps<Props>();
@@ -50,7 +54,9 @@ defineProps<Props>();
 
     <template v-if="accounts.length > 0">
         <DropdownMenuSeparator />
-        <DropdownMenuLabel class="px-1 py-1 text-xs font-medium text-muted-foreground">
+        <DropdownMenuLabel
+            class="px-1 py-1 text-xs font-medium text-muted-foreground"
+        >
             Signed in as
         </DropdownMenuLabel>
         <DropdownMenuGroup>
@@ -69,8 +75,12 @@ defineProps<Props>();
                     />
                     <span v-else class="h-4 w-4 shrink-0" />
                     <span class="min-w-0 flex-1">
-                        <span class="block truncate text-sm">{{ account.name }}</span>
-                        <span class="block truncate text-xs text-muted-foreground">
+                        <span class="block truncate text-sm">{{
+                            account.name
+                        }}</span>
+                        <span
+                            class="block truncate text-xs text-muted-foreground"
+                        >
                             {{ account.email }}
                         </span>
                     </span>

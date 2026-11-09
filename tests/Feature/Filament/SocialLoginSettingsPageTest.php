@@ -11,15 +11,15 @@ use Livewire\Livewire;
 use Spatie\Permission\Models\Role;
 
 beforeEach(function (): void {
-    Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
-    Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
-    Role::firstOrCreate(['name' => 'user', 'guard_name' => 'web']);
+    Role::query()->firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+    Role::query()->firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+    Role::query()->firstOrCreate(['name' => 'user', 'guard_name' => 'web']);
 
     $this->artisan('migrate', ['--path' => 'database/settings', '--no-interaction' => true]);
 
     app()->forgetInstance(SocialLoginSettings::class);
 
-    $this->tenant = Tenant::firstOrCreate(['slug' => 'default'], ['name' => 'Default Organization', 'is_active' => true]);
+    $this->tenant = Tenant::query()->firstOrCreate(['slug' => 'default'], ['name' => 'Default Organization', 'is_active' => true]);
 });
 
 test('social login settings page is registered in the admin panel', function (): void {

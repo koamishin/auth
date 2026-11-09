@@ -36,7 +36,7 @@ test('submitting setup creates super admin user and configures site name', funct
 });
 
 test('setup wizard redirects away once a super admin exists', function (): void {
-    Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+    Role::query()->firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
     $user = User::factory()->create();
     $user->assignRole('super_admin');
 
@@ -46,7 +46,7 @@ test('setup wizard redirects away once a super admin exists', function (): void 
 });
 
 test('application identities do not block portal setup or reserve the administrator email', function (): void {
-    Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+    Role::query()->firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
     $applicationUser = User::factory()->create([
         'email' => 'admin@example.test',
         'identity_namespace' => 'environment:123',

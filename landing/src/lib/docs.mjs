@@ -13,7 +13,11 @@ const pages = [
     'docs/getting-started/configuration.mdx',
     'docs/getting-started/local-development.mdx',
     'docs/guides/core-concepts.mdx',
+    'docs/guides/authentication.mdx',
     'docs/guides/laravel-sdk.mdx',
+    'docs/guides/multi-session.mdx',
+    'docs/guides/session-tokens.mdx',
+    'docs/guides/user-accounts.mdx',
     'docs/guides/user-metadata.mdx',
     'docs/guides/workflows.mdx',
     'docs/guides/development.mdx',
@@ -56,8 +60,7 @@ const publicFiles = [
 
 function getBase() {
     const base =
-        process.env.ASTRO_BASE ||
-        (process.env.GITHUB_ACTIONS ? '/auth' : '');
+        process.env.ASTRO_BASE || (process.env.GITHUB_ACTIONS ? '/auth' : '');
     return base.replace(/\/+$/, '');
 }
 

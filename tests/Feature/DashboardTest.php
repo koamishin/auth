@@ -18,7 +18,7 @@ test('authenticated users can visit the dashboard', function (): void {
 });
 
 test('admin users visiting the dashboard are redirected to the admin panel', function (): void {
-    Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+    Role::query()->firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
     $user = User::factory()->create();
     $user->assignRole('super_admin');
 
@@ -27,7 +27,7 @@ test('admin users visiting the dashboard are redirected to the admin panel', fun
 });
 
 test('admin users visiting the dashboard via inertia are redirected to the admin panel', function (): void {
-    Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+    Role::query()->firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
     $user = User::factory()->create();
     $user->assignRole('super_admin');
 

@@ -24,7 +24,7 @@ test('application users completing two factor challenge are redirected to dashbo
 });
 
 test('system admins completing two factor challenge are redirected to filament admin', function (): void {
-    Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+    Role::query()->firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
     $user = User::factory()->create([
         'two_factor_secret' => encrypt('test-secret'),
         'two_factor_recovery_codes' => encrypt(json_encode(['code1', 'code2'])),
@@ -41,7 +41,7 @@ test('system admins completing two factor challenge are redirected to filament a
 });
 
 test('system admins completing two factor challenge via inertia are redirected to filament admin', function (): void {
-    Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+    Role::query()->firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
     $user = User::factory()->create([
         'two_factor_secret' => encrypt('test-secret'),
         'two_factor_recovery_codes' => encrypt(json_encode(['code1', 'code2'])),

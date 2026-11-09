@@ -19,7 +19,7 @@ use Spatie\Permission\Models\Role;
 
 function navigationTenant(string $slug): Tenant
 {
-    return Tenant::create(['name' => ucfirst($slug), 'slug' => $slug, 'is_active' => true]);
+    return Tenant::query()->create(['name' => ucfirst($slug), 'slug' => $slug, 'is_active' => true]);
 }
 
 function navigationApplication(Tenant $tenant, string $name): TenantApplication
@@ -39,7 +39,7 @@ function navigationRoute(string $name, mixed $record = null): void
 
 function navigationAdmin(): User
 {
-    Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+    Role::query()->firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
     $user = User::factory()->create();
     $user->assignRole('super_admin');
 

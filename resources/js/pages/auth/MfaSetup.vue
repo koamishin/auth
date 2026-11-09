@@ -15,7 +15,9 @@ const props = defineProps<{
     enrolled?: boolean;
 }>();
 
-const applicationName = computed(() => props.application?.name ?? 'this application');
+const applicationName = computed(
+    () => props.application?.name ?? 'this application',
+);
 
 // The component toggles enrolment locally, so mirror the prop into state.
 const enrolled = ref(props.enrolled ?? false);

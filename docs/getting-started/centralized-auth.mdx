@@ -13,11 +13,11 @@ Self-service access is controlled by the selected environment's **Access** mode:
 
 Complete [installation](installation.mdx), including `/setup`. The local test environment uses these development-only origins:
 
-| Service        | Origin                         | Callback                                         |
-| -------------- | ------------------------------ | ------------------------------------------------ |
-| Koamishin Auth | `http://auth.localhost:8120`   | —                                                |
-| App A          | `http://app-a.localhost:8121`  | `http://app-a.localhost:8121/koamishin/callback` |
-| App B          | `http://app-b.localhost:8122`  | `http://app-b.localhost:8122/koamishin/callback` |
+| Service        | Origin                        | Callback                                         |
+| -------------- | ----------------------------- | ------------------------------------------------ |
+| Koamishin Auth | `http://auth.localhost:8120`  | —                                                |
+| App A          | `http://app-a.localhost:8121` | `http://app-a.localhost:8121/koamishin/callback` |
+| App B          | `http://app-b.localhost:8122` | `http://app-b.localhost:8122/koamishin/callback` |
 
 Make sure all three hostnames resolve to the machine running the servers. Separate hostnames and host-only cookies keep session and CSRF cookies from different apps from interfering. Use HTTPS and your actual domains in production.
 
@@ -36,13 +36,13 @@ MAIL_MAILER=log
 
 In the Koamishin Auth administration panel, select your organization and create **App A** and **App B** separately. Each application represents an independent client with its own framework selection, OAuth client credentials, and environment configuration:
 
-| Setting | App A (e.g. Acme Enterprise Auth) | App B (e.g. Billing & Payment Center) |
-| --- | --- | --- |
-| **Framework** | Laravel | Laravel / Next.js / Node.js |
-| **Environment** | Development | Development |
-| **Callback URL** | `https://portal-app-1.test/koamishin/callback` | `http://localhost:3000/api/auth/callback` |
-| **Access mode** | Open | Open |
-| **OAuth Consent Screen** | Off (first-party seamless) | Off (first-party seamless) |
+| Setting                  | App A (e.g. Acme Enterprise Auth)              | App B (e.g. Billing & Payment Center)     |
+| ------------------------ | ---------------------------------------------- | ----------------------------------------- |
+| **Framework**            | Laravel                                        | Laravel / Next.js / Node.js               |
+| **Environment**          | Development                                    | Development                               |
+| **Callback URL**         | `https://portal-app-1.test/koamishin/callback` | `http://localhost:3000/api/auth/callback` |
+| **Access mode**          | Open                                           | Open                                      |
+| **OAuth Consent Screen** | Off (first-party seamless)                     | Off (first-party seamless)                |
 
 Navigate to **Applications** (`/admin/<org>/tenant-applications`) to view the registered applications within your organization:
 

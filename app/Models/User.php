@@ -26,6 +26,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
@@ -45,6 +46,10 @@ use Spatie\Permission\Traits\HasRoles;
  * @property int $id
  * @property string $name
  * @property string $email
+ * @property string $identity_namespace
+ * @property int|null $tenant_application_environment_id
+ * @property string|null $first_name
+ * @property string|null $last_name
  * @property string|null $profile_photo_path
  * @property Carbon|null $email_verified_at
  * @property string $password
@@ -60,8 +65,11 @@ use Spatie\Permission\Traits\HasRoles;
  * @property array<string, mixed>|null $metadata
  * @property Carbon|null $two_factor_confirmed_at
  * @property string|null $two_factor_secret
+ * @property string|null $two_factor_recovery_codes
  * @property string|null $app_authentication_secret
  * @property bool $has_email_authentication
+ * @property-read Pivot $pivot
+ * @property-read TenantApplicationEnvironment|null $tenantApplicationEnvironment
  * @property-read Collection<int, SocialAccount> $socialAccounts
  * @property-read Collection<int, Tenant> $tenants
  * @property-read Collection<int, Session> $sessions

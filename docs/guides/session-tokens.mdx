@@ -13,22 +13,22 @@ A session token lives for **60 seconds**. Its job is to answer "who is this, and
 
 Every generated token carries the claims below. They cannot be overridden.
 
-| Claim | Abbreviation expanded | Description | Example |
-| ----- | --------------------- | ----------- | ------- |
-| `sub` | subject | The ID of the user the session belongs to. | `123` |
-| `iss` | issuer | The portal URL. Matches the `issuer` in the discovery document. | `https://auth.example.com` |
-| `iat` | issued at | When the token was issued, as a Unix timestamp. | `1713158400` |
-| `nbf` | not before | The time before which the token is invalid. Equal to `iat`. | `1713158400` |
-| `exp` | expiration time | The time after which the token is invalid — `iat` + 60 seconds. | `1713158460` |
-| `jti` | JWT ID | The unique identifier for the token. | `01J2X3...` |
-| `sid` | session ID | The session the token belongs to — see below. | `laravel-session-id` |
-| `azp` | authorized party | The `Origin` header of the minting request. Omitted when there was none. | `https://app.example.com` |
-| `v` | version | The version of the session token. | `2` |
-| `fva` | factor verification age | Minutes since each factor class was verified — see below. | `[7, -1]` |
-| `sts` | session status | The status of the session: `active`, or `pending` while it owes a verification. | `pending` |
-| `tasks` | pending tasks | The verifications still owed, by name. Empty when `sts` is `active`. | `["mfa"]` |
-| `application_id` | — | The application the token was minted for. Backends use it to refuse tokens for other applications. | `100` |
-| `environment` | — | The environment the token was minted for. | `production` |
+| Claim            | Abbreviation expanded   | Description                                                                                        | Example                    |
+| ---------------- | ----------------------- | -------------------------------------------------------------------------------------------------- | -------------------------- |
+| `sub`            | subject                 | The ID of the user the session belongs to.                                                         | `123`                      |
+| `iss`            | issuer                  | The portal URL. Matches the `issuer` in the discovery document.                                    | `https://auth.example.com` |
+| `iat`            | issued at               | When the token was issued, as a Unix timestamp.                                                    | `1713158400`               |
+| `nbf`            | not before              | The time before which the token is invalid. Equal to `iat`.                                        | `1713158400`               |
+| `exp`            | expiration time         | The time after which the token is invalid — `iat` + 60 seconds.                                    | `1713158460`               |
+| `jti`            | JWT ID                  | The unique identifier for the token.                                                               | `01J2X3...`                |
+| `sid`            | session ID              | The session the token belongs to — see below.                                                      | `laravel-session-id`       |
+| `azp`            | authorized party        | The `Origin` header of the minting request. Omitted when there was none.                           | `https://app.example.com`  |
+| `v`              | version                 | The version of the session token.                                                                  | `2`                        |
+| `fva`            | factor verification age | Minutes since each factor class was verified — see below.                                          | `[7, -1]`                  |
+| `sts`            | session status          | The status of the session: `active`, or `pending` while it owes a verification.                    | `pending`                  |
+| `tasks`          | pending tasks           | The verifications still owed, by name. Empty when `sts` is `active`.                               | `["mfa"]`                  |
+| `application_id` | —                       | The application the token was minted for. Backends use it to refuse tokens for other applications. | `100`                      |
+| `environment`    | —                       | The environment the token was minted for.                                                          | `production`               |
 
 ### The `sid` claim
 
@@ -49,21 +49,21 @@ SDK-minted tokens carry `[-1, -1]` too — the minting request holds an access t
 
 The **`o` claim** is included only when the session has an application context. Its value is an object with the application's organization and the user's role in it.
 
-| Claim | Abbreviation expanded | Description | Example |
-| ----- | --------------------- | ----------- | ------- |
-| `id` | ID | The ID of the organization. | `7` |
-| `slg` | slug | The slug of the organization. | `acme` |
-| `rol` | role | The user's role in the application, without a prefix. | `admin` |
+| Claim | Abbreviation expanded | Description                                           | Example |
+| ----- | --------------------- | ----------------------------------------------------- | ------- |
+| `id`  | ID                    | The ID of the organization.                           | `7`     |
+| `slg` | slug                  | The slug of the organization.                         | `acme`  |
+| `rol` | role                  | The user's role in the application, without a prefix. | `admin` |
 
 ### Actor claim
 
 The **`act` claim** is included only while an administrator is impersonating another user.
 
-| Claim | Description | Example |
-| ----- | ----------- | ------- |
-| `iss` | The referrer of the token. | `https://auth.example.com` |
-| `sid` | The session ID of the impersonated session. | `laravel-session-id` |
-| `sub` | The ID of the impersonator. | `456` |
+| Claim | Description                                 | Example                    |
+| ----- | ------------------------------------------- | -------------------------- |
+| `iss` | The referrer of the token.                  | `https://auth.example.com` |
+| `sid` | The session ID of the impersonated session. | `laravel-session-id`       |
+| `sub` | The ID of the impersonator.                 | `456`                      |
 
 ## Mint a session token
 

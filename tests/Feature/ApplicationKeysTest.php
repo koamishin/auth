@@ -99,7 +99,7 @@ test('a secret key cannot read users enrolled only in a different application or
 });
 
 test('credentials flashed for one application are not displayed on another application', function (): void {
-    Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+    Role::query()->firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
     $admin = User::factory()->create();
     $admin->assignRole('super_admin');
     $tenant = Tenant::query()->create(['name' => 'Credentials', 'slug' => 'key-credentials']);
@@ -196,7 +196,7 @@ test('publishable keys complete oauth authorization and token refresh for each c
 })->with(['public', 'confidential']);
 
 test('rotating the environment secret leaves the legacy oauth secret unchanged and shows the new key', function (): void {
-    Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+    Role::query()->firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
     $admin = User::factory()->create();
     $admin->assignRole('super_admin');
     $tenant = Tenant::query()->create(['name' => 'Rotate keys', 'slug' => 'rotate-keys']);

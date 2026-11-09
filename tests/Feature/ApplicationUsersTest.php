@@ -10,7 +10,7 @@ use Spatie\Permission\Models\Role;
 
 function applicationUsersAdmin(): User
 {
-    Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+    Role::query()->firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
     $admin = User::factory()->create();
     $admin->assignRole('super_admin');
 
@@ -19,7 +19,7 @@ function applicationUsersAdmin(): User
 
 function applicationUsersTenant(string $slug): Tenant
 {
-    return Tenant::create(['name' => ucfirst($slug), 'slug' => $slug, 'is_active' => true]);
+    return Tenant::query()->create(['name' => ucfirst($slug), 'slug' => $slug, 'is_active' => true]);
 }
 
 function applicationUsersApplication(Tenant $tenant, string $name): TenantApplication

@@ -13,11 +13,11 @@ To configure authentication, navigate to **Applications** in the admin panel, se
 
 An identifier is what a user enters when signing in.
 
-| Identifier | Description | Sign-in | Example |
-| ---------- | ----------- | ------- | ------- |
-| Email address | Always collected and verified. | Yes | `octo@example.com` |
-| Username | 4–64 letters, numbers, hyphens, and underscores, unique per application environment. | Yes, while enabled | `octocat` |
-| Phone number | Stored in international format. SMS verification is not built yet, so a number is never treated as proof of ownership. | No | `+14155550123` |
+| Identifier    | Description                                                                                                            | Sign-in            | Example            |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------ | ------------------ |
+| Email address | Always collected and verified.                                                                                         | Yes                | `octo@example.com` |
+| Username      | 4–64 letters, numbers, hyphens, and underscores, unique per application environment.                                   | Yes, while enabled | `octocat`          |
+| Phone number  | Stored in international format. SMS verification is not built yet, so a number is never treated as proof of ownership. | No                 | `+14155550123`     |
 
 While usernames are enabled, a username works wherever an email address does on the sign-in form.
 
@@ -31,10 +31,10 @@ While usernames are enabled, a username works wherever an email address does on 
 
 ### Email address and password
 
-| Setting | Description |
-| ------- | ----------- |
+| Setting                           | Description                                                                                                                                                                                       |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Allow password authentication** | Turning this off stops new passwords from being created — sign-up and password resets require another method. Users who already have a password keep signing in with it, so nobody is locked out. |
-| **Minimum password length** | Enforced whenever a password is created or changed in this environment, on top of the platform default. |
+| **Minimum password length**       | Enforced whenever a password is created or changed in this environment, on top of the platform default.                                                                                           |
 
 To configure passwords:
 
@@ -46,10 +46,10 @@ To configure passwords:
 
 Passkeys let users sign in with Touch ID, Face ID, Windows Hello, Android biometrics, or an external security key. Users register them from their security page; see [user accounts](user-accounts.mdx).
 
-| Setting | Tab | Description |
-| ------- | --- | ----------- |
-| **Allow passkey sign-in** | Passkeys | Enables the feature for the application. |
-| **Allow built-in authenticators** | Biometric | Permits platform authenticators. Turn off to accept only external security keys. |
+| Setting                                   | Tab       | Description                                                                                       |
+| ----------------------------------------- | --------- | ------------------------------------------------------------------------------------------------- |
+| **Allow passkey sign-in**                 | Passkeys  | Enables the feature for the application.                                                          |
+| **Allow built-in authenticators**         | Biometric | Permits platform authenticators. Turn off to accept only external security keys.                  |
 | **Require biometric or PIN verification** | Biometric | Requires the authenticator to verify the user rather than only testing for presence. Recommended. |
 
 ### Email codes
@@ -72,9 +72,9 @@ To configure social connections, use the application's **Social connections** pa
 
 Multi-factor authentication (MFA) adds a second step after the first factor. When an application requires it, users without a second factor are sent to a setup screen and cannot reach the application until they enrol one. Users enrol an authenticator app or email code, with recovery codes, from their security page.
 
-| Setting | Description |
-| ------- | ----------- |
-| **Require two-step verification** | Demands a second factor of every user of this application. |
+| Setting                                    | Description                                                                                                                                                               |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Require two-step verification**          | Demands a second factor of every user of this application.                                                                                                                |
 | **Passkeys satisfy two-step verification** | A passkey already combines a device with a biometric or PIN, so signing in with one skips the second step. Turn off to require an enrolled factor even for passkey users. |
 
 To configure MFA:
@@ -90,11 +90,11 @@ To configure MFA:
 
 Applications choose whether users must verify their email address before the application authorizes them, and how verification happens.
 
-| Setting | Description |
-| ------- | ----------- |
-| **Verification policy** | Require a verified email, inherit the Portal default, or disable the requirement. |
-| **Verification method** | **Link** sends a signed link; **Code** sends a single-use code that expires after 10 minutes. |
-| **Link lifetime (minutes)** | How long a verification link stays valid. |
+| Setting                                 | Description                                                                                                                                                                             |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Verification policy**                 | Require a verified email, inherit the Portal default, or disable the requirement.                                                                                                       |
+| **Verification method**                 | **Link** sends a signed link; **Code** sends a single-use code that expires after 10 minutes.                                                                                           |
+| **Link lifetime (minutes)**             | How long a verification link stays valid.                                                                                                                                               |
 | **Require the same device and browser** | Binds a verification link to the browser that requested it. A link opened elsewhere is refused and shows the [unauthorized sign-in](security.mdx#know-when-a-new-device-signs-in) page. |
 
 To configure email verification:
@@ -108,11 +108,11 @@ To configure email verification:
 
 The **Access** tab decides who can create an account.
 
-| Mode | Description |
-| ---- | ----------- |
-| **Open** | Anyone can sign up. |
-| **Invite-only** | Sign-ups are closed; only people an operator invites can sign in. |
-| **Waitlist** | Sign-ups are closed, but interested users can join a waitlist for an operator to invite. |
+| Mode            | Description                                                                              |
+| --------------- | ---------------------------------------------------------------------------------------- |
+| **Open**        | Anyone can sign up.                                                                      |
+| **Invite-only** | Sign-ups are closed; only people an operator invites can sign in.                        |
+| **Waitlist**    | Sign-ups are closed, but interested users can join a waitlist for an operator to invite. |
 
 Two rules can narrow an open application further: **Block email subaddresses** refuses addresses such as `name+tag@example.com`, and **Block disposable email addresses** refuses throwaway providers. Block rules always win over an allowlist, and both apply to sign-in as well as sign-up, so an address refused at sign-up cannot slip in later.
 
@@ -122,29 +122,29 @@ For invitations and the waitlist flow, see [tenancy and OAuth](core-concepts.mdx
 
 The **Application Features** settings apply to every application alongside the per-application options:
 
-| Feature | Effect when disabled |
-| ------- | -------------------- |
-| Registration | Self-service sign-up is refused everywhere. |
-| Password reset | The forgot-password flow is turned off. |
-| Two-factor authentication | Users cannot enrol new factors. |
-| Email verification | The Portal default requirement is dropped; applications can still add their own. |
+| Feature                   | Effect when disabled                                                             |
+| ------------------------- | -------------------------------------------------------------------------------- |
+| Registration              | Self-service sign-up is refused everywhere.                                      |
+| Password reset            | The forgot-password flow is turned off.                                          |
+| Two-factor authentication | Users cannot enrol new factors.                                                  |
+| Email verification        | The Portal default requirement is dropped; applications can still add their own. |
 
 ## Where to configure
 
-| Tab | Configures |
-| --- | ---------- |
-| Email | Email sign-up and sign-in, email codes, verification policy and method |
-| Phone | Whether phone numbers are collected |
-| Username | Whether usernames are collected and accepted at sign-in |
-| Password | Password authentication and minimum length |
-| Passkeys | Passkey sign-in |
-| Biometric | Which authenticators passkeys accept, and verification requirements |
-| Access | Sign-up modes and identifier rules |
-| Multi-factor | Two-step verification requirements |
-| Sessions | Session lifetime and [sign-in alerts](security.mdx#know-when-a-new-device-signs-in) |
-| User model | Name parts, account deletion, and [user metadata](user-metadata.mdx) |
-| Enterprise SSO | Not built yet |
-| Web3 | Not built yet |
+| Tab            | Configures                                                                          |
+| -------------- | ----------------------------------------------------------------------------------- |
+| Email          | Email sign-up and sign-in, email codes, verification policy and method              |
+| Phone          | Whether phone numbers are collected                                                 |
+| Username       | Whether usernames are collected and accepted at sign-in                             |
+| Password       | Password authentication and minimum length                                          |
+| Passkeys       | Passkey sign-in                                                                     |
+| Biometric      | Which authenticators passkeys accept, and verification requirements                 |
+| Access         | Sign-up modes and identifier rules                                                  |
+| Multi-factor   | Two-step verification requirements                                                  |
+| Sessions       | Session lifetime and [sign-in alerts](security.mdx#know-when-a-new-device-signs-in) |
+| User model     | Name parts, account deletion, and [user metadata](user-metadata.mdx)                |
+| Enterprise SSO | Not built yet                                                                       |
+| Web3           | Not built yet                                                                       |
 
 ## Next steps
 
