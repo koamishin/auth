@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, usePage } from '@inertiajs/vue3';
-import { ref, toRefs } from 'vue';
+import { computed, ref, toRefs } from 'vue';
 import SecurityController from '@/actions/App/Http/Controllers/Settings/SecurityController';
 import FilamentMfaAppAuthentication from '@/components/FilamentMfaAppAuthentication.vue';
 import FilamentMfaEmailAuthentication from '@/components/FilamentMfaEmailAuthentication.vue';
@@ -15,6 +15,7 @@ import { Separator } from '@/components/ui/separator';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { edit } from '@/routes/security';
+import { destroy as destroyConnection } from '@/routes/security/connections';
 import { destroy, destroyOthers } from '@/routes/security/devices';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 
@@ -56,6 +57,11 @@ const props = defineProps<{
         last_active: string;
         current: boolean;
     }>;
+    connectedAccounts?: Array<{
+        id: number;
+        provider: string;
+        nickname: string | null;
+    }>;
 }>();
 
 const { filamentMfa } = toRefs(props);
@@ -71,6 +77,23 @@ const formatDate = (value: string): string =>
         dateStyle: 'medium',
         timeStyle: 'short',
     });
+
+type SocialProvider = { slug: string; label: string; url: string };
+
+const socialProviders = computed<SocialProvider[]>(
+    () => (page.props as Record<string, any>).socialProviders ?? [],
+);
+const connectedSlugs = computed(() =>
+    (props.connectedAccounts ?? []).map((account) => account.provider),
+);
+const availableProviders = computed(() =>
+    socialProviders.value.filter(
+        (provider) => !connectedSlugs.value.includes(provider.slug),
+    ),
+);
+const providerLabel = (slug: string): string =>
+    socialProviders.value.find((provider) => provider.slug === slug)?.label ??
+    slug;
 
 const breadcrumbItems: BreadcrumbItem[] = [
     {
@@ -254,6 +277,75 @@ const breadcrumbItems: BreadcrumbItem[] = [
                     />
 
                     <PasskeyManager :passkeys="passkeys ?? []" />
+                </section>
+
+                <Separator />
+
+                <section class="space-y-4">
+                    <Heading
+                        variant="small"
+                        title="Connected accounts"
+                        description="Sign in faster with a connected social account"
+                    />
+
+                    <div class="space-y-3">
+                        <div
+                            v-for="account in connectedAccounts ?? []"
+                            :key="account.id"
+                            class="flex items-center justify-between gap-4 rounded-lg border border-border p-3"
+                        >
+                            <div class="min-w-0">
+                                <p class="text-sm font-medium">
+                                    {{ providerLabel(account.provider) }}
+                                </p>
+                                <p
+                                    v-if="account.nickname"
+                                    class="text-xs text-muted-foreground"
+                                >
+                                    {{ account.nickname }}
+                                </p>
+                            </div>
+
+                            <Form
+                                method="delete"
+                                :action="
+                                    destroyConnection({
+                                        connection: account.id,
+                                    }).url
+                                "
+                                :options="{ preserveScroll: true }"
+                            >
+                                <Button type="submit" variant="outline" size="sm">
+                                    Disconnect
+                                </Button>
+                            </Form>
+                        </div>
+
+                        <div
+                            v-if="availableProviders.length > 0"
+                            class="flex flex-wrap gap-2"
+                        >
+                            <a
+                                v-for="provider in availableProviders"
+                                :key="provider.slug"
+                                :href="`${provider.url}?link=1`"
+                                class="inline-flex items-center rounded-lg border border-border px-3 py-2 text-sm font-medium transition-colors hover:bg-accent/50"
+                            >
+                                Connect {{ provider.label }}
+                            </a>
+                        </div>
+
+                        <p
+                            v-if="
+                                (connectedAccounts ?? []).length === 0 &&
+                                availableProviders.length === 0
+                            "
+                            class="text-sm text-muted-foreground"
+                        >
+                            No social providers are configured for this
+                            application yet.
+                        </p>
+                    </div>
                 </section>
 
                 <Separator />

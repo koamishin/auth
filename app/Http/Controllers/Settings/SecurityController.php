@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\PasswordUpdateRequest;
 use App\Http\Requests\Settings\TwoFactorAuthenticationRequest;
 use App\Models\Session;
+use App\Models\SocialAccount;
 use App\Models\User;
 use App\Settings\ApplicationFeaturesSettings;
 use App\Support\PasswordPolicy;
@@ -80,6 +81,15 @@ class SecurityController extends Controller
                 : [],
             'passwordRules' => PasswordPolicy::rulesForFrontend(),
             'devices' => $this->devices($twoFactorAuthenticationRequest, $user),
+            'connectedAccounts' => $user->socialAccounts()
+                ->get()
+                ->map(fn (SocialAccount $account): array => [
+                    'id' => (int) $account->getKey(),
+                    'provider' => (string) $account->provider,
+                    'nickname' => $account->nickname,
+                ])
+                ->values()
+                ->all(),
         ];
 
         if (Features::canManageTwoFactorAuthentication()) {
@@ -150,6 +160,36 @@ class SecurityController extends Controller
             ->delete();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Other devices signed out.')]);
+
+        return to_route('security.edit');
+    }
+
+    /**
+     * Disconnect a social account from this user.
+     *
+     * The last way to sign in is never removed: the user sets a password or
+     * connects another provider first.
+     */
+    public function destroyConnection(Request $request, int $connection): RedirectResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $account = SocialAccount::query()->where('user_id', $user->getKey())->findOrFail($connection);
+
+        $anotherWayIn = SocialAccount::query()
+            ->where('user_id', $user->getKey())
+            ->whereKeyNot($account->getKey())
+            ->exists()
+            || filled($user->password)
+            || $user->passkeys()->exists();
+
+        if (! $anotherWayIn) {
+            return back()->with('error', 'This is your only way to sign in. Set a password or connect another provider first.');
+        }
+
+        $account->delete();
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Connected account removed.')]);
 
         return to_route('security.edit');
     }

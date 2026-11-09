@@ -20,6 +20,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
 use Laravel\Fortify\Events\TwoFactorAuthenticationChallenged;
 use Laravel\Fortify\Features;
 use Laravel\Socialite\Contracts\Provider as ProviderContract;
@@ -46,6 +47,12 @@ class SocialAuthController extends Controller
 
         if (! $providerEnum instanceof SocialLoginProvider) {
             abort(404);
+        }
+
+        // "Connect" from the security page: this round links the provider to
+        // the signed-in account instead of signing anyone in.
+        if ($request->boolean('link') && $request->user() instanceof User) {
+            $request->session()->put('koamishin.social_link', $providerEnum->value);
         }
 
         $environment = $request->attributes->get('koamishin.application_environment');
@@ -87,6 +94,13 @@ class SocialAuthController extends Controller
         abort_unless(filled($socialUser->getId()) && filter_var($socialUser->getEmail(), FILTER_VALIDATE_EMAIL), 422, 'The provider did not return an email address.');
         $verifiedEmail = $providerEnum === SocialLoginProvider::Github
             || ($providerEnum === SocialLoginProvider::Google && $socialUser instanceof SocialiteUser && ($socialUser->getRaw()['email_verified'] ?? false) === true);
+
+        $linking = $request->session()->pull('koamishin.social_link');
+        $signedIn = $request->user();
+
+        if (is_string($linking) && $linking === $providerEnum->value && $signedIn instanceof User) {
+            return $this->linkAccount($request, $providerEnum, $socialUser, $credentials, $signedIn);
+        }
 
         $user = DB::transaction(function () use ($providerEnum, $socialUser, $credentials, $verifiedEmail): User {
             $existingAccount = SocialAccount::query()
@@ -224,6 +238,32 @@ class SocialAuthController extends Controller
         ]));
 
         return $user;
+    }
+
+    /**
+     * Attach the provider identity to the signed-in account.
+     *
+     * A social identity already claimed by another user stays claimed: linking
+     * must never move an account between users.
+     */
+    private function linkAccount(Request $request, SocialLoginProvider $providerEnum, SocialiteUser $socialUser, array $credentials, User $user): RedirectResponse
+    {
+        $existing = SocialAccount::query()
+            ->where('provider', $providerEnum->value)
+            ->where('provider_id', $socialUser->getId())
+            ->where('connection_scope', $credentials['scope'])
+            ->first();
+
+        if ($existing instanceof SocialAccount && (int) $existing->user_id !== (int) $user->getKey()) {
+            return to_route('security.edit')
+                ->with('error', 'This '.$providerEnum->label().' account is already connected to a different user.');
+        }
+
+        $this->upsertSocialAccount($user, $providerEnum, $socialUser, $credentials['scope']);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __(':provider connected.', ['provider' => $providerEnum->label()])]);
+
+        return to_route('security.edit');
     }
 
     private function upsertSocialAccount(User $user, SocialLoginProvider $socialLoginProvider, \Laravel\Socialite\Contracts\User $socialUser, string $connectionScope): SocialAccount

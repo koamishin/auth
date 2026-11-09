@@ -45,6 +45,10 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::delete('settings/security/devices', [SecurityController::class, 'destroyOtherDevices'])
         ->name('security.devices.destroy-others');
 
+    Route::delete('settings/connections/{connection}', [SecurityController::class, 'destroyConnection'])
+        ->whereNumber('connection')
+        ->name('security.connections.destroy');
+
     Route::put('settings/password', [SecurityController::class, 'update'])
         ->middleware('throttle:6,1')
         ->name('user-password.update');
