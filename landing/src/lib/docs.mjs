@@ -9,6 +9,7 @@ const pages = [
     'docs/index.mdx',
     'docs/architecture.mdx',
     'docs/getting-started/installation.mdx',
+    'docs/getting-started/nextjs.mdx',
     'docs/getting-started/centralized-auth.mdx',
     'docs/getting-started/configuration.mdx',
     'docs/getting-started/local-development.mdx',

@@ -7,6 +7,8 @@ description: Add Koamishin Auth login, Clerk-style layout components, proxy rout
 
 The JavaScript and Next.js SDK (`@koamishin/auth-js`) connects a Next.js App Router application to Koamishin Auth using OAuth 2.0 authorization code with S256 PKCE and short-lived RS256 session tokens. It provides Clerk-style React components (`<KoamishinProvider>`, `<Show>`, `<SignInButton>`, `<SignUpButton>`, `<UserButton>`, `<AuthenticateWithRedirectCallback />`) alongside Next.js server and proxy helpers (`koamishinMiddleware()`, `createRouteMatcher()`, `auth()`). See the [JavaScript SDK README](../../packages/koamishin-auth-js/README.md) for the complete API reference.
 
+For a template-based setup and troubleshooting, start with [Get started with Next.js](../getting-started/nextjs.mdx).
+
 ## 1. Prepare Koamishin Auth
 
 Create an organization and a **Next.js** application in the Filament administration panel. In the application setup slideover, click **Register callback**, select the **Public (Browser / Mobile PKCE)** client architecture, and register your exact Next.js callback URL (for example, `http://localhost:3000/auth/callback` in development).

@@ -1,0 +1,102 @@
+---
+title: Get started with Next.js
+description: Connect a Next.js App Router application to Koamishin Auth, using the example template or an existing app.
+---
+
+# Get started with Next.js
+
+Connect a Next.js App Router application to your Koamishin Auth Portal using an OAuth authorization-code flow with S256 PKCE. You can start with the [example Next.js template](https://github.com/koamishin/koamishin-auth-nextjs-template) or add the SDK to an existing application. The template includes a callback page, route protection, session examples, and sign-in and sign-out controls.
+
+## Before you begin
+
+1. [Install Koamishin Auth](installation.mdx) and create an organization and application in the Portal. Start the Portal and make sure your browser and Next.js server can reach it.
+2. Set the Portal's `APP_URL` to its actual public origin, including scheme and port, such as `https://auth.example.com` or your local Portal URL. The Portal uses it as the session-token issuer, and the Next.js SDK verifies it against `NEXT_PUBLIC_KOAMISHIN_PORTAL_URL`. Refresh cached configuration and restart long-running workers after changes; see [configuration](configuration.mdx).
+3. Select the application's environment in the Portal and register a **Public (Browser / Mobile PKCE)** client with a callback URL, such as `http://localhost:3000/auth/callback` for local development. Copy its publishable key (`pk_test_...` for development or `pk_live_...` for production). If users should be able to register themselves, enable **Allow self-service signup** for that environment.
+
+The registered callback URL, `NEXT_PUBLIC_KOAMISHIN_REDIRECT_URI`, and an actual callback route in your application must agree, including the scheme, host, port, and path. Use HTTPS for production callbacks. Keep `sk_...` secret keys on trusted servers; never put them in `NEXT_PUBLIC_*` variables, browser code, or version control.
+
+## Option A: Use the example template
+
+Clone the template and install its dependencies:
+
+```bash
+git clone https://github.com/koamishin/koamishin-auth-nextjs-template.git
+cd koamishin-auth-nextjs-template
+bun install
+```
+
+Copy `.env.example` to `.env.local` and replace the placeholders with the values for your own Portal and application environment:
+
+```dotenv
+NEXT_PUBLIC_KOAMISHIN_PORTAL_URL=http://localhost:8000
+NEXT_PUBLIC_KOAMISHIN_ENVIRONMENT=development
+NEXT_PUBLIC_KOAMISHIN_PUBLISHABLE_KEY=pk_test_your_publishable_key
+NEXT_PUBLIC_KOAMISHIN_REDIRECT_URI=http://localhost:3000/auth/callback
+```
+
+Use the same Portal origin as `APP_URL`, the environment corresponding to the key, and the callback registered above. The template's standard callback page is `app/auth/callback/page.tsx`. Check the template's README for its current dependencies and available routes.
+
+```bash
+bun run dev
+```
+
+Open `http://localhost:3000`, select **Sign In** or **Sign Up**, and complete the hosted flow in the same browser tab. A successful callback returns to the protected dashboard. The SDK stores the PKCE transaction in the originating tab; start a new sign-in instead of reusing an old authorization or callback URL. Signup requires the application's signup policy to allow it.
+
+## Option B: Integrate an existing Next.js app
+
+Install `@koamishin/auth-js` and follow the [Next.js SDK integration guide](../guides/nextjs-sdk.mdx) for the complete App Router setup: public environment variables, the provider and sign-in controls, `proxy.ts` route protection, the callback page, and server-side `auth()` claims. The guide also covers `middleware.ts` for Next.js 15 or earlier. Match its callback example to your registered URL.
+
+## Read the current user and sign out
+
+In a Client Component below `KoamishinProvider`, `useUser()` exposes the profile fetched from the Portal. Use `useKoamishin().client.getUser()` to explicitly fetch the latest userinfo, and `useAuth().signOut()` to clear the app's local session:
+
+```tsx
+'use client';
+
+import { useState } from 'react';
+import { useAuth, useKoamishin, useUser } from '@koamishin/auth-js/nextjs';
+import type { KoamishinUser } from '@koamishin/auth-js';
+
+export function ProfileExample() {
+    const { user, isLoaded } = useUser();
+    const { client } = useKoamishin();
+    const { signOut } = useAuth();
+    const [refreshedUser, setRefreshedUser] = useState<KoamishinUser | null>(null);
+    const [error, setError] = useState<string | null>(null);
+    const profile = refreshedUser ?? user;
+
+    async function refreshProfile() {
+        if (!client) return;
+        setError(null);
+        try {
+            setRefreshedUser(await client.getUser());
+        } catch {
+            setError('Could not refresh your profile. Please sign in again.');
+        }
+    }
+
+    if (!isLoaded) return <p>Loading profile...</p>;
+    if (!profile) return <p>No profile is available.</p>;
+
+    return (
+        <section>
+            <h2>{profile.name}</h2>
+            <p>{profile.email}</p>
+            {error && <p role="alert">{error}</p>}
+            <button type="button" onClick={refreshProfile}>Refresh from Portal</button>
+            <button type="button" onClick={() => signOut({ redirectUrl: '/' })}>Sign out</button>
+        </section>
+    );
+}
+```
+
+`getUser()` uses the access token held by the browser SDK and can fail if the session or network is unavailable. The SDK's `signOut()` removes this application's browser-stored tokens and session cookie; **it does not revoke tokens on the Portal or end the Portal's hosted session**. A later login may therefore reuse a Portal session, depending on the Portal's settings. Do not display access or refresh tokens in the UI or logs.
+
+## Troubleshooting
+
+- **Invalid authorization request or callback 404:** Check that the registered callback, the configured redirect URI, and the implemented route have the same scheme, host, port, and path. Correct duplicate slashes, then restart Next.js and start a new sign-in.
+- **OAuth state mismatch:** Start a fresh sign-in from the application in the same tab; pending transactions expire after ten minutes and cannot be replayed. Check that the Portal URL and key did not change mid-flow.
+- **Sign-in returns to the Portal instead of the dashboard:** Check that the Portal's `APP_URL` matches `NEXT_PUBLIC_KOAMISHIN_PORTAL_URL`, then refresh Portal configuration and workers. Verify that the Next.js server can fetch the Portal's `/oauth/jwks` over trusted HTTPS and that the environment matches the key. The proxy must verify the short-lived session cookie before it lets a request through.
+- **Local certificate trust:** If Node.js reports a self-signed certificate for a trusted local Portal, configure Node to trust the local CA. On Node versions supporting the system CA store, for example, set `NODE_USE_SYSTEM_CA=1` before starting Next.js. Trust only a CA you control; do not disable TLS verification.
+
+For session-token details and security boundaries, see [session tokens](../guides/session-tokens.mdx) and [security](../guides/security.mdx).

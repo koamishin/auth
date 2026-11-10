@@ -144,6 +144,7 @@ New users start with empty application metadata. A trusted backend can populate 
 - [Installation and getting started](docs/getting-started/installation.mdx)
 - [Two-app centralized signup and login walkthrough](docs/getting-started/centralized-auth.mdx)
 - [Laravel SDK integration](docs/guides/laravel-sdk.mdx)
+- [Get started with Next.js](docs/getting-started/nextjs.mdx)
 - [Application user metadata](docs/guides/user-metadata.mdx)
 - [Tenancy, OAuth, and webhooks](docs/guides/core-concepts.mdx)
 - [Management API reference](docs/reference/examples.mdx)
