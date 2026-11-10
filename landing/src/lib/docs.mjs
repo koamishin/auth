@@ -15,6 +15,7 @@ const pages = [
     'docs/guides/core-concepts.mdx',
     'docs/guides/authentication.mdx',
     'docs/guides/laravel-sdk.mdx',
+    'docs/guides/nextjs-sdk.mdx',
     'docs/guides/multi-session.mdx',
     'docs/guides/session-tokens.mdx',
     'docs/guides/user-accounts.mdx',

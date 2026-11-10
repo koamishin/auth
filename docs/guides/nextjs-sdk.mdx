@@ -1,0 +1,229 @@
+---
+title: Next.js SDK integration
+description: Add Koamishin Auth login, Clerk-style layout components, proxy route protection, and offline-verified session tokens to a Next.js application.
+---
+
+# Next.js SDK integration
+
+The JavaScript and Next.js SDK (`@koamishin/auth-js`) connects a Next.js App Router application to Koamishin Auth using OAuth 2.0 authorization code with S256 PKCE and short-lived RS256 session tokens. It provides Clerk-style React components (`<KoamishinProvider>`, `<Show>`, `<SignInButton>`, `<SignUpButton>`, `<UserButton>`, `<AuthenticateWithRedirectCallback />`) alongside Next.js server and proxy helpers (`koamishinMiddleware()`, `createRouteMatcher()`, `auth()`). See the [JavaScript SDK README](../../packages/koamishin-auth-js/README.md) for the complete API reference.
+
+## 1. Prepare Koamishin Auth
+
+Create an organization and a **Next.js** application in the Filament administration panel. In the application setup slideover, click **Register callback**, select the **Public (Browser / Mobile PKCE)** client architecture, and register your exact Next.js callback URL (for example, `http://localhost:3000/auth/callback` in development).
+
+Save the environment's **Publishable Key** (`pk_test_...` for development or `pk_live_...` for production). For self-service user creation from your Next.js app, ensure **Allow self-service signup** is enabled for the selected environment. See [tenancy and OAuth](core-concepts.mdx) and [user authentication](authentication.mdx).
+
+> **Never place Secret Keys (`sk_...`) in `NEXT_PUBLIC_*` variables or browser code.** `createKoamishinClient` immediately rejects `sk_...` keys. Browser PKCE uses only the public Publishable Key (`pk_test_...` or `pk_live_...`), and server route protection verifies RS256 session tokens offline against the Portal's public `/oauth/jwks` endpoint.
+
+## 2. Create a Next.js app and install the SDK
+
+Create a new Next.js application (or use an existing App Router project) and install `@koamishin/auth-js`:
+
+```bash
+bunx create-next-app koamishin-nextjs --yes
+cd koamishin-nextjs
+bun add @koamishin/auth-js
+```
+
+Add `transpilePackages: ['@koamishin/auth-js']` to `next.config.ts` so Next.js Turbopack bundles the SDK subpaths cleanly:
+
+```ts
+import type { NextConfig } from 'next';
+
+const nextConfig: NextConfig = {
+    cacheComponents: true,
+    partialPrefetching: true,
+    transpilePackages: ['@koamishin/auth-js'],
+};
+
+export default nextConfig;
+```
+
+## 3. Configure environment variables
+
+Create `.env.local` at the root of your Next.js project with the credentials from the Portal setup guide:
+
+```dotenv
+NEXT_PUBLIC_KOAMISHIN_PORTAL_URL=http://localhost:8000
+NEXT_PUBLIC_KOAMISHIN_ENVIRONMENT=development
+NEXT_PUBLIC_KOAMISHIN_PUBLISHABLE_KEY=pk_test_your_publishable_key
+NEXT_PUBLIC_KOAMISHIN_REDIRECT_URI=http://localhost:3000/auth/callback
+```
+
+Create a shared client instance in `lib/auth.ts` if your application also calls the client imperatively:
+
+```ts
+import { createKoamishinClient } from '@koamishin/auth-js';
+
+export const koamishin = createKoamishinClient({
+    portalUrl: process.env.NEXT_PUBLIC_KOAMISHIN_PORTAL_URL!,
+    publishableKey: process.env.NEXT_PUBLIC_KOAMISHIN_PUBLISHABLE_KEY!,
+    redirectUri: process.env.NEXT_PUBLIC_KOAMISHIN_REDIRECT_URI!,
+    scopes: ['openid', 'profile', 'email', 'roles'],
+});
+```
+
+## 4. Add `koamishinMiddleware()` to `proxy.ts`
+
+Create `proxy.ts` at the root of your Next.js project (or `src/proxy.ts` if using a `src/` directory). If you are using Next.js 15 or earlier, name the file `middleware.ts` instead of `proxy.ts`.
+
+```ts
+import {
+    koamishinMiddleware,
+    createRouteMatcher,
+} from '@koamishin/auth-js/nextjs/server';
+
+const isProtectedRoute = createRouteMatcher(['/dashboard(.*)']);
+
+export default koamishinMiddleware(async (auth, req) => {
+    if (isProtectedRoute(req)) {
+        await auth.protect();
+    }
+});
+
+export const config = {
+    matcher: [
+        // Skip Next.js internals and static files, unless found in search params
+        '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+        // Always run for API routes
+        '/(api|trpc)(.*)',
+    ],
+};
+```
+
+By default, `koamishinMiddleware()` leaves routes public unless matched and protected with `await auth.protect()`. On every matched request, it reads the short-lived `__koamishin_session` cookie, cryptographically verifies its RS256 signature and claims offline against `${portalUrl}/oauth/jwks`, and forwards the verified session claims to Next.js Server Components. See [session tokens](session-tokens.mdx).
+
+## 5. Add `KoamishinProvider` and auth components to `app/layout.tsx`
+
+Wrap your root layout in `<KoamishinProvider>` and place `<Show when="signed-out">`, `<SignInButton />`, `<SignUpButton>`, `<Show when="signed-in">`, and `<UserButton />` inside React's `<Suspense>` boundary:
+
+```tsx
+import type { Metadata } from 'next';
+import {
+    KoamishinProvider,
+    Show,
+    SignInButton,
+    SignUpButton,
+    UserButton,
+} from '@koamishin/auth-js/nextjs';
+import { Geist, Geist_Mono } from 'next/font/google';
+import { Suspense } from 'react';
+import './globals.css';
+
+const geistSans = Geist({
+    variable: '--font-geist-sans',
+    subsets: ['latin'],
+});
+
+const geistMono = Geist_Mono({
+    variable: '--font-geist-mono',
+    subsets: ['latin'],
+});
+
+export const metadata: Metadata = {
+    title: 'Koamishin Next.js Quickstart',
+    description: 'Generated by create next app',
+};
+
+export default function RootLayout({
+    children,
+}: Readonly<{
+    children: React.ReactNode;
+}>) {
+    return (
+        <html
+            lang="en"
+            className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+        >
+            <body className="min-h-full flex flex-col">
+                <KoamishinProvider>
+                    <header className="flex justify-end items-center p-4 gap-4 h-16">
+                        <Suspense>
+                            <Show when="signed-out">
+                                <SignInButton />
+                                <SignUpButton>
+                                    <button className="bg-purple-700 text-white rounded-full font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 cursor-pointer">
+                                        Sign Up
+                                    </button>
+                                </SignUpButton>
+                            </Show>
+                            <Show when="signed-in">
+                                <UserButton />
+                            </Show>
+                        </Suspense>
+                    </header>
+                    {children}
+                </KoamishinProvider>
+            </body>
+        </html>
+    );
+}
+```
+
+Wrapping the header controls in `<Suspense>` allows Next.js Cache Components (`cacheComponents: true`) to prerender the static shell of every page and stream in the session-dependent controls.
+
+## 6. Create the OAuth callback route
+
+Create `app/auth/callback/page.tsx` to complete the S256 PKCE authorization-code exchange, mint the `__koamishin_session` cookie, and redirect the signed-in user to `/dashboard` (or the original protected URL):
+
+```tsx
+import { Suspense } from 'react';
+import { AuthenticateWithRedirectCallback } from '@koamishin/auth-js/nextjs';
+
+export default function CallbackPage() {
+    return (
+        <Suspense>
+            <AuthenticateWithRedirectCallback afterSignInUrl="/dashboard" />
+        </Suspense>
+    );
+}
+```
+
+## 7. Read session claims and user profile in `/dashboard`
+
+In Next.js Server Components, call `await auth()` from `@koamishin/auth-js/nextjs/server` to read the offline-verified session token claims (`userId`, `sessionId`, `sessionClaims`). In Client Components, call `useUser()` and `useAuth()` from `@koamishin/auth-js/nextjs`:
+
+```tsx
+import { Suspense } from 'react';
+import { auth } from '@koamishin/auth-js/nextjs/server';
+
+async function ServerSessionDetails() {
+    const { userId, sessionId, sessionClaims } = await auth();
+
+    return (
+        <pre>
+            {JSON.stringify(
+                {
+                    userId,
+                    sessionId,
+                    status: sessionClaims?.sts,
+                    environment: sessionClaims?.environment,
+                },
+                null,
+                2,
+            )}
+        </pre>
+    );
+}
+
+export default function DashboardPage() {
+    return (
+        <main className="p-8">
+            <h1 className="text-2xl font-semibold">Protected Dashboard</h1>
+            <Suspense fallback={<p>Verifying session...</p>}>
+                <ServerSessionDetails />
+            </Suspense>
+        </main>
+    );
+}
+```
+
+## 8. Run and create your first user
+
+Start your Next.js development server:
+
+```bash
+bun run dev
+```
+
+Visit `http://localhost:3000` and click **Sign Up** in the header. The browser generates a PKCE challenge and redirects to your Koamishin Portal's hosted registration page (`screen_hint=signup`). Creating an account enrolls the user in your application's environment, redirects back to `http://localhost:3000/auth/callback`, mints the RS256 session cookie, and opens `/dashboard` with `<UserButton />` active in the header.

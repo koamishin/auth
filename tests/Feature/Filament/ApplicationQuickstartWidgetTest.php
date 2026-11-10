@@ -41,7 +41,13 @@ test('quickstart widget initializes with application framework and renders step 
         ->call('setStep', 3)
         ->assertSee('lib/auth.ts')
         ->call('setStep', 4)
-        ->assertSee('app/auth/callback/page.tsx');
+        ->assertSee('app/auth/callback/page.tsx')
+        ->call('setStep', 5)
+        ->assertSee('proxy.ts')
+        ->assertSee('koamishinMiddleware')
+        ->call('setStep', 6)
+        ->assertSee('app/layout.tsx')
+        ->assertSee('KoamishinProvider');
 });
 
 test('quickstart widget allows switching framework tabs dynamically', function (): void {

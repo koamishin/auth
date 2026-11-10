@@ -69,7 +69,7 @@ class ApplicationQuickstartWidget extends Widget
 
     public function setStep(int $step): void
     {
-        if ($step >= 1 && $step <= 4) {
+        if ($step >= 1 && $step <= 6) {
             $this->activeStep = $step;
         }
     }
@@ -137,6 +137,9 @@ class ApplicationQuickstartWidget extends Widget
         $connection = $this->getConnectionStatus()['connected']
             ? "Use this registered callback URL exactly: {$callback}."
             : 'Ask me for the callback URL and register it in the Koamishin dashboard before testing.';
+        $nextjsDetails = $this->framework === 'nextjs'
+            ? "\nFor Next.js App Router, configure proxy.ts with koamishinMiddleware() from @koamishin/auth-js/nextjs/server, wrap app/layout.tsx in <KoamishinProvider> with <Suspense>, <Show when=\"signed-out\">, <SignInButton />, <SignUpButton>, <Show when=\"signed-in\">, and <UserButton /> from @koamishin/auth-js/nextjs, and mount <AuthenticateWithRedirectCallback /> in app/auth/callback/page.tsx."
+            : '';
 
         return <<<PROMPT
 Integrate Koamishin authentication into this {$framework} application.
@@ -147,7 +150,7 @@ Environment: {$environment}
 Publishable key: {$publishableKey}
 {$connection}
 
-Use the Koamishin quickstart for this platform and an SDK version that supports publishable keys. Follow the existing project conventions. Implement sign-in, sign-up, and the OAuth callback with state validation and S256 PKCE; validate the returned user against this application and environment. Do not put secret keys in browser or mobile code, URLs, logs, or version control. If server-side credentials are needed, ask me to supply them through my environment or secret manager. Run the relevant tests and explain any remaining setup.
+Use the Koamishin quickstart for this platform and an SDK version that supports publishable keys. Follow the existing project conventions. Implement sign-in, sign-up, and the OAuth callback with state validation and S256 PKCE; validate the returned user against this application and environment.{$nextjsDetails} Do not put secret keys in browser or mobile code, URLs, logs, or version control. If server-side credentials are needed, ask me to supply them through my environment or secret manager. Run the relevant tests and explain any remaining setup.
 PROMPT;
     }
 
@@ -398,42 +401,103 @@ TS,
             ],
             [
                 'number' => 4,
-                'title' => 'Create Callback Route & Buttons',
-                'subtitle' => 'Handle code exchange on redirect and provide sign-in / sign-up buttons.',
+                'title' => 'Create Callback Route',
+                'subtitle' => 'Handle PKCE code exchange and session cookie sync on redirect.',
                 'file' => 'app/auth/callback/page.tsx',
                 'language' => 'typescript',
                 'code' => <<<'TS'
-'use client';
-
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { koamishin } from '@/lib/auth';
+import { AuthenticateWithRedirectCallback } from '@koamishin/auth-js/nextjs';
 
 export default function CallbackPage() {
-  const router = useRouter();
+  return <AuthenticateWithRedirectCallback afterSignInUrl="/dashboard" />;
+}
+TS,
+                'tip' => 'AuthenticateWithRedirectCallback exchanges the one-time authorization code, mints the short-lived __koamishin_session cookie, and redirects to your app.',
+            ],
+            [
+                'number' => 5,
+                'title' => 'Add koamishinMiddleware() to Your App',
+                'subtitle' => 'Create proxy.ts (or middleware.ts on Next.js <=15) to verify sessions and protect routes.',
+                'file' => 'proxy.ts',
+                'language' => 'typescript',
+                'code' => <<<'TS'
+import {
+  koamishinMiddleware,
+  createRouteMatcher,
+} from '@koamishin/auth-js/nextjs/server';
 
-  useEffect(() => {
-    koamishin.handleRedirectCallback()
-      .then(({ user }) => {
-        console.log('Signed in as:', user.name);
-        router.push('/dashboard');
-      })
-      .catch((err) => {
-        console.error('Sign-in failed:', err);
-        router.push('/login?error=auth_failed');
-      });
-  }, [router]);
+const isProtectedRoute = createRouteMatcher(['/dashboard(.*)']);
 
+export default koamishinMiddleware(async (auth, req) => {
+  if (isProtectedRoute(req)) {
+    await auth.protect();
+  }
+});
+
+export const config = {
+  matcher: [
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    '/(api|trpc)(.*)',
+  ],
+};
+TS,
+                'tip' => 'koamishinMiddleware() verifies the RS256 session token offline against your Portal JWKS endpoint and forwards claims to Server Components.',
+            ],
+            [
+                'number' => 6,
+                'title' => 'Add KoamishinProvider and Auth Components',
+                'subtitle' => 'Wrap app/layout.tsx in KoamishinProvider and render signed-in / signed-out controls inside Suspense.',
+                'file' => 'app/layout.tsx',
+                'language' => 'typescript',
+                'code' => <<<'TS'
+import type { Metadata } from 'next';
+import {
+  KoamishinProvider,
+  Show,
+  SignInButton,
+  SignUpButton,
+  UserButton,
+} from '@koamishin/auth-js/nextjs';
+import { Suspense } from 'react';
+import './globals.css';
+
+export const metadata: Metadata = {
+  title: 'Koamishin Next.js Quickstart',
+  description: 'Generated by create next app',
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
-    <div className="flex h-screen items-center justify-center font-sans">
-      <p className="text-sm font-medium text-gray-600 animate-pulse">
-        Completing secure sign-in with Koamishin...
-      </p>
-    </div>
+    <html lang="en" className="h-full antialiased">
+      <body className="min-h-full flex flex-col">
+        <KoamishinProvider>
+          <header className="flex justify-end items-center p-4 gap-4 h-16">
+            <Suspense>
+              <Show when="signed-out">
+                <SignInButton />
+                <SignUpButton>
+                  <button className="bg-purple-700 text-white rounded-full font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 cursor-pointer">
+                    Sign Up
+                  </button>
+                </SignUpButton>
+              </Show>
+              <Show when="signed-in">
+                <UserButton />
+              </Show>
+            </Suspense>
+          </header>
+          {children}
+        </KoamishinProvider>
+      </body>
+    </html>
   );
 }
 TS,
-                'tip' => 'Use koamishin.redirectToSignIn() and koamishin.redirectToSignUp() on your buttons to start the flow.',
+                'tip' => 'Show, SignInButton, SignUpButton, and UserButton mirror the Clerk Next.js layout pattern while running against your Koamishin Portal.',
             ],
         ];
     }

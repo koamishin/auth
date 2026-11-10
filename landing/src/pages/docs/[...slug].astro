@@ -41,6 +41,7 @@ const tabs = [
       ]),
       resolveGroup('Integrate & extend', [
         'docs/guides/laravel-sdk.mdx',
+        'docs/guides/nextjs-sdk.mdx',
         'docs/guides/customization.mdx',
         'docs/guides/extensibility.mdx',
       ]),
@@ -72,6 +73,7 @@ const isActiveGroup = (group) => group.items.some((item) => item.source === page
 const toc = (page.headings ?? []).filter((heading) => heading.depth >= 2 && heading.depth <= 3);
 const sdkOptions = [
   { label: 'Platform', source: 'docs/index.mdx', url: `${base}/docs/` },
+  { label: 'Next.js SDK', source: 'docs/guides/nextjs-sdk.mdx', url: `${base}/docs/guides/nextjs-sdk/` },
   { label: 'Laravel SDK', source: 'packages/koamishin-auth-php/README.md', url: `${base}/docs/repository/packages/koamishin-auth-php/README/` },
   { label: 'JavaScript SDK', source: 'packages/koamishin-auth-js/README.md', url: `${base}/docs/repository/packages/koamishin-auth-js/README/` },
 ];
