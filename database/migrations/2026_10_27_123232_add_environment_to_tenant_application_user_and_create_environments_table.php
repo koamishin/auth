@@ -18,7 +18,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('tenant_application_id')->constrained('tenant_applications')->cascadeOnDelete();
             $table->string('environment'); // development, production
-            $table->string('oauth_client_id')->nullable();
+            $table->uuid('oauth_client_id')->nullable();
             $table->foreign('oauth_client_id')->references('id')->on('oauth_clients')->nullOnDelete();
             $table->json('redirect_uris');
             $table->json('settings')->nullable(); // allow_signups, require_email_verification, allowed_social_providers, etc.

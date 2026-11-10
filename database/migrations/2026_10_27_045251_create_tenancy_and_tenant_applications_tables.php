@@ -35,7 +35,7 @@ return new class extends Migration
         Schema::create('tenant_applications', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('tenant_id')->constrained('tenants')->cascadeOnDelete();
-            $table->string('oauth_client_id')->nullable();
+            $table->uuid('oauth_client_id')->nullable();
             $table->foreign('oauth_client_id')->references('id')->on('oauth_clients')->nullOnDelete();
             $table->string('name');
             $table->string('framework')->default('laravel'); // laravel, nextjs, vue, react, nodejs, vanilla
