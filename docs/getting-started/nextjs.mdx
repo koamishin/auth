@@ -92,6 +92,8 @@ export function ProfileExample() {
 
 `getUser()` uses the access token held by the browser SDK and can fail if the session or network is unavailable. The SDK's `signOut()` removes this application's browser-stored tokens and session cookie; **it does not revoke tokens on the Portal or end the Portal's hosted session**. A later login may therefore reuse a Portal session, depending on the Portal's settings. Do not display access or refresh tokens in the UI or logs.
 
+For the available controls and hook APIs, see [Next.js components and hooks](../guides/nextjs-components.mdx). For the Portal and SDK session model and Clerk comparison, read [How Koamishin Auth works](../guides/how-koamishin-works.mdx).
+
 ## Troubleshooting
 
 - **Invalid authorization request or callback 404:** Check that the registered callback, the configured redirect URI, and the implemented route have the same scheme, host, port, and path. Correct duplicate slashes, then restart Next.js and start a new sign-in.
