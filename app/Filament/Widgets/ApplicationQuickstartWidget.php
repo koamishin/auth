@@ -412,7 +412,7 @@ export default function CallbackPage() {
   return <AuthenticateWithRedirectCallback afterSignInUrl="/dashboard" />;
 }
 TS,
-                'tip' => 'AuthenticateWithRedirectCallback exchanges the one-time authorization code, mints the short-lived __koamishin_session cookie, and redirects to your app.',
+                'tip' => 'Place this page at the path in your registered callback URL. For example, /api/auth/callback requires app/api/auth/callback/page.tsx. NEXT_PUBLIC_KOAMISHIN_REDIRECT_URI must match that registered URL exactly. Restart Next.js after changing it and start a new sign-in.',
             ],
             [
                 'number' => 5,

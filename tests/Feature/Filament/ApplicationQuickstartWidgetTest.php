@@ -42,6 +42,8 @@ test('quickstart widget initializes with application framework and renders step 
         ->assertSee('lib/auth.ts')
         ->call('setStep', 4)
         ->assertSee('app/auth/callback/page.tsx')
+        ->assertSee('app/api/auth/callback/page.tsx')
+        ->assertSee('NEXT_PUBLIC_KOAMISHIN_REDIRECT_URI must match')
         ->call('setStep', 5)
         ->assertSee('proxy.ts')
         ->assertSee('koamishinMiddleware')

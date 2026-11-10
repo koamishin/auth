@@ -166,6 +166,8 @@ Wrapping the header controls in `<Suspense>` allows Next.js Cache Components (`c
 
 Create `app/auth/callback/page.tsx` to complete the S256 PKCE authorization-code exchange, mint the `__koamishin_session` cookie, and redirect the signed-in user to `/dashboard` (or the original protected URL):
 
+The page path must match the callback URL registered in the Portal and `NEXT_PUBLIC_KOAMISHIN_REDIRECT_URI` exactly, including the port. For example, if the registered URL ends in `/api/auth/callback`, put this page at `app/api/auth/callback/page.tsx` instead. Restart the Next.js server after changing `.env.local` and begin a new sign-in; an old authorization code cannot be reused.
+
 ```tsx
 import { Suspense } from 'react';
 import { AuthenticateWithRedirectCallback } from '@koamishin/auth-js/nextjs';
