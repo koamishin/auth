@@ -157,14 +157,16 @@ class EnsureOAuthApplicationAccess
         if (is_string($requestedClient) && str_starts_with($requestedClient, 'pk_')) {
             $requestedEnvironment = $this->access->environmentForPublishableKey($requestedClient);
             if ($requestedEnvironment?->oauthClient && ! $requestedEnvironment->oauthClient->confidential()) {
-                abort_unless($request->query('code_challenge_method') === 'S256', 400, 'Public applications must use S256 PKCE.');
+                if ($request->query('code_challenge_method') !== 'S256') {
+                    return $this->authorizationError('pkce');
+                }
             }
         }
 
         try {
             $authorization = $this->server->validateAuthorizationRequest(app(ServerRequestInterface::class));
-        } catch (OAuthServerException) {
-            abort(400, 'Invalid application authorization request. Start again from the application.');
+        } catch (OAuthServerException $exception) {
+            return $this->authorizationError($exception->getErrorType());
         }
 
         $clientId = $authorization->getClient()->getIdentifier();
@@ -283,8 +285,8 @@ class EnsureOAuthApplicationAccess
         $psrRequest = app(ServerRequestInterface::class)->withMethod('GET')->withQueryParams($query);
         try {
             $authorization = $this->server->validateAuthorizationRequest($psrRequest);
-        } catch (OAuthServerException) {
-            abort(400, 'Invalid application authorization request. Start again from the application.');
+        } catch (OAuthServerException $exception) {
+            return $this->authorizationError($exception->getErrorType());
         }
         abort_unless(hash_equals($flow['client_id'], $authorization->getClient()->getIdentifier()), 403);
         $request->query->replace($query);
@@ -304,6 +306,14 @@ class EnsureOAuthApplicationAccess
         $response->headers->set('Referrer-Policy', 'no-referrer');
 
         return $response;
+    }
+
+    private function authorizationError(string $reason): Response
+    {
+        return response()->view('auth-authorization-error', ['reason' => $reason], 400, [
+            'Cache-Control' => 'no-store, private',
+            'Referrer-Policy' => 'no-referrer',
+        ]);
     }
 
     /** @param Closure(Request): Response $next */

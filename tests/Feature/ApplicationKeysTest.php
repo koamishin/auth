@@ -223,3 +223,53 @@ test('rotating the environment secret leaves the legacy oauth secret unchanged a
         ->and($application->getEnvironmentConfig()->fresh()->verifySecretKey($rotated))->toBeTrue()
         ->and($client->fresh()->secret)->toBe($legacyHash);
 });
+
+test('authorization errors explain callback and client checks without exposing request values', function (): void {
+    $tenant = Tenant::query()->create(['name' => 'OAuth error', 'slug' => 'oauth-error']);
+    $application = app(ApplicationProvisioner::class)->create($tenant, ['name' => 'Example']);
+    $environment = app(ApplicationProvisioner::class)->connectEnvironment($application, 'development', [
+        'framework' => 'nextjs',
+        'client_type' => 'public',
+        'redirect_uris' => ['http://localhost:3000/auth/callback'],
+    ]);
+    $query = [
+        'client_id' => $environment->publishable_key,
+        'redirect_uri' => 'http://localhost:3000/api/auth/callback',
+        'response_type' => 'code',
+        'scope' => 'openid',
+        'state' => 'private-state-value',
+        'code_challenge' => str_repeat('a', 43),
+        'code_challenge_method' => 'S256',
+    ];
+
+    get('/oauth/authorize?'.http_build_query($query))
+        ->assertBadRequest()
+        ->assertSee('application credentials or callback URL')
+        ->assertSee('Compare the requested')
+        ->assertDontSee('private-state-value')
+        ->assertDontSee($environment->publishable_key)
+        ->assertHeader('Referrer-Policy', 'no-referrer');
+});
+
+test('authorization errors distinguish unsupported scopes and missing S256', function (): void {
+    $tenant = Tenant::query()->create(['name' => 'OAuth checks', 'slug' => 'oauth-checks']);
+    $application = app(ApplicationProvisioner::class)->create($tenant, ['name' => 'Example']);
+    $environment = app(ApplicationProvisioner::class)->connectEnvironment($application, 'development', [
+        'framework' => 'nextjs',
+        'client_type' => 'public',
+        'redirect_uris' => ['http://localhost:3000/auth/callback'],
+    ]);
+    $query = [
+        'client_id' => $environment->publishable_key,
+        'redirect_uri' => 'http://localhost:3000/auth/callback',
+        'response_type' => 'code',
+        'scope' => 'unsupported-scope',
+        'state' => 'state',
+        'code_challenge' => str_repeat('a', 43),
+        'code_challenge_method' => 'S256',
+    ];
+
+    get('/oauth/authorize?'.http_build_query($query))->assertBadRequest()->assertSee('unsupported or malformed scope');
+    get('/oauth/authorize?'.http_build_query([...$query, 'scope' => 'openid', 'code_challenge_method' => 'plain']))
+        ->assertBadRequest()->assertSee('must use S256 PKCE');
+});
