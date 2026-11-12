@@ -16,4 +16,6 @@ test('cross-origin browser SDK requests receive CORS headers on OAuth and OIDC e
     'oidc discovery' => ['GET', '/.well-known/openid-configuration'],
     'userinfo' => ['GET', '/api/oauth/userinfo'],
     'session token mint' => ['POST', '/api/oauth/session-token'],
+    'user API' => ['GET', '/api/user'],
+    'grant family revocation' => ['POST', '/api/oauth/revoke-family'],
 ]);

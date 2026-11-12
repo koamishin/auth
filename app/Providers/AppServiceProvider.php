@@ -11,7 +11,8 @@ use App\Models\Client;
 use App\Models\User;
 use App\Observers\UserObserver;
 use App\Services\OAuth\ApplicationAuthentication;
-use App\Services\OAuth\PassportBridgeClientRepository;
+use App\Services\OAuth\OAuthBootstrapGuard;
+use App\Services\OAuth\OwnedAuthorizationServerFactory;
 use BladeUI\Icons\Factory;
 use Carbon\CarbonImmutable;
 use Filament\Panel;
@@ -27,7 +28,6 @@ use Inertia\Inertia;
 use Laravel\Passkeys\Actions\GenerateRegistrationOptions;
 use Laravel\Passkeys\Actions\GenerateVerificationOptions;
 use Laravel\Passkeys\Actions\StorePasskey;
-use Laravel\Passport\Bridge\ClientRepository;
 use Laravel\Passport\Passport;
 use Laravel\Pennant\FeatureManager;
 use Nwidart\Modules\Facades\Module;
@@ -41,7 +41,7 @@ class AppServiceProvider extends ServiceProvider
     #[\Override]
     public function register(): void
     {
-        $this->app->bind(ClientRepository::class, PassportBridgeClientRepository::class);
+        $this->app->make(OAuthBootstrapGuard::class)->register($this->app);
         $this->registerFilamentPlugins();
         $this->registerPasskeyOptions();
     }
@@ -75,6 +75,7 @@ class AppServiceProvider extends ServiceProvider
         $this->configureDefaults();
         $this->configureFeatures();
         $this->configurePassport();
+        $this->app->make(OwnedAuthorizationServerFactory::class)->markReady();
         $this->configureBrandIcons();
 
         \Filament\Resources\Resource::scopeToTenant(false);

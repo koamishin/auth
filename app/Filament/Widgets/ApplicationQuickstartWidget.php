@@ -350,6 +350,8 @@ PHP,
      */
     private function getNextJsSteps(string $portalUrl, string $clientId, string $callback, string $env): array
     {
+        $applicationId = $this->record instanceof TenantApplication ? $this->getApplicationId() : 'your-application-id';
+
         $installCmd = match ($this->packageManager) {
             'pnpm' => 'pnpm add @koamishin/auth-js',
             'yarn' => 'yarn add @koamishin/auth-js',
@@ -378,8 +380,9 @@ NEXT_PUBLIC_KOAMISHIN_PORTAL_URL={$portalUrl}
 NEXT_PUBLIC_KOAMISHIN_ENVIRONMENT={$env}
 NEXT_PUBLIC_KOAMISHIN_PUBLISHABLE_KEY={$clientId}
 NEXT_PUBLIC_KOAMISHIN_REDIRECT_URI={$callback}
+KOAMISHIN_APPLICATION_ID={$applicationId}
 ENV,
-                'tip' => 'Public variables in Next.js require the NEXT_PUBLIC_ prefix to be accessible in browser client components.',
+                'tip' => 'Public variables in Next.js require the NEXT_PUBLIC_ prefix. Set the application ID for server-side application binding; use a verifier that rejects missing and mismatched claims.',
             ],
             [
                 'number' => 3,

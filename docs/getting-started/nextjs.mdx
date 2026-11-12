@@ -7,6 +7,8 @@ description: Connect a Next.js App Router application to Koamishin Auth, using t
 
 Connect a Next.js App Router application to your Koamishin Auth Portal using an OAuth authorization-code flow with S256 PKCE. You can start with the [example Next.js template](https://github.com/koamishin/koamishin-auth-nextjs-template) or add the SDK to an existing application. The template includes a callback page, route protection, session examples, and sign-in and sign-out controls.
 
+> **Security limitation:** In `@koamishin/auth-js` v1.3.0, `auth()` can trust forged identity headers when a request bypasses the proxy. Its session-token verifier also accepts missing application or environment claims even when those values are configured. Do not use this SDK version as the sole authorization boundary for sensitive routes. A fix is under development and has not yet been released.
+
 ## Before you begin
 
 1. [Install Koamishin Auth](installation.mdx) and create an organization and application in the Portal. Start the Portal and make sure your browser and Next.js server can reach it.
@@ -32,9 +34,12 @@ NEXT_PUBLIC_KOAMISHIN_PORTAL_URL=http://localhost:8000
 NEXT_PUBLIC_KOAMISHIN_ENVIRONMENT=development
 NEXT_PUBLIC_KOAMISHIN_PUBLISHABLE_KEY=pk_test_your_publishable_key
 NEXT_PUBLIC_KOAMISHIN_REDIRECT_URI=http://localhost:3000/auth/callback
+KOAMISHIN_APPLICATION_ID=your_application_id
 ```
 
 Use the same Portal origin as `APP_URL`, the environment corresponding to the key, and the callback registered above. The template's standard callback page is `app/auth/callback/page.tsx`. Check the template's README for its current dependencies and available routes.
+
+Set `KOAMISHIN_APPLICATION_ID` to the Portal application ID for server-side application binding. The publishable key's environment alone does not distinguish applications. This setting does not fix the v1.3.0 limitations described above.
 
 ```bash
 bun run dev

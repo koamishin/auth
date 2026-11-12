@@ -6,9 +6,13 @@ namespace App\Services\OAuth;
 
 use App\Models\TenantApplicationEnvironment;
 use Illuminate\Contracts\Hashing\Hasher;
+use Illuminate\Hashing\Argon2IdHasher;
+use Illuminate\Hashing\ArgonHasher;
+use Illuminate\Hashing\BcryptHasher;
 use Laravel\Passport\Bridge\ClientRepository as BaseBridgeClientRepository;
 use Laravel\Passport\ClientRepository as ClientModelRepository;
 use League\OAuth2\Server\Entities\ClientEntityInterface;
+use LogicException;
 
 class PassportBridgeClientRepository extends BaseBridgeClientRepository
 {
@@ -17,6 +21,10 @@ class PassportBridgeClientRepository extends BaseBridgeClientRepository
         Hasher $hasher,
         private readonly ApplicationAccess $access,
     ) {
+        if ($clients::class !== ClientModelRepository::class || $access::class !== ApplicationAccess::class
+            || ! in_array($hasher::class, [BcryptHasher::class, ArgonHasher::class, Argon2IdHasher::class], true)) {
+            throw new LogicException('Custom OAuth client repository dependencies are unsupported.');
+        }
         parent::__construct($clients, $hasher);
     }
 

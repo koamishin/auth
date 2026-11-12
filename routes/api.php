@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\ManagementOrganizationController;
 use App\Http\Controllers\Api\V1\ManagementSessionController;
 use App\Http\Controllers\Api\V1\ManagementUserController;
 use App\Http\Controllers\Auth\OpenIdConnectController;
+use App\Http\Controllers\Auth\RevokeGrantFamilyController;
 use App\Http\Controllers\Auth\SessionTokenController;
 use App\Http\Middleware\AuthenticateManagementClient;
 use Illuminate\Support\Facades\Route;
@@ -23,6 +24,10 @@ Route::get('/oauth/userinfo', [OpenIdConnectController::class, 'userinfo'])
 Route::post('/oauth/session-token', [SessionTokenController::class, 'store'])
     ->middleware(['auth:api', 'throttle:60,1'])
     ->name('api.oauth.session-token');
+
+Route::post('/oauth/revoke-family', RevokeGrantFamilyController::class)
+    ->middleware('throttle:60,1')
+    ->name('api.oauth.revoke-family');
 
 Route::prefix('v1')->middleware('throttle:60,1')->group(function (): void {
     Route::get('/organization', [ManagementOrganizationController::class, 'show'])

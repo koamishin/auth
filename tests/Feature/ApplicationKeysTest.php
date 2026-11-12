@@ -7,6 +7,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Services\OAuth\ApplicationProvisioner;
 use Filament\Facades\Filament;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Laravel\Passport\Client;
@@ -181,6 +182,10 @@ test('publishable keys complete oauth authorization and token refresh for each c
     }
 
     $tokens = postJson('/oauth/token', $payload)->assertOk();
+    $revocationToken = $tokens->json('revocation_token');
+    expect($revocationToken)->toBeString()->not->toBe('');
+    $storedHash = DB::table('oauth_grant_families')->where('client_id', $environment->oauth_client_id)->value('revocation_hash');
+    expect($storedHash)->toBe(hash('sha256', $revocationToken))->not->toBe($revocationToken);
     withToken($tokens->json('access_token'))->getJson('/api/oauth/userinfo')
         ->assertOk()->assertJsonPath('application_id', (string) $application->id)
         ->assertJsonPath('environment', 'development');
@@ -192,7 +197,20 @@ test('publishable keys complete oauth authorization and token refresh for each c
     if ($clientType === 'confidential') {
         $refresh['client_secret'] = $credentials['development']['secret_key'];
     }
-    postJson('/oauth/token', $refresh)->assertOk();
+    $renewed = postJson('/oauth/token', $refresh)->assertOk()->assertJsonMissingPath('revocation_token');
+    postJson('/oauth/token', $refresh)->assertStatus(400)->assertJsonPath('error', 'invalid_grant');
+    postJson('/api/oauth/revoke-family', ['revocation_token' => $refresh['refresh_token']])->assertUnprocessable();
+    postJson('/api/oauth/revoke-family', ['revocation_token' => $revocationToken.'bad'])->assertUnauthorized();
+    $wrongCredential = substr($revocationToken, 0, -1).(str_ends_with($revocationToken, 'a') ? 'b' : 'a');
+    postJson('/api/oauth/revoke-family', ['revocation_token' => $wrongCredential])->assertUnauthorized();
+    expect(DB::table('oauth_grant_families')->where('client_id', $environment->oauth_client_id)->value('revoked_at'))->toBeNull();
+    postJson('/api/oauth/revoke-family', ['revocation_token' => $revocationToken])->assertNoContent();
+    postJson('/api/oauth/revoke-family', ['revocation_token' => $revocationToken])->assertHeader('Cache-Control', 'no-store, private');
+    postJson('/api/oauth/revoke-family', ['revocation_token' => $revocationToken])->assertNoContent();
+    app('auth')->forgetGuards();
+    withToken($renewed->json('access_token'))->getJson('/api/oauth/userinfo')->assertUnauthorized();
+    postJson('/oauth/token', [...$refresh, 'refresh_token' => $renewed->json('refresh_token')])
+        ->assertStatus(400)->assertJsonPath('error', 'invalid_grant');
 })->with(['public', 'confidential']);
 
 test('rotating the environment secret leaves the legacy oauth secret unchanged and shows the new key', function (): void {

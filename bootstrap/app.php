@@ -11,13 +11,17 @@ use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RedirectIfApplicationFlowAuthenticated;
 use App\Http\Middleware\RedirectPortalRegistrationAlias;
+use App\Services\OAuth\OAuthBootstrapGuard;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
+use Laravel\Passport\PersonalAccessTokenFactory;
+use League\OAuth2\Server\AuthorizationServer;
+use League\OAuth2\Server\ResourceServer;
 
-return Application::configure(basePath: dirname(__DIR__))
+$app = Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         api: __DIR__.'/../routes/api.php',
@@ -55,3 +59,15 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         //
     })->create();
+
+$oauthGuard = new OAuthBootstrapGuard;
+$app->instance(OAuthBootstrapGuard::class, $oauthGuard);
+foreach ([AuthorizationServer::class, ResourceServer::class, PersonalAccessTokenFactory::class] as $abstract) {
+    $app->beforeResolving($abstract, function () use ($oauthGuard): void {
+        if (! $oauthGuard->isRegistered()) {
+            throw new LogicException('OAuth services cannot be resolved before grant family protection is registered.');
+        }
+    });
+}
+
+return $app;
