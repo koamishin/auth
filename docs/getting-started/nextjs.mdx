@@ -7,7 +7,7 @@ description: Connect a Next.js App Router application to Koamishin Auth, using t
 
 Connect a Next.js App Router application to your Koamishin Auth Portal using an OAuth authorization-code flow with S256 PKCE. You can start with the [example Next.js template](https://github.com/koamishin/koamishin-auth-nextjs-template) or add the SDK to an existing application. The template includes a callback page, route protection, session examples, and sign-in and sign-out controls.
 
-> **Security limitation:** In `@koamishin/auth-js` v1.3.0, `auth()` can trust forged identity headers when a request bypasses the proxy. Its session-token verifier also accepts missing application or environment claims even when those values are configured. Do not use this SDK version as the sole authorization boundary for sensitive routes. A fix is under development and has not yet been released.
+> **Security in v2.0.0:** In `@koamishin/auth-js` v2.0.0, session cookies use client-scoped `__Host-` cookies, `auth()` strips untrusted forwarding headers and verifies RS256 JWTs against Portal JWKS offline, and verification strictly enforces matching `application_id` and `environment` claims. Token families are revoked on the Portal during sign-out.
 
 ## Before you begin
 
@@ -39,7 +39,7 @@ KOAMISHIN_APPLICATION_ID=your_application_id
 
 Use the same Portal origin as `APP_URL`, the environment corresponding to the key, and the callback registered above. The template's standard callback page is `app/auth/callback/page.tsx`. Check the template's README for its current dependencies and available routes.
 
-Set `KOAMISHIN_APPLICATION_ID` to the Portal application ID for server-side application binding. The publishable key's environment alone does not distinguish applications. This setting does not fix the v1.3.0 limitations described above.
+Set `KOAMISHIN_APPLICATION_ID` to the Portal application ID for server-side application binding. Verification strictly enforces that session tokens match both the configured application and environment.
 
 ```bash
 bun run dev
@@ -95,7 +95,7 @@ export function ProfileExample() {
 }
 ```
 
-`getUser()` uses the access token held by the browser SDK and can fail if the session or network is unavailable. The SDK's `signOut()` removes this application's browser-stored tokens and session cookie; **it does not revoke tokens on the Portal or end the Portal's hosted session**. A later login may therefore reuse a Portal session, depending on the Portal's settings. Do not display access or refresh tokens in the UI or logs.
+`getUser()` uses the access token held by the browser SDK and can fail if the session or network is unavailable. The SDK's `signOut()` removes this application's browser-stored tokens and session cookie, and revokes the active token family on the Portal via `/api/oauth/revoke-family`. A later login starts a fresh authorization flow. Do not display access or refresh tokens in the UI or logs.
 
 For the available controls and hook APIs, see [Next.js components and hooks](../guides/nextjs-components.mdx). For the Portal and SDK session model and Clerk comparison, read [How Koamishin Auth works](../guides/how-koamishin-works.mdx).
 
