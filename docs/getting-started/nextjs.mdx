@@ -61,7 +61,9 @@ export function ProfileExample() {
     const { user, isLoaded } = useUser();
     const { client } = useKoamishin();
     const { signOut } = useAuth();
-    const [refreshedUser, setRefreshedUser] = useState<KoamishinUser | null>(null);
+    const [refreshedUser, setRefreshedUser] = useState<KoamishinUser | null>(
+        null,
+    );
     const [error, setError] = useState<string | null>(null);
     const profile = refreshedUser ?? user;
 
@@ -83,8 +85,12 @@ export function ProfileExample() {
             <h2>{profile.name}</h2>
             <p>{profile.email}</p>
             {error && <p role="alert">{error}</p>}
-            <button type="button" onClick={refreshProfile}>Refresh from Portal</button>
-            <button type="button" onClick={() => signOut({ redirectUrl: '/' })}>Sign out</button>
+            <button type="button" onClick={refreshProfile}>
+                Refresh from Portal
+            </button>
+            <button type="button" onClick={() => signOut({ redirectUrl: '/' })}>
+                Sign out
+            </button>
         </section>
     );
 }

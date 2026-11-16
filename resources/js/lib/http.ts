@@ -6,9 +6,12 @@ const http = axios.create({
     },
 });
 
-const token = document
-    .querySelector('meta[name="csrf-token"]')
-    ?.getAttribute('content');
+const token =
+    typeof document !== 'undefined'
+        ? document
+              .querySelector('meta[name="csrf-token"]')
+              ?.getAttribute('content')
+        : null;
 if (token) {
     http.defaults.headers.common['X-CSRF-TOKEN'] = token;
 }

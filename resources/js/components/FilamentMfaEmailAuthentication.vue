@@ -74,9 +74,10 @@ const openEnable = async () => {
     } catch (e: any) {
         const defaultMessage = 'Failed to send code';
         const validationMessage = e.response?.data?.errors?.email?.[0];
-        error.value =
+        const message =
             validationMessage ?? e.response?.data?.message ?? defaultMessage;
-        toast.error(error.value);
+        error.value = message;
+        toast.error(message);
     } finally {
         isSending.value = false;
     }
@@ -91,8 +92,9 @@ const resend = async () => {
         await http.post(resendRoute.url());
         toast.success('A new code has been sent to your email address.');
     } catch (e: any) {
-        error.value = e.response?.data?.message ?? 'Failed to resend code';
-        toast.error(error.value);
+        const message = e.response?.data?.message ?? 'Failed to resend code';
+        error.value = message;
+        toast.error(message);
     } finally {
         isSending.value = false;
     }
@@ -111,9 +113,10 @@ const enable = async () => {
         modalOpen.value = false;
         toast.success('Email authentication has been enabled.');
     } catch (e: any) {
-        error.value = e.response?.data?.message ?? 'Failed to enable';
+        const message = e.response?.data?.message ?? 'Failed to enable';
+        error.value = message;
         fieldError.value = e.response?.data?.errors?.code?.[0] ?? null;
-        toast.error(error.value);
+        toast.error(message);
     } finally {
         isSubmitting.value = false;
     }
@@ -128,8 +131,9 @@ const disable = async () => {
         emit('update:enabled', false);
         toast.success('Email authentication has been disabled.');
     } catch (e: any) {
-        error.value = e.response?.data?.message ?? 'Failed to disable';
-        toast.error(error.value);
+        const message = e.response?.data?.message ?? 'Failed to disable';
+        error.value = message;
+        toast.error(message);
     }
 };
 </script>
@@ -178,7 +182,7 @@ const disable = async () => {
             <div v-else class="space-y-4">
                 <div class="space-y-2">
                     <div class="flex justify-center">
-                        <InputOTP v-model="code" :maxLength="6">
+                        <InputOTP v-model="code" :maxlength="6">
                             <InputOTPGroup>
                                 <InputOTPSlot
                                     v-for="slot in 6"

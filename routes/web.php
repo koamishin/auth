@@ -174,7 +174,21 @@ Route::middleware(['web', 'auth'])->post('admin/{tenant:slug}/toggle-env/{applic
         'tenant' => $tenant,
     ]);
 
-    if (! is_string($redirect) || $redirect === '' || ! str_starts_with($redirect, url('/'))) {
+    $baseUrl = rtrim(url('/'), '/');
+    $parsedRedirect = is_string($redirect) ? parse_url($redirect) : false;
+    $parsedBase = parse_url($baseUrl);
+    $isSameOrigin = is_array($parsedRedirect)
+        && (
+            (! isset($parsedRedirect['host']) && str_starts_with((string) $redirect, '/'))
+            || (
+                isset($parsedRedirect['host'], $parsedBase['host'])
+                && strcasecmp($parsedRedirect['host'], $parsedBase['host']) === 0
+                && ($parsedRedirect['scheme'] ?? $parsedBase['scheme'] ?? null) === ($parsedBase['scheme'] ?? null)
+                && ($parsedRedirect['port'] ?? null) === ($parsedBase['port'] ?? null)
+            )
+        );
+
+    if (! is_string($redirect) || $redirect === '' || ! $isSameOrigin) {
         $redirect = $fallback;
     }
 

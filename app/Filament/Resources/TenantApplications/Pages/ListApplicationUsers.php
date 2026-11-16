@@ -20,7 +20,6 @@ use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Concerns\InteractsWithRecord;
 use Filament\Resources\Pages\Page;
-use Filament\Support\Components\Attributes\Unexposed;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
@@ -50,7 +49,6 @@ class ListApplicationUsers extends Page implements HasTable
 
     protected string $view = 'filament.resources.tenant-applications.pages.list-application-users';
 
-    #[Unexposed]
     public function mount(int|string $record): void
     {
         $this->record = $this->resolveRecord($record);
@@ -78,7 +76,7 @@ class ListApplicationUsers extends Page implements HasTable
      *
      * @return array<int, Action>
      */
-    #[	Override]
+    #[\Override]
     protected function getHeaderActions(): array
     {
         return [

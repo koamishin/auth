@@ -145,10 +145,12 @@ class FeatureFlagResource extends Resource
 
                         $count = FeatureRegistry::rolloutForAllUsers($data['feature'], $active);
 
+                        $featureName = $feature->name ?? $data['feature'];
+
                         Notification::make()
                             ->success()
                             ->title('Rollout Complete')
-                            ->body(($active ? 'Enabled' : 'Disabled')." '{$feature->name}' for {$count} users.")
+                            ->body(($active ? 'Enabled' : 'Disabled')." '{$featureName}' for {$count} users.")
                             ->send();
                     }),
                 Action::make('clear_overrides')
@@ -169,10 +171,12 @@ class FeatureFlagResource extends Resource
                         $feature = FeatureRegistry::get($data['feature']);
                         $count = FeatureRegistry::clearUserOverrides($data['feature']);
 
+                        $featureName = $feature->name ?? $data['feature'];
+
                         Notification::make()
                             ->success()
                             ->title('Overrides Cleared')
-                            ->body("Cleared {$count} user overrides for '{$feature->name}'. Users will now use role-based settings.")
+                            ->body("Cleared {$count} user overrides for '{$featureName}'. Users will now use role-based settings.")
                             ->send();
                     }),
             ]);

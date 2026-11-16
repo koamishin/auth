@@ -16,21 +16,21 @@ export REDIS_HOST REDIS_PORT DB_HOST DB_PORT
 initialStuff() {
     echo "Container mode: $container_mode"
 
-    if [ ! -d "/var/www/html/vendor/laravel/horizon" ]; then
+    if [ ! -d "/app/vendor/laravel/horizon" ]; then
         echo "Horizon not installed. Disabling Horizon supervisor config."
         if [ -f "/etc/supervisor/conf.d/supervisord.horizon.conf" ]; then
             echo "" > /etc/supervisor/conf.d/supervisord.horizon.conf
         fi
     fi
 
-    if [ ! -d "/var/www/html/vendor/laravel/pulse" ]; then
+    if [ ! -d "/app/vendor/laravel/pulse" ]; then
         echo "Pulse not installed. Disabling Pulse supervisor config."
         if [ -f "/etc/supervisor/conf.d/supervisord.pulse.conf" ]; then
             echo "" > /etc/supervisor/conf.d/supervisord.pulse.conf
         fi
     fi
 
-    if [ ! -d "/var/www/html/vendor/laravel/telescope" ]; then
+    if [ ! -d "/app/vendor/laravel/telescope" ]; then
         if [ -f "/etc/supervisor/conf.d/supervisord.telescope.conf" ]; then
             echo "Telescope not installed. Disabling Telescope supervisor config."
             echo "" > /etc/supervisor/conf.d/supervisord.telescope.conf
@@ -90,7 +90,7 @@ check_connections() {
     # Check Storage
     echo "Testing Storage permissions..."
     php -r "
-        \$path = '/var/www/html/storage/framework/testing/connection_test';
+        \$path = '/app/storage/framework/testing/connection_test';
         @mkdir(dirname(\$path), 0777, true);
         if (@file_put_contents(\$path, 'test') !== false && @unlink(\$path)) {
             echo 'Storage is writable and readable.' . PHP_EOL;

@@ -40,6 +40,11 @@ class SocialAccount extends Model
         'expires_at',
     ];
 
+    protected $hidden = [
+        'access_token',
+        'refresh_token',
+    ];
+
     /**
      * @return array<string, string>
      */

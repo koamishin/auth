@@ -13,6 +13,7 @@ export function resolveLayout(name: string): typeof AppLayout | null {
         case name === 'Dashboard':
         case name.startsWith('auth/'):
         case name.startsWith('settings/'):
+        case name.startsWith('setup/'):
             return null;
         default:
             return AppLayout;

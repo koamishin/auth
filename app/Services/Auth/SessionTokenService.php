@@ -251,8 +251,19 @@ class SessionTokenService
      */
     private function sign(User $user, array $claims, int $issuedAt, int $expiresAt): string
     {
-        $privateKeyPath = storage_path('oauth-private.key');
-        abort_unless(file_exists($privateKeyPath), 503, 'Session tokens are not configured.');
+        $configuredPrivateKey = config('passport.private_key');
+        $privateKeyPath = is_string($configuredPrivateKey) && $configuredPrivateKey !== ''
+            ? $configuredPrivateKey
+            : storage_path('oauth-private.key');
+        abort_unless(str_contains($privateKeyPath, '-----BEGIN') || file_exists($privateKeyPath), 503, 'Session tokens are not configured.');
+
+        $configuredPublicKey = config('passport.public_key');
+        $publicKeyPath = is_string($configuredPublicKey) && $configuredPublicKey !== ''
+            ? $configuredPublicKey
+            : storage_path('oauth-public.key');
+        $publicKey = str_contains($publicKeyPath, '-----BEGIN')
+            ? $publicKeyPath
+            : (file_exists($publicKeyPath) ? (string) file_get_contents($publicKeyPath) : '');
 
         $builder = (new Builder(new JoseEncoder, ChainedFormatter::withUnixTimestampDates()))
             ->issuedBy(rtrim((string) config('app.url'), '/'))
@@ -262,13 +273,17 @@ class SessionTokenService
             ->canOnlyBeUsedAfter(new DateTimeImmutable('@'.$issuedAt))
             ->expiresAt(new DateTimeImmutable('@'.$expiresAt))
             // The same key identifier the JWKS endpoint publishes.
-            ->withHeader('kid', hash('sha256', (string) file_get_contents(storage_path('oauth-public.key'))));
+            ->withHeader('kid', hash('sha256', $publicKey));
 
         foreach ($claims as $name => $value) {
             // The builder is immutable; every call returns a new one.
             $builder = $builder->withClaim($name, $value);
         }
 
-        return $builder->getToken(new Sha256, InMemory::file($privateKeyPath))->toString();
+        $signingKey = str_contains($privateKeyPath, '-----BEGIN')
+            ? InMemory::plainText($privateKeyPath)
+            : InMemory::file($privateKeyPath);
+
+        return $builder->getToken(new Sha256, $signingKey)->toString();
     }
 }

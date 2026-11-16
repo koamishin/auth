@@ -29,7 +29,7 @@ class OpenIdConnectController extends Controller
             'token_endpoint' => "{$baseUrl}/oauth/token",
             'userinfo_endpoint' => "{$baseUrl}/api/oauth/userinfo",
             'jwks_uri' => "{$baseUrl}/oauth/jwks",
-            'scopes_supported' => ['openid', 'profile', 'email', 'roles'],
+            'scopes_supported' => ['openid', 'profile', 'email', 'phone', 'wallet', 'roles', 'metadata:public'],
             'response_types_supported' => ['code'],
             'subject_types_supported' => ['public'],
             'id_token_signing_alg_values_supported' => ['RS256'],
@@ -44,13 +44,16 @@ class OpenIdConnectController extends Controller
      */
     public function jwks(): JsonResponse
     {
-        $keyPath = storage_path('oauth-public.key');
+        $configuredKey = config('passport.public_key');
+        $keyPath = is_string($configuredKey) && $configuredKey !== '' ? $configuredKey : storage_path('oauth-public.key');
+        $publicKey = str_contains($keyPath, '-----BEGIN')
+            ? $keyPath
+            : (file_exists($keyPath) ? file_get_contents($keyPath) : false);
 
-        if (! file_exists($keyPath)) {
+        if (! is_string($publicKey) || $publicKey === '') {
             return response()->json(['keys' => []], 500);
         }
 
-        $publicKey = file_get_contents($keyPath);
         $res = openssl_pkey_get_public($publicKey);
 
         if ($res === false) {
@@ -89,7 +92,7 @@ class OpenIdConnectController extends Controller
         $user = $request->user();
         $token = $user->token();
 
-        if (! $token instanceof AccessToken || ($token->oauth_client_id ?? '') === '') {
+        if (! $token instanceof AccessToken || ($token->oauth_client_id ?? '') === '' || ! $token->can('openid')) {
             abort(403);
         }
 
@@ -139,9 +142,8 @@ class OpenIdConnectController extends Controller
                 ->where('environment', $environment->environment)
                 ->where('user_id', $user->getKey())
                 ->value('role');
-            abort_unless(is_string($role) && $role !== '', 403);
 
-            $claims['roles'] = [$role];
+            $claims['roles'] = [is_string($role) && $role !== '' ? $role : 'member'];
             $claims['permissions'] = [];
         }
 

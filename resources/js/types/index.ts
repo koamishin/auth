@@ -10,6 +10,15 @@ export type AppPageProps<
 > = T & {
     name: string;
     auth: Auth;
+    settingsFeatures?: {
+        profile?: boolean;
+        security?: boolean;
+        appearance?: boolean;
+        accountDeletion?: boolean;
+        password?: boolean;
+        passkeys?: boolean;
+        [key: string]: boolean | undefined;
+    };
     sidebarOpen: boolean;
     authLayout: 'simple' | 'card' | 'split';
     authColorTheme?: ColorTheme | null;
@@ -17,3 +26,5 @@ export type AppPageProps<
     appearancePreview?: { environment: string; backUrl: string } | null;
     [key: string]: unknown;
 };
+
+export type SharedData = AppPageProps;

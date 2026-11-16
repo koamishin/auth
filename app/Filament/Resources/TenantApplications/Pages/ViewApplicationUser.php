@@ -20,7 +20,6 @@ use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Concerns\InteractsWithRecord;
 use Filament\Resources\Pages\Page;
-use Filament\Support\Components\Attributes\Unexposed;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -40,10 +39,8 @@ class ViewApplicationUser extends Page
 
     protected string $view = 'filament.resources.tenant-applications.pages.view-application-user';
 
-    #[Unexposed]
     public int|string $userId;
 
-    #[Unexposed]
     public function mount(int|string $record, int|string $userId): void
     {
         $this->record = $this->resolveRecord($record);

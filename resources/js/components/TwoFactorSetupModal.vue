@@ -241,14 +241,18 @@ watch(
 
                 <template v-else>
                     <Form
-                        v-bind="
-                            enableApp.form({ code: code, encrypted: encrypted })
-                        "
+                        v-bind="enableApp.form()"
                         reset-on-error
                         @finish="code = ''"
                         @success="isOpen = false"
                         v-slot="{ errors, processing }"
                     >
+                        <input type="hidden" name="code" :value="code" />
+                        <input
+                            type="hidden"
+                            name="encrypted"
+                            :value="encrypted ?? ''"
+                        />
                         <div
                             ref="pinInputContainerRef"
                             class="relative w-full space-y-3"

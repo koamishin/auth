@@ -6,6 +6,7 @@ namespace App\Jobs;
 
 use App\Models\WebhookDelivery;
 use App\Models\WebhookEndpoint;
+use App\Support\WebhookUrlValidator;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -109,8 +110,21 @@ class DispatchWebhookJob implements ShouldQueue
             'attempts' => $this->attempts(),
         ]);
 
+        $urlError = WebhookUrlValidator::validate($this->endpoint->url);
+        if ($urlError !== null) {
+            $delivery->update([
+                'response_status' => 0,
+                'response_body' => $urlError,
+                'status' => 'failed',
+                'attempts' => $this->attempts(),
+            ]);
+
+            return;
+        }
+
         try {
             $response = Http::timeout(10)
+                ->withOptions(['allow_redirects' => false])
                 ->withHeaders($headers)
                 ->withBody($rawPayload, 'application/json')
                 ->post($this->endpoint->url);

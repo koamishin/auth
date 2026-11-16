@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, router, useForm } from '@inertiajs/vue3';
 import { toast } from 'vue-sonner';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
@@ -32,7 +32,7 @@ const toggleFeature = (key: string, active: boolean) => {
         return;
     }
 
-    form.patch(
+    router.patch(
         featuresSettingsUrl,
         {
             feature: key,
@@ -44,7 +44,7 @@ const toggleFeature = (key: string, active: boolean) => {
                 toast.success(
                     `${props.features.find((f) => f.key === key)?.name || key} ${active ? 'enabled' : 'disabled'}`,
                 ),
-            onError: (errors) => {
+            onError: (errors: Record<string, string>) => {
                 if (errors.message) {
                     toast.error(errors.message);
                 } else {
@@ -60,7 +60,7 @@ const unavailableFeatures = () => props.features.filter((f) => !f.available);
 </script>
 
 <template>
-    <AppLayout title="Feature settings" :breadcrumbs="breadcrumbs">
+    <AppLayout :breadcrumbs="breadcrumbs">
         <Head title="Feature settings" />
 
         <SettingsLayout>

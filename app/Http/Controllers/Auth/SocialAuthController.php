@@ -102,7 +102,12 @@ class SocialAuthController extends Controller
             return $this->linkAccount($providerEnum, $socialUser, $credentials, $signedIn);
         }
 
-        $user = DB::transaction(function () use ($providerEnum, $socialUser, $credentials, $verifiedEmail): User {
+        $environment = $request->attributes->get('koamishin.application_environment');
+        $identityNamespace = $environment instanceof TenantApplicationEnvironment
+            ? $environment->identityNamespace()
+            : User::PORTAL_IDENTITY_NAMESPACE;
+
+        $user = DB::transaction(function () use ($providerEnum, $socialUser, $credentials, $verifiedEmail, $environment, $identityNamespace): User {
             $existingAccount = SocialAccount::query()
                 ->where('provider', $providerEnum->value)
                 ->where('provider_id', $socialUser->getId())
@@ -112,7 +117,11 @@ class SocialAuthController extends Controller
             if ($existingAccount instanceof SocialAccount) {
                 $user = $existingAccount->user;
             } else {
-                $user = User::query()->where('email', $socialUser->getEmail())->first();
+                /** @var User|null $user */
+                $user = User::query()
+                    ->whereIn('identity_namespace', [$identityNamespace, User::PORTAL_IDENTITY_NAMESPACE])
+                    ->where('email', $socialUser->getEmail())
+                    ->first();
 
                 if ($user instanceof User) {
                     if (! $verifiedEmail) {
@@ -123,11 +132,15 @@ class SocialAuthController extends Controller
                     }
                 } else {
                     abort_unless($this->applicationFeaturesSettings->registration_enabled, 403, 'Registration is disabled.');
-                    $environment = request()->attributes->get('koamishin.application_environment');
                     if ($environment instanceof TenantApplicationEnvironment) {
                         abort_unless(app(ApplicationAuthentication::class)->allowsSignups($environment), 403, 'Registration is closed for this application.');
                     }
-                    $user = $this->createUserFromSocial($socialUser, $verifiedEmail);
+                    $user = $this->createUserFromSocial(
+                        $socialUser,
+                        $verifiedEmail,
+                        $identityNamespace,
+                        $environment instanceof TenantApplicationEnvironment ? $environment : null,
+                    );
                 }
             }
 
@@ -220,8 +233,12 @@ class SocialAuthController extends Controller
         return $manager->buildProvider($provider, $credentials);
     }
 
-    private function createUserFromSocial(\Laravel\Socialite\Contracts\User $socialUser, bool $verifiedEmail): User
-    {
+    private function createUserFromSocial(
+        \Laravel\Socialite\Contracts\User $socialUser,
+        bool $verifiedEmail,
+        string $identityNamespace = User::PORTAL_IDENTITY_NAMESPACE,
+        ?TenantApplicationEnvironment $environment = null,
+    ): User {
         $defaultRole = $this->applicationFeaturesSettings->default_user_role;
 
         $user = User::query()->create([
@@ -229,6 +246,8 @@ class SocialAuthController extends Controller
             'email' => $socialUser->getEmail(),
             'password' => null,
             'email_verified_at' => $verifiedEmail ? now() : null,
+            'identity_namespace' => $identityNamespace,
+            'tenant_application_environment_id' => $environment?->getKey(),
         ]);
 
         $roleName = filled($defaultRole) ? $defaultRole : RoleEnums::USER->value;
