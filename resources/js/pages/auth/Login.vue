@@ -209,7 +209,7 @@ function submitCode() {
                     v-for="account in otherAccounts"
                     :key="account.id"
                     type="button"
-                    class="flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-2 text-left text-sm transition-colors hover:bg-accent/50"
+                    class="flex items-center gap-3 rounded-xl border border-border/80 bg-card/60 px-3.5 py-2.5 text-left text-sm transition-colors hover:bg-accent/50"
                     @click="switchAccount(account.id)"
                 >
                     <span
@@ -253,7 +253,9 @@ function submitCode() {
             <input v-if="hosted" type="hidden" name="hosted" value="1" />
             <div class="grid gap-6">
                 <div class="grid gap-2">
-                    <Label for="email">Email address</Label>
+                    <Label for="email" class="text-[13px] font-medium">
+                        Email address
+                    </Label>
                     <Input
                         id="email"
                         type="email"
@@ -263,17 +265,20 @@ function submitCode() {
                         :tabindex="1"
                         autocomplete="email"
                         placeholder="email@example.com"
+                        class="h-10 rounded-xl border-border/80 bg-card/60 px-3.5 text-[14.5px] shadow-none transition-colors focus-visible:bg-background"
                     />
                     <InputError :message="errors.email" />
                 </div>
 
                 <div class="grid gap-2">
                     <div class="flex items-center justify-between">
-                        <Label for="password">Password</Label>
+                        <Label for="password" class="text-[13px] font-medium">
+                            Password
+                        </Label>
                         <TextLink
                             v-if="canResetPassword"
                             :href="request()"
-                            class="text-sm"
+                            class="text-[12.5px] text-muted-foreground hover:text-foreground"
                             :tabindex="5"
                         >
                             Forgot password?
@@ -287,6 +292,7 @@ function submitCode() {
                         :tabindex="2"
                         autocomplete="current-password"
                         placeholder="Password"
+                        class="h-10 rounded-xl border-border/80 bg-card/60 px-3.5 text-[14.5px] shadow-none transition-colors focus-visible:bg-background"
                     />
                     <InputError :message="errors.password" />
                 </div>
@@ -295,7 +301,7 @@ function submitCode() {
                     <Label
                         v-if="!flow"
                         for="remember"
-                        class="flex items-center space-x-3"
+                        class="flex items-center space-x-2.5 text-[13px] font-normal text-muted-foreground"
                     >
                         <Checkbox id="remember" name="remember" :tabindex="3" />
                         <span>Remember me</span>
@@ -304,7 +310,7 @@ function submitCode() {
 
                 <Button
                     type="submit"
-                    class="mt-4 w-full"
+                    class="mt-2 h-10 w-full cursor-pointer rounded-xl text-[14px] font-medium transition-transform duration-100 ease-out active:scale-[0.985] motion-reduce:transform-none"
                     :tabindex="4"
                     :disabled="processing"
                     data-test="login-button"

@@ -92,7 +92,7 @@ const props = defineProps<{
 
                 <Button
                     type="submit"
-                    class="mt-2 w-full"
+                    class="mt-2 h-10 w-full cursor-pointer rounded-xl text-[14px] font-medium transition-transform duration-100 ease-out active:scale-[0.985] motion-reduce:transform-none"
                     :disabled="processing"
                 >
                     <Spinner v-if="processing" />
@@ -188,7 +188,9 @@ const props = defineProps<{
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="email">Email address</Label>
+                    <Label for="email" class="text-[13px] font-medium">
+                        Email address
+                    </Label>
                     <Input
                         id="email"
                         type="email"
@@ -197,12 +199,15 @@ const props = defineProps<{
                         autocomplete="email"
                         name="email"
                         placeholder="email@example.com"
+                        class="h-10 rounded-xl border-border/80 bg-card/60 px-3.5 text-[14.5px] shadow-none transition-colors focus-visible:bg-background"
                     />
                     <InputError :message="errors.email" />
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="password">Password</Label>
+                    <Label for="password" class="text-[13px] font-medium">
+                        Password
+                    </Label>
                     <Input
                         id="password"
                         type="password"
@@ -211,12 +216,18 @@ const props = defineProps<{
                         autocomplete="new-password"
                         name="password"
                         placeholder="Password"
+                        class="h-10 rounded-xl border-border/80 bg-card/60 px-3.5 text-[14.5px] shadow-none transition-colors focus-visible:bg-background"
                     />
                     <InputError :message="errors.password" />
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="password_confirmation">Confirm password</Label>
+                    <Label
+                        for="password_confirmation"
+                        class="text-[13px] font-medium"
+                    >
+                        Confirm password
+                    </Label>
                     <Input
                         id="password_confirmation"
                         type="password"
@@ -225,13 +236,14 @@ const props = defineProps<{
                         autocomplete="new-password"
                         name="password_confirmation"
                         placeholder="Confirm password"
+                        class="h-10 rounded-xl border-border/80 bg-card/60 px-3.5 text-[14.5px] shadow-none transition-colors focus-visible:bg-background"
                     />
                     <InputError :message="errors.password_confirmation" />
                 </div>
 
                 <Button
                     type="submit"
-                    class="mt-2 w-full"
+                    class="mt-2 h-10 w-full cursor-pointer rounded-xl text-[14px] font-medium transition-transform duration-100 ease-out active:scale-[0.985] motion-reduce:transform-none"
                     tabindex="5"
                     :disabled="processing"
                     data-test="register-user-button"

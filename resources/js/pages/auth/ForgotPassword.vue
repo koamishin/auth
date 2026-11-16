@@ -24,7 +24,7 @@ defineProps<{
 
         <div
             v-if="status"
-            class="mb-4 text-center text-sm font-medium text-green-600"
+            class="mb-4 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-3.5 py-2.5 text-center text-[13px] font-medium text-emerald-600 dark:text-emerald-400"
         >
             {{ status }}
         </div>
@@ -32,7 +32,9 @@ defineProps<{
         <div class="space-y-6">
             <Form v-bind="email.form()" v-slot="{ errors, processing }">
                 <div class="grid gap-2">
-                    <Label for="email">Email address</Label>
+                    <Label for="email" class="text-[13px] font-medium">
+                        Email address
+                    </Label>
                     <Input
                         id="email"
                         type="email"
@@ -40,13 +42,14 @@ defineProps<{
                         autocomplete="off"
                         autofocus
                         placeholder="email@example.com"
+                        class="h-10 rounded-xl border-border/80 bg-card/60 px-3.5 text-[14.5px] shadow-none transition-colors focus-visible:bg-background"
                     />
                     <InputError :message="errors.email" />
                 </div>
 
                 <div class="my-6 flex items-center justify-start">
                     <Button
-                        class="w-full"
+                        class="h-10 w-full cursor-pointer rounded-xl text-[14px] font-medium transition-transform duration-100 ease-out active:scale-[0.985] motion-reduce:transform-none"
                         :disabled="processing"
                         data-test="email-password-reset-link-button"
                     >
