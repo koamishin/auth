@@ -23,12 +23,14 @@ import { store } from '@/routes/password/confirm';
         >
             <div class="space-y-6">
                 <div class="grid gap-2">
-                    <Label htmlFor="password">Password</Label>
+                    <Label htmlFor="password" class="text-[13px] font-medium"
+                        >Password</Label
+                    >
                     <Input
                         id="password"
                         type="password"
                         name="password"
-                        class="mt-1 block w-full"
+                        class="h-10 rounded-xl border-border/80 bg-card/60 px-3.5 text-[14.5px] shadow-none transition-colors focus-visible:bg-background"
                         required
                         autocomplete="current-password"
                         autofocus
@@ -39,7 +41,7 @@ import { store } from '@/routes/password/confirm';
 
                 <div class="flex items-center">
                     <Button
-                        class="w-full"
+                        class="h-10 w-full cursor-pointer rounded-xl text-[14px] font-medium transition-transform duration-100 ease-out active:scale-[0.985] motion-reduce:transform-none"
                         :disabled="processing"
                         data-test="confirm-password-button"
                     >

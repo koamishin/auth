@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import ImpersonateBanner from '@/components/ImpersonateBanner.vue';
+import KoamishinLogo from '@/components/KoamishinLogo.vue';
 import {
     Card,
     CardContent,
@@ -21,41 +21,44 @@ defineProps<{
 
 <template>
     <div
-        class="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10"
+        class="relative flex min-h-svh flex-col items-center justify-center bg-muted/40 px-6 py-12 text-foreground antialiased"
     >
         <ImpersonateBanner class="absolute top-0 left-0 w-full" />
-        <div class="flex w-full max-w-md flex-col gap-6">
+
+        <div class="flex w-full max-w-[420px] flex-col gap-6">
             <Link
                 :href="home()"
-                class="flex items-center gap-2 self-center font-medium"
+                class="flex items-center justify-center self-center transition-transform duration-100 ease-out active:scale-[0.96] motion-reduce:transform-none"
             >
-                <div class="flex h-9 w-9 items-center justify-center">
-                    <img
-                        v-if="logoUrl"
-                        :src="logoUrl"
-                        :alt="applicationName || 'Application'"
-                        class="max-h-12 max-w-32 object-contain"
-                    />
-                    <AppLogoIcon
-                        v-else
-                        class="size-9 fill-current text-black dark:text-white"
-                    />
-                </div>
+                <img
+                    v-if="logoUrl"
+                    :src="logoUrl"
+                    :alt="applicationName || 'Application'"
+                    class="max-h-12 max-w-32 object-contain"
+                />
+                <KoamishinLogo v-else class="size-10" />
             </Link>
 
-            <div class="flex flex-col gap-6">
-                <Card class="rounded-xl">
-                    <CardHeader class="px-10 pt-8 pb-0 text-center">
-                        <CardTitle class="text-xl">{{ title }}</CardTitle>
-                        <CardDescription>
-                            {{ description }}
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent class="px-10 py-8">
-                        <slot />
-                    </CardContent>
-                </Card>
-            </div>
+            <Card
+                class="rounded-2xl border-border/70 bg-card/95 shadow-sm backdrop-blur-sm"
+            >
+                <CardHeader class="px-8 pt-8 pb-0 text-center">
+                    <CardTitle
+                        class="text-[22px] leading-[1.2] font-semibold tracking-[-0.022em]"
+                    >
+                        {{ title }}
+                    </CardTitle>
+                    <CardDescription
+                        v-if="description"
+                        class="mt-1.5 text-[13.5px] leading-relaxed"
+                    >
+                        {{ description }}
+                    </CardDescription>
+                </CardHeader>
+                <CardContent class="px-8 py-7">
+                    <slot />
+                </CardContent>
+            </Card>
         </div>
     </div>
 </template>
