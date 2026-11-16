@@ -98,10 +98,11 @@ const openSetup = async () => {
         const response = await http.post<SetupResponse>(setupRoute.url());
         setup.value = response.data;
     } catch (error: any) {
-        enableError.value =
+        const message =
             error.response?.data?.message ?? 'Failed to start setup';
+        enableError.value = message;
         setup.value = null;
-        toast.error(enableError.value);
+        toast.error(message);
     } finally {
         isLoadingSetup.value = false;
     }
@@ -141,10 +142,11 @@ const enable = async () => {
         closeSetup();
         toast.success('Authenticator app enabled successfully');
     } catch (error: any) {
-        enableError.value = error.response?.data?.message ?? 'Failed to enable';
+        const message = error.response?.data?.message ?? 'Failed to enable';
+        enableError.value = message;
         enableFieldError.value =
             error.response?.data?.errors?.code?.[0] ?? null;
-        toast.error(enableError.value);
+        toast.error(message);
     }
 };
 
@@ -157,9 +159,9 @@ const disable = async () => {
         emit('update:enabled', false);
         toast.success('Authenticator app disabled successfully');
     } catch (error: any) {
-        enableError.value =
-            error.response?.data?.message ?? 'Failed to disable';
-        toast.error(enableError.value);
+        const message = error.response?.data?.message ?? 'Failed to disable';
+        enableError.value = message;
+        toast.error(message);
     }
 };
 
@@ -175,9 +177,10 @@ const regenerateRecoveryCodes = async () => {
         recoveryCodesModalOpen.value = true;
         toast.success('Recovery codes regenerated successfully');
     } catch (error: any) {
-        enableError.value =
+        const message =
             error.response?.data?.message ?? 'Failed to regenerate codes';
-        toast.error(enableError.value);
+        enableError.value = message;
+        toast.error(message);
     }
 };
 
@@ -272,7 +275,7 @@ const recoveryCodesText = computed(() =>
                 <div class="space-y-2">
                     <p class="text-sm font-medium">Authentication code</p>
                     <div class="flex justify-center">
-                        <InputOTP v-model="code" :maxLength="6">
+                        <InputOTP v-model="code" :maxlength="6">
                             <InputOTPGroup>
                                 <InputOTPSlot
                                     v-for="slot in 6"

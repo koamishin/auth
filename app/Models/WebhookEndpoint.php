@@ -22,6 +22,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $description
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property-read TenantApplicationEnvironment|null $environment
  */
 class WebhookEndpoint extends Model
 {
@@ -36,6 +37,10 @@ class WebhookEndpoint extends Model
         'events',
         'is_active',
         'description',
+    ];
+
+    protected $hidden = [
+        'secret',
     ];
 
     protected function casts(): array

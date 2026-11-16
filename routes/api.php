@@ -24,7 +24,7 @@ Route::post('/oauth/session-token', [SessionTokenController::class, 'store'])
     ->middleware(['auth:api', 'throttle:60,1'])
     ->name('api.oauth.session-token');
 
-Route::prefix('v1')->middleware('throttle:60,1')->group(function (): void {
+Route::prefix('v1')->middleware('throttle:management-api')->group(function (): void {
     Route::get('/organization', [ManagementOrganizationController::class, 'show'])
         ->middleware(AuthenticateManagementClient::using('organization:read'));
     Route::get('/users', [ManagementUserController::class, 'index'])

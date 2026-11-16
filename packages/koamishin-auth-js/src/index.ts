@@ -626,11 +626,7 @@ export async function verifySessionToken(
           : null;
     const expectedEnvironment = options.environment ?? inferredEnvironment;
 
-    if (
-        expectedEnvironment &&
-        claims.environment &&
-        claims.environment !== expectedEnvironment
-    ) {
+    if (expectedEnvironment && claims.environment !== expectedEnvironment) {
         throw new Error(
             'Session token environment does not match the configured environment.',
         );
@@ -638,8 +634,7 @@ export async function verifySessionToken(
 
     if (
         options.applicationId &&
-        claims.application_id &&
-        String(claims.application_id) !== String(options.applicationId)
+        String(claims.application_id ?? '') !== String(options.applicationId)
     ) {
         throw new Error(
             'Session token application_id does not match the configured applicationId.',
@@ -648,16 +643,13 @@ export async function verifySessionToken(
 
     let jwks = options.jwks ?? (await resolveJwks(portalUrl, false));
     let jwk = jwks.keys.find(
-        (k) =>
-            k.kty === 'RSA' && (!header.kid || !k.kid || k.kid === header.kid),
+        (k) => k.kty === 'RSA' && (!header.kid || k.kid === header.kid),
     );
 
     if (!jwk && !options.jwks) {
         jwks = await resolveJwks(portalUrl, true);
         jwk = jwks.keys.find(
-            (k) =>
-                k.kty === 'RSA' &&
-                (!header.kid || !k.kid || k.kid === header.kid),
+            (k) => k.kty === 'RSA' && (!header.kid || k.kid === header.kid),
         );
     }
 

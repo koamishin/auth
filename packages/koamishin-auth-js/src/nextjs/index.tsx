@@ -434,7 +434,7 @@ export function SignInButton({
                 'text-sm sm:text-base font-medium text-gray-700 hover:text-gray-950 dark:text-gray-200 dark:hover:text-white px-3 py-2 cursor-pointer transition-colors'
             }
         >
-            {children ?? 'Sign In'}
+            Sign In
         </button>
     );
 }
@@ -474,7 +474,7 @@ export function SignUpButton({
                 'bg-purple-700 hover:bg-purple-600 text-white rounded-full font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 cursor-pointer transition-colors'
             }
         >
-            {children ?? 'Sign Up'}
+            Sign Up
         </button>
     );
 }

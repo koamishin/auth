@@ -5,6 +5,7 @@ import AuthSimpleLayout from '@/layouts/auth/AuthSimpleLayout.vue';
 import AuthCardLayout from '@/layouts/auth/AuthCardLayout.vue';
 import AuthSplitLayout from '@/layouts/auth/AuthSplitLayout.vue';
 import { themes } from '@/conf/themes';
+import type { AppPageProps } from '@/types';
 
 defineProps<{
     title?: string;
