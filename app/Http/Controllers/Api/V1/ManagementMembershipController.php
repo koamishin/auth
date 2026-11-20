@@ -25,6 +25,7 @@ class ManagementMembershipController extends Controller
 
         DB::transaction(function () use ($environment, $userId): void {
             $user = $this->tenantUser($environment, $userId);
+            abort_if($user->isBanned(), 403, 'Banned users cannot be enrolled.');
             $inserted = DB::table('tenant_application_user')->insertOrIgnore([
                 'tenant_application_id' => $environment->tenant_application_id,
                 'user_id' => $user->getKey(),

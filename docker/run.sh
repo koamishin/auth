@@ -43,8 +43,8 @@ docker run -d \
     --restart unless-stopped \
     --env-file .env \
     --network host \
-    -v koami-storage:/var/www/html/storage \
-    -v koami-logs:/var/www/html/storage/logs \
+    -v koami-storage:/app/storage \
+    -v koami-logs:/app/storage/logs \
     --health-cmd "curl -f http://localhost:8000 || exit 1" \
     --health-interval 30s \
     --health-timeout 10s \

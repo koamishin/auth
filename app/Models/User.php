@@ -167,6 +167,7 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
+            ->logAll()
             ->logExcept([
                 'password',
                 'remember_token',

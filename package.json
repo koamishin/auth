@@ -58,6 +58,5 @@
     },
     "overrides": {
         "vite": "npm:@voidzero-dev/vite-plus-core@0.3.3"
-    },
-    "name": "koamishin-portal"
+    }
 }

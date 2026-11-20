@@ -12,6 +12,7 @@ export type User = {
 export type Auth = {
     user: User;
     accounts?: SwitchableAccount[];
+    impersonating?: boolean;
 };
 
 /** An account this browser is signed in to and can switch to. */

@@ -32,27 +32,31 @@ const inputEmail = ref(props.email);
         >
             <div class="grid gap-6">
                 <div class="grid gap-2">
-                    <Label for="email">Email</Label>
+                    <Label for="email" class="text-[13px] font-medium"
+                        >Email</Label
+                    >
                     <Input
                         id="email"
                         type="email"
                         name="email"
                         autocomplete="email"
                         v-model="inputEmail"
-                        class="mt-1 block w-full"
+                        class="h-10 rounded-xl border-border/80 bg-muted/40 px-3.5 text-[14.5px] shadow-none"
                         readonly
                     />
                     <InputError :message="errors.email" class="mt-2" />
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="password">Password</Label>
+                    <Label for="password" class="text-[13px] font-medium"
+                        >Password</Label
+                    >
                     <Input
                         id="password"
                         type="password"
                         name="password"
                         autocomplete="new-password"
-                        class="mt-1 block w-full"
+                        class="h-10 rounded-xl border-border/80 bg-card/60 px-3.5 text-[14.5px] shadow-none transition-colors focus-visible:bg-background"
                         autofocus
                         placeholder="Password"
                     />
@@ -60,7 +64,10 @@ const inputEmail = ref(props.email);
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="password_confirmation">
+                    <Label
+                        for="password_confirmation"
+                        class="text-[13px] font-medium"
+                    >
                         Confirm Password
                     </Label>
                     <Input
@@ -68,7 +75,7 @@ const inputEmail = ref(props.email);
                         type="password"
                         name="password_confirmation"
                         autocomplete="new-password"
-                        class="mt-1 block w-full"
+                        class="h-10 rounded-xl border-border/80 bg-card/60 px-3.5 text-[14.5px] shadow-none transition-colors focus-visible:bg-background"
                         placeholder="Confirm password"
                     />
                     <InputError :message="errors.password_confirmation" />
@@ -76,7 +83,7 @@ const inputEmail = ref(props.email);
 
                 <Button
                     type="submit"
-                    class="mt-4 w-full"
+                    class="mt-2 h-10 w-full cursor-pointer rounded-xl text-[14px] font-medium transition-transform duration-100 ease-out active:scale-[0.985] motion-reduce:transform-none"
                     :disabled="processing"
                     data-test="reset-password-button"
                 >

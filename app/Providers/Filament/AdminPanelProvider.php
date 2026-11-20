@@ -38,6 +38,7 @@ use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Modules\Blog\BlogPlugin;
 use RobertBoes\FilamentPasskeys\FilamentPasskeysPlugin;
 
 class AdminPanelProvider extends PanelProvider
@@ -160,6 +161,7 @@ class AdminPanelProvider extends PanelProvider
                     ->pluralLabel('Logs')
                     ->navigationGroup('System'),
                 FilamentPasskeysPlugin::make(),
+                ...(class_exists(BlogPlugin::class) ? [BlogPlugin::make()] : []),
             ])
             ->middleware([
                 EncryptCookies::class,

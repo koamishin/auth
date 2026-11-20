@@ -93,7 +93,7 @@ class OpenIdConnectController extends Controller
         $user = $request->user();
         $token = $user->token();
 
-        if (! $token instanceof AccessToken || ($token->oauth_client_id ?? '') === '') {
+        if (! $token instanceof AccessToken || ($token->oauth_client_id ?? '') === '' || ! $token->can('openid')) {
             abort(403);
         }
 
@@ -143,9 +143,7 @@ class OpenIdConnectController extends Controller
                 ->where('environment', $environment->environment)
                 ->where('user_id', $user->getKey())
                 ->value('role');
-            abort_unless(is_string($role) && $role !== '', 403);
-
-            $claims['roles'] = [$role];
+            $claims['roles'] = [is_string($role) && $role !== '' ? $role : 'member'];
             $claims['permissions'] = [];
         }
 

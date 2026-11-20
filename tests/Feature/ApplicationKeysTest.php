@@ -198,17 +198,18 @@ test('publishable keys complete oauth authorization and token refresh for each c
         $refresh['client_secret'] = $credentials['development']['secret_key'];
     }
     $renewed = postJson('/oauth/token', $refresh)->assertOk()->assertJsonMissingPath('revocation_token');
-    postJson('/oauth/token', $refresh)->assertStatus(400)->assertJsonPath('error', 'invalid_grant');
     postJson('/api/oauth/revoke-family', ['revocation_token' => $refresh['refresh_token']])->assertUnprocessable();
     postJson('/api/oauth/revoke-family', ['revocation_token' => $revocationToken.'bad'])->assertUnauthorized();
     $wrongCredential = substr($revocationToken, 0, -1).(str_ends_with($revocationToken, 'a') ? 'b' : 'a');
     postJson('/api/oauth/revoke-family', ['revocation_token' => $wrongCredential])->assertUnauthorized();
     expect(DB::table('oauth_grant_families')->where('client_id', $environment->oauth_client_id)->value('revoked_at'))->toBeNull();
+    withToken($renewed->json('access_token'))->getJson('/api/oauth/userinfo')->assertOk();
     postJson('/api/oauth/revoke-family', ['revocation_token' => $revocationToken])->assertNoContent();
     postJson('/api/oauth/revoke-family', ['revocation_token' => $revocationToken])->assertHeader('Cache-Control', 'no-store, private');
     postJson('/api/oauth/revoke-family', ['revocation_token' => $revocationToken])->assertNoContent();
     app('auth')->forgetGuards();
     withToken($renewed->json('access_token'))->getJson('/api/oauth/userinfo')->assertUnauthorized();
+    postJson('/oauth/token', $refresh)->assertStatus(400)->assertJsonPath('error', 'invalid_grant');
     postJson('/oauth/token', [...$refresh, 'refresh_token' => $renewed->json('refresh_token')])
         ->assertStatus(400)->assertJsonPath('error', 'invalid_grant');
 })->with(['public', 'confidential']);

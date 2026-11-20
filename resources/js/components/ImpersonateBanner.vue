@@ -29,7 +29,7 @@ const user = computed(() => page.props.auth.user);
                 }}).
             </p>
             <a
-                :href="leave()"
+                :href="leave.url()"
                 class="flex-none rounded-full bg-amber-900 px-3.5 py-1 text-sm font-semibold text-white shadow-sm hover:bg-amber-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-900 dark:bg-amber-700 dark:hover:bg-amber-600"
             >
                 Leave Impersonation <span aria-hidden="true">&rarr;</span>

@@ -37,6 +37,8 @@ test('user activity log excludes sensitive authentication columns', function ():
     ])->save();
 
     $activities = Activity::query()->where('subject_id', $user->getKey())->get();
+    expect($activities)->not->toBeEmpty();
+    expect((string) json_encode($activities->last()->properties))->toContain('Updated Name');
 
     foreach ($activities as $activity) {
         $serialized = json_encode($activity->properties);

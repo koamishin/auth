@@ -50,13 +50,13 @@ $app = Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             RedirectPortalRegistrationAlias::class,
             EnforceVerificationLinkDevice::class,
-            EnforceSessionLifetime::class,
             HandleAppearance::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
             EnsureSetupIsComplete::class,
             EnsureAuthenticationFeatures::class,
             EnsureOAuthApplicationAccess::class,
+            EnforceSessionLifetime::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

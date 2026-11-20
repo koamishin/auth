@@ -14,9 +14,17 @@ use Illuminate\Support\Str;
 
 class RegisterTenant extends BaseRegisterTenant
 {
+    protected string $view = 'filament.pages.tenancy.register-tenant';
+
     public static function getLabel(): string
     {
         return 'Register Organization';
+    }
+
+    #[\Override]
+    public function getSubheading(): ?string
+    {
+        return 'Create a workspace to manage your applications and users.';
     }
 
     #[\Override]

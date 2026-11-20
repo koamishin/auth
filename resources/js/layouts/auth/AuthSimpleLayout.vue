@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import ImpersonateBanner from '@/components/ImpersonateBanner.vue';
+import KoamishinLogo from '@/components/KoamishinLogo.vue';
 import { home } from '@/routes';
 
 defineProps<{
@@ -14,39 +14,42 @@ defineProps<{
 
 <template>
     <div
-        class="flex min-h-svh flex-col items-center justify-center gap-6 bg-background p-6 md:p-10"
+        class="relative flex min-h-svh flex-col items-center justify-center bg-background px-6 py-12 text-foreground antialiased"
     >
         <ImpersonateBanner class="absolute top-0 left-0 w-full" />
-        <div class="w-full max-w-sm">
-            <div class="flex flex-col gap-8">
-                <div class="flex flex-col items-center gap-4">
+
+        <div class="w-full max-w-[380px]">
+            <div class="flex flex-col gap-7">
+                <div class="flex flex-col items-center text-center">
                     <Link
                         :href="home()"
-                        class="flex flex-col items-center gap-2 font-medium"
+                        class="mb-5 flex items-center justify-center transition-transform duration-100 ease-out active:scale-[0.96] motion-reduce:transform-none"
                     >
-                        <div
-                            class="mb-1 flex h-9 w-9 items-center justify-center rounded-md"
-                        >
-                            <img
-                                v-if="logoUrl"
-                                :src="logoUrl"
-                                :alt="applicationName || 'Application'"
-                                class="max-h-12 max-w-32 object-contain"
-                            />
-                            <AppLogoIcon
-                                v-else
-                                class="size-9 fill-current text-[var(--foreground)] dark:text-white"
-                            />
-                        </div>
+                        <img
+                            v-if="logoUrl"
+                            :src="logoUrl"
+                            :alt="applicationName || 'Application'"
+                            class="max-h-12 max-w-32 object-contain"
+                        />
+                        <KoamishinLogo v-else class="size-10" />
                         <span class="sr-only">{{ title }}</span>
                     </Link>
-                    <div class="space-y-2 text-center">
-                        <h1 class="text-xl font-medium">{{ title }}</h1>
-                        <p class="text-center text-sm text-muted-foreground">
+
+                    <div class="space-y-1.5">
+                        <h1
+                            class="text-[24px] leading-[1.15] font-semibold tracking-[-0.025em]"
+                        >
+                            {{ title }}
+                        </h1>
+                        <p
+                            v-if="description"
+                            class="text-[14px] leading-[1.45] text-muted-foreground"
+                        >
                             {{ description }}
                         </p>
                     </div>
                 </div>
+
                 <slot />
             </div>
         </div>
