@@ -21,6 +21,7 @@ use App\Models\Tenant;
 use App\Models\TenantApplication;
 use App\Models\User;
 use App\Settings\ApplicationFeaturesSettings;
+use App\Support\OutboundUrlValidator;
 use Filament\Facades\Filament;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -174,21 +175,7 @@ Route::middleware(['web', 'auth'])->post('admin/{tenant:slug}/toggle-env/{applic
         'tenant' => $tenant,
     ]);
 
-    $baseUrl = rtrim(url('/'), '/');
-    $parsedRedirect = is_string($redirect) ? parse_url($redirect) : false;
-    $parsedBase = parse_url($baseUrl);
-    $isSameOrigin = is_array($parsedRedirect)
-        && (
-            (! isset($parsedRedirect['host']) && str_starts_with((string) $redirect, '/'))
-            || (
-                isset($parsedRedirect['host'], $parsedBase['host'])
-                && strcasecmp($parsedRedirect['host'], $parsedBase['host']) === 0
-                && ($parsedRedirect['scheme'] ?? $parsedBase['scheme'] ?? null) === ($parsedBase['scheme'] ?? null)
-                && ($parsedRedirect['port'] ?? null) === ($parsedBase['port'] ?? null)
-            )
-        );
-
-    if (! is_string($redirect) || $redirect === '' || ! $isSameOrigin) {
+    if (! is_string($redirect) || ! OutboundUrlValidator::isSameOrigin($redirect, url('/'))) {
         $redirect = $fallback;
     }
 

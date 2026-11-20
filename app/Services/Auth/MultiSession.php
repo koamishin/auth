@@ -318,6 +318,11 @@ class MultiSession
         return null;
     }
 
+    public function revokeAllFor(int|string $userId): void
+    {
+        MultiSessionAccount::query()->where('user_id', $userId)->delete();
+    }
+
     private function deleteToken(string $token): void
     {
         MultiSessionAccount::query()->where('token_hash', $this->hash($token))->delete();

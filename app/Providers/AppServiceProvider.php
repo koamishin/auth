@@ -11,7 +11,8 @@ use App\Models\Client;
 use App\Models\User;
 use App\Observers\UserObserver;
 use App\Services\OAuth\ApplicationAuthentication;
-use App\Services\OAuth\PassportBridgeClientRepository;
+use App\Services\OAuth\OAuthBootstrapGuard;
+use App\Services\OAuth\OwnedAuthorizationServerFactory;
 use BladeUI\Icons\Factory;
 use Carbon\CarbonImmutable;
 use Filament\Panel;
@@ -30,7 +31,7 @@ use Inertia\Inertia;
 use Laravel\Passkeys\Actions\GenerateRegistrationOptions;
 use Laravel\Passkeys\Actions\GenerateVerificationOptions;
 use Laravel\Passkeys\Actions\StorePasskey;
-use Laravel\Passport\Bridge\ClientRepository;
+use Laravel\Passkeys\Passkeys;
 use Laravel\Passport\Passport;
 use Laravel\Pennant\FeatureManager;
 use Nwidart\Modules\Facades\Module;
@@ -44,7 +45,7 @@ class AppServiceProvider extends ServiceProvider
     #[\Override]
     public function register(): void
     {
-        $this->app->bind(ClientRepository::class, PassportBridgeClientRepository::class);
+        $this->app->make(OAuthBootstrapGuard::class)->register($this->app);
         $this->registerFilamentPlugins();
         $this->registerPasskeyOptions();
     }
@@ -78,6 +79,7 @@ class AppServiceProvider extends ServiceProvider
         $this->configureDefaults();
         $this->configureFeatures();
         $this->configurePassport();
+        $this->app->make(OwnedAuthorizationServerFactory::class)->markReady();
         $this->configureBrandIcons();
 
         \Filament\Resources\Resource::scopeToTenant(false);
@@ -89,16 +91,11 @@ class AppServiceProvider extends ServiceProvider
 
         Gate::before(fn ($user, $ability): ?true => method_exists($user, 'hasRole') && $user->hasRole('super_admin') ? true : null);
 
+        Passkeys::authorizeLoginUsing(
+            fn (Request $request, $user): bool => !$user instanceof User || !$user->isBanned(),
+        );
+
         User::observe(UserObserver::class);
-
-        RateLimiter::for('management-api', function (Request $request): Limit {
-            $bearer = $request->bearerToken();
-            $key = is_string($bearer) && $bearer !== ''
-                ? 'mgmt:'.hash('sha256', $bearer)
-                : 'mgmt-ip:'.$request->ip();
-
-            return Limit::perMinute(60)->by($key);
-        });
     }
 
     protected function configureBrandIcons(): void
@@ -129,6 +126,15 @@ class AppServiceProvider extends ServiceProvider
                 ->uncompromised()
             : null
         );
+
+        RateLimiter::for('management-api', function (Request $request): Limit {
+            $bearer = $request->bearerToken();
+            if (is_string($bearer) && $bearer !== '') {
+                return Limit::perMinute(300)->by('mgmt:'.hash('sha256', $bearer));
+            }
+
+            return Limit::perMinute(60)->by('mgmt-ip:'.$request->ip());
+        });
     }
 
     protected function configureFeatures(): void
@@ -158,6 +164,7 @@ class AppServiceProvider extends ServiceProvider
             'wallet' => 'User wallet information',
             'metadata:public' => 'Read application-scoped public metadata',
             'users:read' => 'Read users in the application environment',
+            'users:write' => 'Create, update, ban, and delete users in the application environment',
             'metadata:read' => 'Read application-scoped user metadata',
             'metadata:write' => 'Replace application-scoped user metadata',
             'sessions:read' => 'Read application-scoped OAuth grants',

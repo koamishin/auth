@@ -9,6 +9,7 @@ use App\Models\TenantApplication;
 use App\Models\TenantApplicationEnvironment;
 use App\Models\User;
 use App\Services\Webhooks\WebhookDispatcher;
+use App\Support\OutboundUrlValidator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -241,12 +242,37 @@ class LaravelUserImporter
         string $environment = 'development',
         array $options = [],
     ): array {
-        $driver = $dbConfig['driver'] ?? 'mysql';
+        $driver = strtolower((string) ($dbConfig['driver'] ?? 'mysql'));
+
+        if (! in_array($driver, ['mysql', 'mariadb', 'pgsql', 'sqlsrv'], true)) {
+            return [
+                'total' => 0,
+                'imported' => 0,
+                'updated' => 0,
+                'skipped' => 0,
+                'errors' => ['Unsupported database driver for external import.'],
+            ];
+        }
+
+        $host = (string) ($dbConfig['host'] ?? '');
+
+        try {
+            OutboundUrlValidator::assertSafeDatabaseHost($host);
+        } catch (\InvalidArgumentException $e) {
+            return [
+                'total' => 0,
+                'imported' => 0,
+                'updated' => 0,
+                'skipped' => 0,
+                'errors' => [$e->getMessage()],
+            ];
+        }
+
         $connectionName = 'temp_external_import_'.Str::random(8);
 
         config(["database.connections.{$connectionName}" => [
             'driver' => $driver,
-            'host' => $dbConfig['host'] ?? '127.0.0.1',
+            'host' => $host,
             'port' => (string) ($dbConfig['port'] ?? ($driver === 'pgsql' ? '5432' : '3306')),
             'database' => $dbConfig['database'],
             'username' => $dbConfig['username'] ?? '',
@@ -267,13 +293,13 @@ class LaravelUserImporter
             $records = $rows->map(fn ($r): array => (array) $r)->toArray();
 
             return $this->importFromData($records, $tenant, $application, $environment, $options);
-        } catch (\Throwable $e) {
+        } catch (\Throwable) {
             return [
                 'total' => 0,
                 'imported' => 0,
                 'updated' => 0,
                 'skipped' => 0,
-                'errors' => ['Database connection failed: '.$e->getMessage()],
+                'errors' => ['Database connection failed. Verify the host, credentials, and table name.'],
             ];
         } finally {
             DB::purge($connectionName);

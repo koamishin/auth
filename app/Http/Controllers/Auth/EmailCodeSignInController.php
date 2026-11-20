@@ -16,6 +16,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Contracts\LoginResponse;
+use Laravel\Fortify\Events\TwoFactorAuthenticationChallenged;
+use Laravel\Fortify\Features;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -70,6 +72,8 @@ class EmailCodeSignInController extends Controller
             ]);
         }
 
+        $this->codes->verify($user, (string) $request->input('code'), EmailCodePurpose::SignIn);
+
         if ($user->isBanned()) {
             throw ValidationException::withMessages([
                 'email' => $user->ban_reason
@@ -85,14 +89,26 @@ class EmailCodeSignInController extends Controller
             throw ValidationException::withMessages(['email' => $reason]);
         }
 
-        $this->codes->verify($user, (string) $request->input('code'), EmailCodePurpose::SignIn);
+        if (Features::enabled(Features::twoFactorAuthentication()) && $user->two_factor_secret && $user->two_factor_confirmed_at) {
+            $request->session()->put(['login.id' => $user->getKey(), 'login.remember' => false]);
+            TwoFactorAuthenticationChallenged::dispatch($user);
+
+            $authentication = app(ApplicationAuthentication::class);
+            if ($authentication->isHosted($request) && $authentication->flowId($request) !== null) {
+                return $authentication->transition($request, 'two-factor');
+            }
+
+            return redirect()->route('two-factor.login', array_filter(['flow' => $authentication->flowId($request)]));
+        }
 
         // An email code is a single factor, so it must not inherit a passkey's
         // multi-factor satisfaction from earlier in this session.
         app(ApplicationAuthentication::class)->markSignInSatisfiesMultiFactor($request, false);
 
-        /** @var StatefulGuard $guard */
-        $guard = Auth::guard(config('fortify.guard', 'web'));
+        $guard = $request->attributes->get('koamishin.application_guard');
+        if (! $guard instanceof StatefulGuard) {
+            $guard = Auth::guard(config('fortify.guard', 'web'));
+        }
         $guard->login($user, false);
 
         $request->session()->regenerate();

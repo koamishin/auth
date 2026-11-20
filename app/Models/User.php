@@ -132,7 +132,7 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
 
     public function canImpersonate(): bool
     {
-        return app(ApplicationFeaturesSettings::class)->user_impersonation_enabled && $this->hasRole('admin');
+        return app(ApplicationFeaturesSettings::class)->user_impersonation_enabled && $this->isSystemAdmin();
     }
 
     protected function shouldLogEvent(string $eventName): bool
@@ -167,12 +167,21 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logAll();
+            ->logAll()
+            ->logExcept([
+                'password',
+                'remember_token',
+                'two_factor_secret',
+                'two_factor_recovery_codes',
+                'app_authentication_secret',
+                'app_authentication_recovery_codes',
+            ])
+            ->dontSubmitEmptyLogs();
     }
 
     public function canBeImpersonated(): bool
     {
-        return ! $this->hasRole('admin');
+        return ! $this->isSystemAdmin() && ! $this->hasRole('admin') && ! $this->isBanned();
     }
 
     /**

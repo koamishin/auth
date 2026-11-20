@@ -70,10 +70,9 @@ LABEL org.opencontainers.image.licenses=MIT
 
 ARG USER_ID=1000
 ARG GROUP_ID=1000
-ARG ROOT=/app
 ARG TZ=UTC
 
-ENV ROOT=${ROOT}
+ENV ROOT=/app
 ENV TERM=xterm-color
 ENV OCTANE_SERVER=frankenphp
 ENV TZ=${TZ}
@@ -176,4 +175,4 @@ EXPOSE 2019
 
 ENTRYPOINT ["start-container"]
 
-HEALTHCHECK --start-period=5s --interval=1s --timeout=3s --retries=10 CMD healthcheck || exit 1
+HEALTHCHECK --start-period=10s --interval=15s --timeout=3s --retries=5 CMD healthcheck || exit 1

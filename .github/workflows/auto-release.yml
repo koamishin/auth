@@ -26,9 +26,9 @@ jobs:
     steps:
       - name: Check Graphite skip status
         id: check_skip
-        uses: withgraphite/graphite-ci-action@main
+        uses: withgraphite/graphite-ci-action@v1
         with:
-          graphite_token: RZIHC9RcWuPOikTuveo3KetGbIBSctAWhkQ82qVW8cPmpn087Emx6VLq4uz8
+          graphite_token: ${{ secrets.GRAPHITE_TOKEN }}
 
   # ----------------------------------------------------------------------------
   # 2. Analyze commit: determine release type, version, and tag

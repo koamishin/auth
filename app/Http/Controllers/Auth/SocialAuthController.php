@@ -103,11 +103,11 @@ class SocialAuthController extends Controller
         }
 
         $environment = $request->attributes->get('koamishin.application_environment');
-        $identityNamespace = $environment instanceof TenantApplicationEnvironment
+        $namespace = $environment instanceof TenantApplicationEnvironment
             ? $environment->identityNamespace()
             : User::PORTAL_IDENTITY_NAMESPACE;
 
-        $user = DB::transaction(function () use ($providerEnum, $socialUser, $credentials, $verifiedEmail, $environment, $identityNamespace): User {
+        $user = DB::transaction(function () use ($providerEnum, $socialUser, $credentials, $verifiedEmail, $environment, $namespace): User {
             $existingAccount = SocialAccount::query()
                 ->where('provider', $providerEnum->value)
                 ->where('provider_id', $socialUser->getId())
@@ -116,12 +116,24 @@ class SocialAuthController extends Controller
 
             if ($existingAccount instanceof SocialAccount) {
                 $user = $existingAccount->user;
+                $userNamespace = $user->identity_namespace ?? User::PORTAL_IDENTITY_NAMESPACE;
+                if ($environment instanceof TenantApplicationEnvironment
+                    && $userNamespace !== $namespace
+                    && $userNamespace !== User::PORTAL_IDENTITY_NAMESPACE) {
+                    abort(409, 'This social account belongs to a different application environment.');
+                }
             } else {
-                /** @var User|null $user */
                 $user = User::query()
-                    ->whereIn('identity_namespace', [$identityNamespace, User::PORTAL_IDENTITY_NAMESPACE])
                     ->where('email', $socialUser->getEmail())
+                    ->where('identity_namespace', $namespace)
                     ->first();
+
+                if (! $user instanceof User && $environment instanceof TenantApplicationEnvironment) {
+                    $user = User::query()
+                        ->where('email', $socialUser->getEmail())
+                        ->where('identity_namespace', User::PORTAL_IDENTITY_NAMESPACE)
+                        ->first();
+                }
 
                 if ($user instanceof User) {
                     if (! $verifiedEmail) {
@@ -135,12 +147,7 @@ class SocialAuthController extends Controller
                     if ($environment instanceof TenantApplicationEnvironment) {
                         abort_unless(app(ApplicationAuthentication::class)->allowsSignups($environment), 403, 'Registration is closed for this application.');
                     }
-                    $user = $this->createUserFromSocial(
-                        $socialUser,
-                        $verifiedEmail,
-                        $identityNamespace,
-                        $environment instanceof TenantApplicationEnvironment ? $environment : null,
-                    );
+                    $user = $this->createUserFromSocial($socialUser, $verifiedEmail, $environment);
                 }
             }
 
@@ -233,12 +240,8 @@ class SocialAuthController extends Controller
         return $manager->buildProvider($provider, $credentials);
     }
 
-    private function createUserFromSocial(
-        \Laravel\Socialite\Contracts\User $socialUser,
-        bool $verifiedEmail,
-        string $identityNamespace = User::PORTAL_IDENTITY_NAMESPACE,
-        ?TenantApplicationEnvironment $environment = null,
-    ): User {
+    private function createUserFromSocial(\Laravel\Socialite\Contracts\User $socialUser, bool $verifiedEmail, ?TenantApplicationEnvironment $environment = null): User
+    {
         $defaultRole = $this->applicationFeaturesSettings->default_user_role;
 
         $user = User::query()->create([
@@ -246,7 +249,7 @@ class SocialAuthController extends Controller
             'email' => $socialUser->getEmail(),
             'password' => null,
             'email_verified_at' => $verifiedEmail ? now() : null,
-            'identity_namespace' => $identityNamespace,
+            'identity_namespace' => $environment?->identityNamespace() ?? User::PORTAL_IDENTITY_NAMESPACE,
             'tenant_application_environment_id' => $environment?->getKey(),
         ]);
 

@@ -38,6 +38,7 @@ test('quickstart widget initializes with application framework and renders step 
         ->assertSee('npm install @koamishin/auth-js')
         ->call('setStep', 2)
         ->assertSee('NEXT_PUBLIC_KOAMISHIN_PUBLISHABLE_KEY='.$app->getPublishableKey())
+        ->assertSee('KOAMISHIN_APPLICATION_ID='.$app->getKey())
         ->call('setStep', 3)
         ->assertSee('lib/auth.ts')
         ->call('setStep', 4)

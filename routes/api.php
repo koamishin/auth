@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\ManagementOrganizationController;
 use App\Http\Controllers\Api\V1\ManagementSessionController;
 use App\Http\Controllers\Api\V1\ManagementUserController;
 use App\Http\Controllers\Auth\OpenIdConnectController;
+use App\Http\Controllers\Auth\RevokeGrantFamilyController;
 use App\Http\Controllers\Auth\SessionTokenController;
 use App\Http\Middleware\AuthenticateManagementClient;
 use Illuminate\Support\Facades\Route;
@@ -24,14 +25,32 @@ Route::post('/oauth/session-token', [SessionTokenController::class, 'store'])
     ->middleware(['auth:api', 'throttle:60,1'])
     ->name('api.oauth.session-token');
 
+Route::post('/oauth/revoke-family', RevokeGrantFamilyController::class)
+    ->middleware('throttle:60,1')
+    ->name('api.oauth.revoke-family');
+
 Route::prefix('v1')->middleware('throttle:management-api')->group(function (): void {
     Route::get('/organization', [ManagementOrganizationController::class, 'show'])
         ->middleware(AuthenticateManagementClient::using('organization:read'));
     Route::get('/users', [ManagementUserController::class, 'index'])
         ->middleware(AuthenticateManagementClient::using('users:read'));
+    Route::post('/users', [ManagementUserController::class, 'store'])
+        ->middleware(AuthenticateManagementClient::using('users:write'));
     Route::get('/users/{userId}', [ManagementUserController::class, 'show'])
         ->whereNumber('userId')
         ->middleware(AuthenticateManagementClient::using('users:read'));
+    Route::patch('/users/{userId}', [ManagementUserController::class, 'update'])
+        ->whereNumber('userId')
+        ->middleware(AuthenticateManagementClient::using('users:write'));
+    Route::delete('/users/{userId}', [ManagementUserController::class, 'destroy'])
+        ->whereNumber('userId')
+        ->middleware(AuthenticateManagementClient::using('users:write'));
+    Route::post('/users/{userId}/ban', [ManagementUserController::class, 'ban'])
+        ->whereNumber('userId')
+        ->middleware(AuthenticateManagementClient::using('users:write'));
+    Route::post('/users/{userId}/unban', [ManagementUserController::class, 'unban'])
+        ->whereNumber('userId')
+        ->middleware(AuthenticateManagementClient::using('users:write'));
     Route::get('/users/{userId}/metadata', [ManagementMetadataController::class, 'show'])
         ->whereNumber('userId')
         ->middleware(AuthenticateManagementClient::using('metadata:read'));

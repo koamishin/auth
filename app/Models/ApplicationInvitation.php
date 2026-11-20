@@ -47,6 +47,10 @@ class ApplicationInvitation extends Model
         'revoked_at',
     ];
 
+    protected $hidden = [
+        'token_hash',
+    ];
+
     /**
      * @return array<string, string>
      */

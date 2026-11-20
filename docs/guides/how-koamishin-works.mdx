@@ -1,0 +1,63 @@
+---
+title: How Koamishin Auth works
+description: Understand hosted authentication, browser storage, routing, rate limits, and signed session tokens.
+---
+
+# How Koamishin Auth works
+
+Koamishin Auth is a self-hosted Laravel Portal. A consumer application uses OAuth authorization code with S256 PKCE to send a user to Portal-hosted authentication and receive a code at its registered callback. This page explains the current Next.js SDK and Portal implementation; the [architecture](../architecture.mdx), [security guide](security.mdx), and [session-token reference](session-tokens.mdx) cover the underlying boundaries in more detail.
+
+## From sign-in to a protected page
+
+1. Create an application environment and a public OAuth client with the consumer's registered callback. The publishable key identifies that environment; unlike Clerk's documented publishable-key format, Koamishin also requires the Portal URL separately.
+2. The browser SDK generates state and an S256 PKCE verifier, stores the pending transaction in the browser tab, and navigates to the Portal's `/oauth/authorize`. Sign-up adds `screen_hint=signup`. The Portal controls the hosted login, registration, verification, and other authentication screens.
+3. After authorization, the Portal returns a code and state to the consumer's callback. The SDK checks state, exchanges the code using the verifier, and requests userinfo. It stores the access token, refresh token when issued, and user data in `sessionStorage`.
+4. The provider requests a 60-second session JWT with the access token and writes the app-origin `__koamishin_session` cookie. It attempts to renew that cookie every 45 seconds while the provider is active and the user is signed in.
+5. The Next.js proxy can verify the cookie against the Portal's public `/oauth/jwks` and pass verified session claims to server code. It only protects routes that explicitly call `auth.protect()`.
+
+These are separate credentials and sessions. The Portal's hosted browser session, the OAuth access/refresh tokens, and the app's short-lived session JWT are not interchangeable. A Portal login does not automatically grant access to every application. Application membership, environment, access policies, and consent still apply. SSO between eligible applications is opt-in; see [tenancy and OAuth](core-concepts.mdx).
+
+## Browser storage and cookies
+
+| Value | Where it lives | Purpose and important boundary |
+| --- | --- | --- |
+| Pending state and PKCE verifier | Consumer tab's `sessionStorage` | Matches the callback to a recent transaction; expires after ten minutes. |
+| OAuth access and refresh tokens | Consumer tab's `sessionStorage` | Lets the browser call userinfo, refresh access, and mint session tokens; readable by JavaScript. |
+| `__koamishin_session` | Consumer-origin cookie | Short-lived signed JWT for the app's server/proxy. The SDK writes it with `Path=/` and `SameSite=Lax`, without a domain attribute; it is JavaScript-readable, not `HttpOnly`. |
+| Portal session cookie | Portal origin | Maintains the Portal's own browser session; configured separately using Laravel session settings. |
+
+The app cookie is not the Portal's session cookie and does not share the browser's access token with the app server. The current SDK writes the cookie with `document.cookie` and does not set `Secure`; production deployments must use HTTPS and assess their cookie and XSS risks rather than assume Clerk's cookie protections apply. Keep OAuth tokens and verifiers out of URLs, application logs, and screenshots. Authorization requests and callbacks carry state and may carry a code in their URLs; treat them as sensitive transient values and avoid sharing or logging full URLs.
+
+Consumer `signOut()` clears the app's local browser data and cookie, but does not revoke the Portal grant or end the Portal's hosted session. Existing signed JWTs remain usable until expiration even after server-side revocation. For higher-risk operations, check current access rather than relying exclusively on an offline token. See [session tokens](session-tokens.mdx) and [multi-session accounts](multi-session.mdx).
+
+## Routing and browser restoration
+
+Koamishin's Next.js controls start a redirect to Portal-hosted screens; they are not embedded Clerk `SignIn`, `SignUp`, or `UserProfile` components and do not expose Clerk's `path` or `hash` routing props. The consumer must provide a callback page at its registered URI. The Portal owns its authentication routes and returns to the application after authorization.
+
+The provider restores the stored user and access token within the same tab and attempts token renewal. Unlike Clerk's documented server/browser handshake, this SDK has no equivalent server-side handshake to restore an expired app cookie before a protected server request. A protected request with a missing or unverifiable cookie can be redirected to sign-in even while browser state exists. Test reloads, tab closure, expiry, and navigation for your deployment.
+
+## Tokens and verification
+
+Session JWTs are RS256 signed, not encrypted: the payload is readable by its holder. The Portal publishes its public key at `/oauth/jwks`; the SDK verifies signatures, issuer, and time claims. The expected issuer is the Portal's configured `APP_URL`, which must match the SDK's Portal URL. Configure HTTPS and a trusted local CA rather than disabling verification.
+
+The current JavaScript verifier checks environment and application ID **when configured and present in the token**; it does not require those claims to exist. Applications with strict isolation requirements must explicitly reject missing or mismatched binding claims at their authorization boundary. The SDK's automatic proxy verification does not establish application-specific authorization on its own. The Portal's OAuth access tokens are separate from these session JWTs. This Portal does not currently issue OIDC ID tokens or implement nonce handling; discovery metadata alone does not establish full OIDC conformance.
+
+## Rate limits
+
+Limits are defined by the deployed application and may differ by version or configuration. For example, the current Portal configures five password-login attempts per minute keyed by identifier and IP, and five two-factor attempts per minute keyed by the login session. The session-token mint routes and `/api/v1` management group use `throttle:60,1`. Email-code and invitation endpoints have their own throttles. Review `routes/` and Fortify configuration for the version you deploy; do not assume Clerk's documented quotas apply to Koamishin or that every route has the same limit.
+
+## Comparison and possible extensions
+
+The following is a design assessment, not a promise of compatibility or a specification for future releases. Clerk's documentation describes its own architecture and limits; consult the [Clerk overview](https://clerk.com/docs/guides/how-clerk-works/overview), [cookies](https://clerk.com/docs/guides/how-clerk-works/cookies), [routing](https://clerk.com/docs/guides/how-clerk-works/routing), [rate limits](https://clerk.com/docs/guides/how-clerk-works/system-limits), and [tokens and signatures](https://clerk.com/docs/guides/how-clerk-works/tokens-and-signatures) for its current behavior.
+
+| Area | Koamishin today | Potential direction |
+| --- | --- | --- |
+| Getting started | App Router guide and one example template; no validated Pages Router quickstart. | Test Pages Router and document it only after a supported example exists. |
+| UI and routing | Hosted flows plus triggers and a basic user menu. | Evaluate embedded components and routing as a separate, accessible product feature; don't promise Clerk prop compatibility. |
+| Session restoration | Tab storage and periodic app-cookie minting; no Clerk-style handshake. | Design an explicit secure restoration flow for SSR and expired cookies, with browser and security tests. |
+| Sign-out | Consumer-local clearing; Portal and grants can remain active. | Design explicit grant revocation and optional Portal/global logout with clear scope and CSRF protections. |
+| Verification | Short-lived RS256 JWTs and JWKS; conditional environment/application checks in the JS verifier. | Consider required audience and binding claims, key rotation, revocation expectations, and fail-closed tests before changing the contract. |
+| Rate limits | Endpoint-specific Laravel throttles, not Clerk's hosted quotas. | Publish and test a versioned limit policy and consistent 429 behavior for each supported API. |
+| Cookie model | Browser-readable app JWT and browser-held OAuth tokens. | Evaluate a server-managed, HttpOnly session/BFF design and its cross-origin, CSRF, and operational tradeoffs. |
+
+These changes involve protocol and security decisions; none is required merely to follow the current quickstart. Prioritize an explicit logout/revocation design and reliable session restoration before pursuing visual component parity.

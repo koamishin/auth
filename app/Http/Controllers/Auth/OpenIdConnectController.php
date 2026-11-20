@@ -29,7 +29,7 @@ class OpenIdConnectController extends Controller
             'token_endpoint' => "{$baseUrl}/oauth/token",
             'userinfo_endpoint' => "{$baseUrl}/api/oauth/userinfo",
             'jwks_uri' => "{$baseUrl}/oauth/jwks",
-            'scopes_supported' => ['openid', 'profile', 'email', 'phone', 'wallet', 'roles', 'metadata:public'],
+            'scopes_supported' => ['openid', 'profile', 'email', 'roles'],
             'response_types_supported' => ['code'],
             'subject_types_supported' => ['public'],
             'id_token_signing_alg_values_supported' => ['RS256'],
@@ -44,10 +44,11 @@ class OpenIdConnectController extends Controller
      */
     public function jwks(): JsonResponse
     {
-        $configuredKey = config('passport.public_key');
-        $keyPath = is_string($configuredKey) && $configuredKey !== '' ? $configuredKey : storage_path('oauth-public.key');
-        $publicKey = str_contains($keyPath, '-----BEGIN')
-            ? $keyPath
+        $configured = config('passport.public_key');
+        $keyPath = storage_path('oauth-public.key');
+
+        $publicKey = is_string($configured) && $configured !== ''
+            ? str_replace('\\n', "\n", $configured)
             : (file_exists($keyPath) ? file_get_contents($keyPath) : false);
 
         if (! is_string($publicKey) || $publicKey === '') {
@@ -142,7 +143,6 @@ class OpenIdConnectController extends Controller
                 ->where('environment', $environment->environment)
                 ->where('user_id', $user->getKey())
                 ->value('role');
-
             $claims['roles'] = [is_string($role) && $role !== '' ? $role : 'member'];
             $claims['permissions'] = [];
         }

@@ -6,7 +6,7 @@ namespace App\Jobs;
 
 use App\Models\WebhookDelivery;
 use App\Models\WebhookEndpoint;
-use App\Support\WebhookUrlValidator;
+use App\Support\OutboundUrlValidator;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -100,6 +100,8 @@ class DispatchWebhookJob implements ShouldQueue
             ];
         }
 
+        $resolve = OutboundUrlValidator::validateWebhookUrl($this->endpoint->url);
+
         /** @var WebhookDelivery $delivery */
         $delivery = WebhookDelivery::query()->create([
             'webhook_endpoint_id' => $this->endpoint->id,
@@ -110,24 +112,19 @@ class DispatchWebhookJob implements ShouldQueue
             'attempts' => $this->attempts(),
         ]);
 
-        $urlError = WebhookUrlValidator::validate($this->endpoint->url);
-        if ($urlError !== null) {
-            $delivery->update([
-                'response_status' => 0,
-                'response_body' => $urlError,
-                'status' => 'failed',
-                'attempts' => $this->attempts(),
-            ]);
-
-            return;
-        }
-
         try {
-            $response = Http::timeout(10)
-                ->withOptions(['allow_redirects' => false])
+            $pending = Http::timeout(10)
+                ->withoutRedirecting()
                 ->withHeaders($headers)
-                ->withBody($rawPayload, 'application/json')
-                ->post($this->endpoint->url);
+                ->withBody($rawPayload, 'application/json');
+
+            if ($resolve !== [] && defined('CURLOPT_RESOLVE')) {
+                $pending = $pending->withOptions([
+                    'curl' => [CURLOPT_RESOLVE => $resolve],
+                ]);
+            }
+
+            $response = $pending->post($this->endpoint->url);
 
             $delivery->update([
                 'response_status' => $response->status(),
@@ -136,13 +133,16 @@ class DispatchWebhookJob implements ShouldQueue
                 'attempts' => $this->attempts(),
             ]);
 
-            if ($response->failed()) {
+            $status = $response->status();
+            $retryable = $status === 408 || $status === 429 || $status >= 500;
+
+            if ($retryable && $this->attempts() < $this->tries) {
                 $this->release($this->backoff[$this->attempts() - 1] ?? 60);
             }
         } catch (\Throwable $e) {
             $delivery->update([
                 'response_status' => 0,
-                'response_body' => $e->getMessage(),
+                'response_body' => 'Delivery failed due to a network or endpoint error.',
                 'status' => 'failed',
                 'attempts' => $this->attempts(),
             ]);

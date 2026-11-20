@@ -251,18 +251,19 @@ class SessionTokenService
      */
     private function sign(User $user, array $claims, int $issuedAt, int $expiresAt): string
     {
-        $configuredPrivateKey = config('passport.private_key');
-        $privateKeyPath = is_string($configuredPrivateKey) && $configuredPrivateKey !== ''
-            ? $configuredPrivateKey
-            : storage_path('oauth-private.key');
-        abort_unless(str_contains($privateKeyPath, '-----BEGIN') || file_exists($privateKeyPath), 503, 'Session tokens are not configured.');
+        $configuredPrivate = config('passport.private_key');
+        $configuredPublic = config('passport.public_key');
+        $privateKeyPath = storage_path('oauth-private.key');
+        $publicKeyPath = storage_path('oauth-public.key');
 
-        $configuredPublicKey = config('passport.public_key');
-        $publicKeyPath = is_string($configuredPublicKey) && $configuredPublicKey !== ''
-            ? $configuredPublicKey
-            : storage_path('oauth-public.key');
-        $publicKey = str_contains($publicKeyPath, '-----BEGIN')
-            ? $publicKeyPath
+        $privateKey = is_string($configuredPrivate) && $configuredPrivate !== ''
+            ? InMemory::plainText(str_replace('\\n', "\n", $configuredPrivate))
+            : (file_exists($privateKeyPath) ? InMemory::file($privateKeyPath) : null);
+
+        abort_if(!$privateKey instanceof \Lcobucci\JWT\Signer\Key\InMemory, 503, 'Session tokens are not configured.');
+
+        $publicKeyContents = is_string($configuredPublic) && $configuredPublic !== ''
+            ? str_replace('\\n', "\n", $configuredPublic)
             : (file_exists($publicKeyPath) ? (string) file_get_contents($publicKeyPath) : '');
 
         $builder = (new Builder(new JoseEncoder, ChainedFormatter::withUnixTimestampDates()))
@@ -273,17 +274,13 @@ class SessionTokenService
             ->canOnlyBeUsedAfter(new DateTimeImmutable('@'.$issuedAt))
             ->expiresAt(new DateTimeImmutable('@'.$expiresAt))
             // The same key identifier the JWKS endpoint publishes.
-            ->withHeader('kid', hash('sha256', $publicKey));
+            ->withHeader('kid', hash('sha256', $publicKeyContents));
 
         foreach ($claims as $name => $value) {
             // The builder is immutable; every call returns a new one.
             $builder = $builder->withClaim($name, $value);
         }
 
-        $signingKey = str_contains($privateKeyPath, '-----BEGIN')
-            ? InMemory::plainText($privateKeyPath)
-            : InMemory::file($privateKeyPath);
-
-        return $builder->getToken(new Sha256, $signingKey)->toString();
+        return $builder->getToken(new Sha256, $privateKey)->toString();
     }
 }

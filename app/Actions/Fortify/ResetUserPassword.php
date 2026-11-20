@@ -7,6 +7,7 @@ namespace App\Actions\Fortify;
 use App\Concerns\PasswordValidationRules;
 use App\Models\TenantApplicationEnvironment;
 use App\Models\User;
+use App\Services\Auth\MultiSession;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Fortify\Contracts\ResetsUserPasswords;
 
@@ -40,5 +41,7 @@ class ResetUserPassword implements ResetsUserPasswords
         $user->forceFill([
             'password' => $input['password'],
         ])->save();
+
+        app(MultiSession::class)->revokeAllFor($user->getKey());
     }
 }

@@ -17,6 +17,8 @@ const pages = [
     'docs/guides/authentication.mdx',
     'docs/guides/laravel-sdk.mdx',
     'docs/guides/nextjs-sdk.mdx',
+    'docs/guides/nextjs-components.mdx',
+    'docs/guides/how-koamishin-works.mdx',
     'docs/guides/multi-session.mdx',
     'docs/guides/session-tokens.mdx',
     'docs/guides/user-accounts.mdx',

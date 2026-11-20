@@ -46,6 +46,7 @@ class WebhookEndpoint extends Model
     protected function casts(): array
     {
         return [
+            'secret' => 'encrypted',
             'events' => 'array',
             'is_active' => 'boolean',
         ];

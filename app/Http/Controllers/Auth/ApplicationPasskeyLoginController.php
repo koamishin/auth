@@ -31,9 +31,14 @@ class ApplicationPasskeyLoginController extends PasskeyLoginController
 
         // Allow and block rules apply to every sign-in method, not just passwords.
         $environment = $request->attributes->get('koamishin.application_environment');
-        if ($environment instanceof TenantApplicationEnvironment
-            && ! app(ApplicationAccessPolicy::class)->allows($environment, $passkey->user->email)) {
-            throw InvalidPasskeyException::make('Unable to sign in with this account.');
+        if ($environment instanceof TenantApplicationEnvironment) {
+            if (($passkey->user->identity_namespace ?? User::PORTAL_IDENTITY_NAMESPACE) !== $environment->identityNamespace()) {
+                throw InvalidPasskeyException::make('Unable to sign in with this account.');
+            }
+
+            if (! app(ApplicationAccessPolicy::class)->allows($environment, $passkey->user->email)) {
+                throw InvalidPasskeyException::make('Unable to sign in with this account.');
+            }
         }
 
         $guard->login($passkey->user);

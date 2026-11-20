@@ -11,7 +11,7 @@ use App\Jobs\DispatchWebhookJob;
 use App\Models\Tenant;
 use App\Models\TenantApplicationEnvironment;
 use App\Models\WebhookEndpoint;
-use App\Support\WebhookUrlValidator;
+use App\Support\OutboundUrlValidator;
 use BackedEnum;
 use Closure;
 use Filament\Actions\Action;
@@ -34,6 +34,7 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class WebhookEndpointResource extends Resource
 {
@@ -54,6 +55,19 @@ class WebhookEndpointResource extends Resource
     protected static bool $isScopedToTenant = false;
 
     #[\Override]
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+        $tenant = Filament::getTenant();
+
+        if ($tenant instanceof Tenant) {
+            $query->whereHas('environment.application', fn ($q) => $q->where('tenant_id', $tenant->getKey()));
+        }
+
+        return $query;
+    }
+
+    #[\Override]
     public static function form(Schema $schema): Schema
     {
         return $schema
@@ -68,46 +82,34 @@ class WebhookEndpointResource extends Resource
 
                         Select::make('tenant_application_environment_id')
                             ->label('Application environment')
-                            ->options(function (): array {
-                                $tenant = Filament::getTenant();
-
-                                return TenantApplicationEnvironment::query()
-                                    ->with('application.tenant')
-                                    ->when(
-                                        $tenant instanceof Tenant,
-                                        fn ($query) => $query->whereHas(
-                                            'application',
-                                            fn ($appQuery) => $appQuery->where('tenant_id', $tenant->getKey()),
-                                        ),
-                                    )
-                                    ->get()
-                                    ->mapWithKeys(fn (TenantApplicationEnvironment $environment): array => [
-                                        $environment->getKey() => $environment->application->tenant->name.' / '.$environment->application->name.' / '.$environment->environment,
-                                    ])
-                                    ->all();
-                            })
+                            ->options(fn (): array => TenantApplicationEnvironment::query()
+                                ->with('application.tenant')
+                                ->get()
+                                ->mapWithKeys(fn (TenantApplicationEnvironment $environment): array => [
+                                    $environment->getKey() => $environment->application->tenant->name.' / '.$environment->application->name.' / '.$environment->environment,
+                                ])
+                                ->all())
                             ->searchable()
                             ->required()
                             ->helperText('Only events from this application and environment are delivered.'),
 
                         TextInput::make('url')
                             ->label('Endpoint URL')
-                            ->placeholder('https://crm.example.com/api/webhooks/auth')
+                            ->placeholder('https://api.example.com/webhooks/auth')
                             ->url()
                             ->required()
                             ->maxLength(500)
-                            ->rules([
-                                fn (): Closure => function (string $attribute, mixed $value, Closure $fail): void {
-                                    if (! is_string($value)) {
-                                        return;
-                                    }
+                            ->rule(fn(): Closure => function (string $attribute, mixed $value, Closure $fail): void {
+                                if (! is_string($value) || $value === '') {
+                                    return;
+                                }
 
-                                    $error = WebhookUrlValidator::validate($value);
-                                    if ($error !== null) {
-                                        $fail($error);
-                                    }
-                                },
-                            ]),
+                                try {
+                                    OutboundUrlValidator::validateWebhookUrl($value);
+                                } catch (\InvalidArgumentException $e) {
+                                    $fail($e->getMessage());
+                                }
+                            }),
 
                         Select::make('signature_format')
                             ->label('Signature Format')
@@ -239,7 +241,7 @@ class WebhookEndpointResource extends Resource
                         } catch (\Throwable) {
                             Notification::make()
                                 ->title('Delivery Failed')
-                                ->body('Could not deliver test webhook to the configured endpoint.')
+                                ->body('Could not reach the configured webhook endpoint.')
                                 ->danger()
                                 ->send();
                         }

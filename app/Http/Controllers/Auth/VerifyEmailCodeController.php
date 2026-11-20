@@ -8,6 +8,7 @@ use App\Enums\EmailCodePurpose;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\Auth\EmailCodeService;
+use App\Support\OutboundUrlValidator;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -66,8 +67,13 @@ class VerifyEmailCodeController extends Controller
 
         $this->codes->send($user, EmailCodePurpose::Verification);
 
+        $referer = $request->header('Referer');
+        $target = OutboundUrlValidator::isSameOrigin($referer, url('/'))
+            ? (string) $referer
+            : url()->current();
+
         return $request->header('X-Inertia')
-            ? Inertia::location($request->header('Referer') ?? url()->current())
+            ? Inertia::location($target)
             : redirect()->back();
     }
 

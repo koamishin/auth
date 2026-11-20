@@ -20,7 +20,7 @@ return new class extends Migration
             $table->timestamp('invited_at')->nullable();
             $table->timestamps();
 
-            $table->unique(['tenant_application_environment_id', 'email']);
+            $table->unique(['tenant_application_environment_id', 'email'], 'application_waitlist_environment_email_unique');
         });
     }
 

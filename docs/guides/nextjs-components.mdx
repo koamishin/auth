@@ -1,0 +1,72 @@
+---
+title: Next.js components and hooks
+description: Use Koamishin's Next.js provider, authentication controls, callback, hooks, and server helpers.
+---
+
+# Next.js components and hooks
+
+This reference describes the Next.js exports present in `@koamishin/auth-js` 1.3.0 source. Check your installed version before relying on an API; names inspired by Clerk do not imply drop-in compatibility. For a working App Router setup, begin with [Get started with Next.js](../getting-started/nextjs.mdx) and the [Next.js SDK integration](nextjs-sdk.mdx). The [example template](https://github.com/koamishin/koamishin-auth-nextjs-template) shows these pieces together.
+
+The documented example uses App Router. A Pages Router quickstart and its server-side integration have not been validated for this SDK; do not assume Clerk's Pages Router instructions apply unchanged.
+
+## Provider and authentication controls
+
+Import the following from `@koamishin/auth-js/nextjs`. Wrap client components that use these exports in `KoamishinProvider`. The provider reads `NEXT_PUBLIC_KOAMISHIN_PORTAL_URL`, `NEXT_PUBLIC_KOAMISHIN_PUBLISHABLE_KEY`, and `NEXT_PUBLIC_KOAMISHIN_REDIRECT_URI`, or accepts `portalUrl`, `publishableKey` (or legacy `clientId`), `redirectUri`, and `scopes` as props. Use a public OAuth client and never expose an `sk_...` key.
+
+| Export | Purpose | Options and boundaries |
+| --- | --- | --- |
+| `KoamishinProvider` | Supplies the browser client, user, and session context. | `children`, `portalUrl`, `publishableKey`, `clientId`, `redirectUri`, `scopes`. |
+| `Show` | Conditionally renders client UI after the provider loads. | `when="signed-in"` or `when="signed-out"`; optional `fallback`. This is presentation, not authorization. |
+| `SignInButton` | Starts the Portal-hosted sign-in flow. | Optional `children`, `redirectUrl`, and `className`. |
+| `SignUpButton` | Starts the Portal-hosted registration flow. | Optional `children`, `redirectUrl`, and `className`; Portal signup policy still applies. |
+| `UserButton` | Displays the user's avatar/initials and menu. | Optional `afterSignOutUrl` (default `/`). Its current menu links to `/dashboard` and signs out locally. |
+| `AuthenticateWithRedirectCallback` | Completes the PKCE callback. | Optional `afterSignInUrl` (default `/dashboard`); a stored return destination can take precedence. |
+
+These sign-in and sign-up controls are **triggers**, not embedded credential forms. With custom children, use an accessible interactive element such as a real `<button>`; the SDK wraps it in a clickable span. Choose trusted, application-controlled redirect destinations.
+
+```tsx
+import { Suspense } from 'react';
+import {
+    KoamishinProvider, Show, SignInButton, SignUpButton, UserButton,
+} from '@koamishin/auth-js/nextjs';
+
+export function AuthShell({ children }: { children: React.ReactNode }) {
+    return (
+        <KoamishinProvider>
+            <Suspense fallback={<p>Loading account...</p>}>
+                <Show when="signed-out">
+                    <SignInButton />
+                    <SignUpButton><button type="button">Create account</button></SignUpButton>
+                </Show>
+                <Show when="signed-in"><UserButton afterSignOutUrl="/" /></Show>
+            </Suspense>
+            {children}
+        </KoamishinProvider>
+    );
+}
+```
+
+The App Router root layout can render this shell inside `<body>`. A callback route must render `AuthenticateWithRedirectCallback` at the exact path configured in the Portal and the app, wrapped in `Suspense` as in the [integration guide](nextjs-sdk.mdx). Do not open a callback directly or replay an old URL: it requires the original browser-tab transaction.
+
+## Client hooks
+
+Use hooks inside a Client Component under the provider:
+
+| Hook | Returns |
+| --- | --- |
+| `useUser()` | `user`, `isLoaded`, `isSignedIn`. |
+| `useAuth()` | `isLoaded`, `isSignedIn`, `userId`, `sessionId`, `sessionClaims`, `signIn`, `signUp`, `signOut`. |
+| `useKoamishin()` | Full context, including `client`, `user`, claims, loading/error state, authentication methods, and `completeCallback`. |
+| `useSession()` | An alias of `useKoamishin()`, not a separate Clerk-compatible session object. |
+
+`signIn({ redirectUrl })` and `signUp({ redirectUrl })` initiate redirects. `signOut({ redirectUrl })` clears this browser application's stored tokens and cookie and redirects; it does **not** revoke the Portal grant or end the Portal's hosted session. For an example calling `client.getUser()` and handling errors, see [reading the current user](../getting-started/nextjs.mdx#read-the-current-user-and-sign-out). User data and claims may be unavailable while loading or when authentication fails.
+
+## Protect routes and read server claims
+
+Import `koamishinMiddleware`, `createRouteMatcher`, and `auth` from `@koamishin/auth-js/nextjs/server`. The middleware leaves routes public unless you explicitly call `auth.protect()`; see the [complete proxy example](nextjs-sdk.mdx#4-add-koamishinmiddleware-to-proxyts). In an App Router Server Component, `await auth()` returns `userId`, `sessionId`, `sessionClaims`, and `isAuthenticated`. Wrap request-dependent server UI in `Suspense` when using Next.js Cache Components.
+
+A `Show` condition or a visible button does not secure an API or data operation. Verify identity and application authorization at the server boundary as well. The SDK also exports `decodeSessionToken` and `verifySessionToken` from the server entry point; decoding alone does not verify a signature. See [session tokens](session-tokens.mdx).
+
+## Current scope
+
+The SDK does not expose Clerk's full prebuilt sign-in, signup, organization, profile, or billing component suite; the actual authentication screens are hosted by the Portal. `UserButton` is a small account menu, not a full account-management component. See [How Koamishin Auth works](how-koamishin-works.mdx) for security, routing, session differences, and potential future capabilities.

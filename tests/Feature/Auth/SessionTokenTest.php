@@ -7,12 +7,17 @@ use App\Models\User;
 use App\Services\Auth\MultiSession;
 use App\Services\Auth\SessionTokenService;
 use App\Services\OAuth\ApplicationAuthentication;
+use App\Services\OAuth\GrantFamilies;
 use App\Support\FactorVerifications;
 use DateTimeImmutable;
 use Illuminate\Cookie\CookieValuePrefix;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Testing\TestResponse;
 use Laravel\Passport\Client;
 use Laravel\Passport\ClientRepository;
+use Laravel\Passport\Passport;
+use Laravel\Passport\RefreshToken;
+use Laravel\Passport\Token;
 use Lcobucci\JWT\Encoding\JoseEncoder;
 use Lcobucci\JWT\Signer\Key\InMemory;
 use Lcobucci\JWT\Signer\Rsa\Sha256;
@@ -134,7 +139,7 @@ function sessionTokenClaims(TestResponse $response): array
  * A real authorization-code exchange, the way a client application gets its
  * first access token for a user.
  */
-function sessionTokenCodeGrant(Client $client, User $user): string
+function sessionTokenCodeGrant(Client $client, User $user, ?array &$issuedTokens = null): string
 {
     $challenge = rtrim(strtr(base64_encode(hash('sha256', str_repeat('a', 64), true)), '+/', '-_'), '=');
     $authorize = '/oauth/authorize?'.http_build_query([
@@ -175,6 +180,8 @@ function sessionTokenCodeGrant(Client $client, User $user): string
         'code' => $parameters['code'] ?? '',
         'code_verifier' => str_repeat('a', 64),
     ])->assertOk();
+
+    $issuedTokens = $exchange->json();
 
     return (string) $exchange->json('access_token');
 }
@@ -456,4 +463,206 @@ test('banned users cannot mint session tokens', function (): void {
     $user->ban();
 
     $this->getJson(route('session-token.show'))->assertForbidden();
+});
+
+test('a user can revoke only the current oauth grant and its refresh token', function (): void {
+    [$client, $environment] = sessionTokenEnvironment('revoke-current-grant');
+    $user = sessionTokenUser($environment);
+    sessionTokenEnroll($user, $environment);
+    $tokens = null;
+    $accessToken = sessionTokenCodeGrant($client, $user, $tokens);
+    $grant = $user->tokens()->where('client_id', $client->getKey())->firstOrFail();
+    $refresh = RefreshToken::query()->where('access_token_id', $grant->getKey())->firstOrFail();
+    [$otherClient] = sessionTokenEnvironment('revoke-other-application');
+    $otherGrant = new Token;
+    $otherGrant->forceFill([
+        'id' => str_repeat('a', 80),
+        'user_id' => $user->getKey(),
+        'client_id' => $otherClient->getKey(),
+        'scopes' => ['openid'],
+        'revoked' => false,
+        'expires_at' => now()->addHour(),
+    ])->save();
+    $otherRefresh = new RefreshToken;
+    $otherRefresh->forceFill([
+        'id' => str_repeat('b', 80),
+        'access_token_id' => $otherGrant->getKey(),
+        'revoked' => false,
+        'expires_at' => now()->addHour(),
+    ])->save();
+
+    $this->postJson('/api/oauth/revoke-family', ['revocation_token' => $tokens['revocation_token']])->assertNoContent();
+
+    expect($grant->fresh()->revoked)->toBeTrue()
+        ->and($refresh->fresh()->revoked)->toBeTrue()
+        ->and($otherGrant->fresh()->revoked)->toBeFalse()
+        ->and($otherRefresh->fresh()->revoked)->toBeFalse();
+    app('auth')->forgetGuards();
+    $this->withToken($accessToken)->getJson('/api/oauth/userinfo')->assertUnauthorized();
+});
+
+test('revoking a grant requires a valid revocation credential', function (): void {
+    $this->postJson('/api/oauth/revoke-family')->assertUnprocessable();
+    $this->postJson('/api/oauth/revoke-family', ['revocation_token' => 'invalid-token'])->assertUnauthorized();
+});
+
+test('revocation credentials must be correctly formed and cannot be guessed', function (): void {
+    $this->postJson('/api/oauth/revoke-family', ['revocation_token' => 'bad'])->assertUnauthorized();
+    $this->postJson('/api/oauth/revoke-family', [
+        'revocation_token' => 'kg1.00000000-0000-0000-0000-000000000000.'.str_repeat('a', 64),
+    ])->assertUnauthorized();
+    $this->postJson('/api/oauth/revoke-family', [
+        'revocation_token' => 'kg1.------------------------------------.'.str_repeat('a', 64),
+    ])->assertUnauthorized();
+});
+
+test('a later client credentials response does not inherit another grants secrets', function (): void {
+    [$client, $environment] = sessionTokenEnvironment('response-isolation');
+    $user = sessionTokenUser($environment);
+    sessionTokenEnroll($user, $environment);
+    sessionTokenCodeGrant($client, $user);
+    $machineClient = app(ClientRepository::class)->createClientCredentialsGrantClient('response-isolation-machine');
+
+    $this->postJson('/oauth/token', [
+        'grant_type' => 'client_credentials',
+        'client_id' => $machineClient->getKey(),
+        'client_secret' => $machineClient->plainSecret,
+        'scope' => 'users:read',
+    ])->assertOk()
+        ->assertJsonMissingPath('refresh_token')
+        ->assertJsonMissingPath('revocation_token');
+});
+
+test('revoking a grant family does not affect another application grant', function (): void {
+    [$firstClient, $firstEnvironment] = sessionTokenEnvironment('family-first-application');
+    $firstUser = sessionTokenUser($firstEnvironment);
+    sessionTokenEnroll($firstUser, $firstEnvironment);
+    $firstTokens = null;
+    sessionTokenCodeGrant($firstClient, $firstUser, $firstTokens);
+
+    [$otherClient, $otherEnvironment] = sessionTokenEnvironment('family-other-application');
+    $otherUser = sessionTokenUser($otherEnvironment);
+    sessionTokenEnroll($otherUser, $otherEnvironment);
+    $otherTokens = null;
+    sessionTokenCodeGrant($otherClient, $otherUser, $otherTokens);
+    expect($firstTokens['revocation_token'])->not->toBe($otherTokens['revocation_token']);
+    $firstParts = explode('.', $firstTokens['revocation_token']);
+    $otherParts = explode('.', $otherTokens['revocation_token']);
+    $forged = $otherParts[0].'.'.$otherParts[1].'.'.$firstParts[2];
+    $this->postJson('/api/oauth/revoke-family', ['revocation_token' => $forged])->assertUnauthorized();
+
+    $this->postJson('/api/oauth/revoke-family', ['revocation_token' => $firstTokens['revocation_token']])->assertNoContent();
+    app('auth')->forgetGuards();
+    $this->withToken($otherTokens['access_token'])->getJson('/api/oauth/userinfo')->assertOk();
+    $this->postJson('/oauth/token', [
+        'grant_type' => 'refresh_token',
+        'client_id' => $otherClient->getKey(),
+        'client_secret' => $otherClient->plainSecret,
+        'refresh_token' => $otherTokens['refresh_token'],
+    ])->assertOk();
+});
+
+test('a revocation credential remains usable when its access token has expired', function (): void {
+    [$client, $environment] = sessionTokenEnvironment('revocation-after-access-expiry');
+    $user = sessionTokenUser($environment);
+    sessionTokenEnroll($user, $environment);
+    $tokens = null;
+    sessionTokenCodeGrant($client, $user, $tokens);
+    $grant = $user->tokens()->where('client_id', $client->getKey())->firstOrFail();
+    $grant->forceFill(['expires_at' => now()->subMinute()])->save();
+
+    $this->postJson('/api/oauth/revoke-family', ['revocation_token' => $tokens['revocation_token']])->assertNoContent();
+
+    expect($grant->fresh()->revoked)->toBeTrue();
+    $this->postJson('/oauth/token', [
+        'grant_type' => 'refresh_token',
+        'client_id' => $client->getKey(),
+        'client_secret' => $client->plainSecret,
+        'refresh_token' => $tokens['refresh_token'],
+    ])->assertStatus(400)->assertJsonPath('error', 'invalid_grant');
+});
+
+test('an untracked legacy grant receives a revocation credential when refreshed', function (): void {
+    [$client, $environment] = sessionTokenEnvironment('legacy-family-refresh');
+    $user = sessionTokenUser($environment);
+    sessionTokenEnroll($user, $environment);
+    $tokens = null;
+    sessionTokenCodeGrant($client, $user, $tokens);
+    $familyId = explode('.', $tokens['revocation_token'])[1];
+    DB::table('oauth_grant_family_tokens')->where('family_id', $familyId)->delete();
+    DB::table('oauth_grant_families')->where('id', $familyId)->delete();
+
+    $renewed = $this->postJson('/oauth/token', [
+        'grant_type' => 'refresh_token',
+        'client_id' => $client->getKey(),
+        'client_secret' => $client->plainSecret,
+        'refresh_token' => $tokens['refresh_token'],
+    ])->assertOk();
+    expect($renewed->json('revocation_token'))->toBeString()->not->toBe('');
+    $this->postJson('/api/oauth/revoke-family', ['revocation_token' => $renewed->json('revocation_token')])->assertNoContent();
+    $this->postJson('/oauth/token', [
+        'grant_type' => 'refresh_token',
+        'client_id' => $client->getKey(),
+        'client_secret' => $client->plainSecret,
+        'refresh_token' => $renewed->json('refresh_token'),
+    ])->assertStatus(400)->assertJsonPath('error', 'invalid_grant');
+});
+
+test('a revocation credential after rotation revokes the entire grant family', function (): void {
+    [$client, $environment] = sessionTokenEnvironment('bearer-family-revocation');
+    $user = sessionTokenUser($environment);
+    sessionTokenEnroll($user, $environment);
+    $tokens = null;
+    sessionTokenCodeGrant($client, $user, $tokens);
+    $renewed = $this->postJson('/oauth/token', [
+        'grant_type' => 'refresh_token',
+        'client_id' => $client->getKey(),
+        'client_secret' => $client->plainSecret,
+        'refresh_token' => $tokens['refresh_token'],
+    ])->assertOk();
+
+    $this->postJson('/api/oauth/revoke-family', ['revocation_token' => $tokens['revocation_token']])->assertNoContent();
+
+    $familyId = explode('.', $tokens['revocation_token'])[1];
+    expect(DB::table('oauth_grant_families')->where('id', $familyId)->value('revoked_at'))->not->toBeNull();
+    $this->postJson('/oauth/token', [
+        'grant_type' => 'refresh_token',
+        'client_id' => $client->getKey(),
+        'client_secret' => $client->plainSecret,
+        'refresh_token' => $renewed->json('refresh_token'),
+    ])->assertStatus(400)->assertJsonPath('error', 'invalid_grant');
+});
+
+test('grant families use the configured passport connection', function (): void {
+    $previousConnection = config('passport.connection');
+    config([
+        'database.connections.passport_family_test' => config('database.connections.sqlite'),
+        'passport.connection' => 'passport_family_test',
+    ]);
+
+    try {
+        $connection = app(GrantFamilies::class)->connection();
+        expect($connection)->toBe(DB::connection('passport_family_test'));
+    } finally {
+        config(['passport.connection' => $previousConnection]);
+        DB::purge('passport_family_test');
+    }
+});
+
+test('grant families refuse mismatched passport model connections', function (): void {
+    config(['database.connections.passport_mismatch_test' => config('database.connections.sqlite')]);
+    $originalModel = Passport::refreshTokenModel();
+    $mismatchedModel = new class extends RefreshToken
+    {
+        protected $connection = 'passport_mismatch_test';
+    };
+    Passport::useRefreshTokenModel($mismatchedModel::class);
+
+    try {
+        expect(fn () => app(GrantFamilies::class)->connection())
+            ->toThrow(LogicException::class, 'built-in Passport token models');
+    } finally {
+        Passport::useRefreshTokenModel($originalModel);
+        DB::purge('passport_mismatch_test');
+    }
 });

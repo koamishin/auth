@@ -100,6 +100,9 @@ class KoamishinServiceProvider extends ServiceProvider
         if ($this->app['config']->get('koamishin-setup.enabled') !== true
             || $this->app['config']->get('koamishin-setup.migrate_hosted_routes') !== true) {
             $this->app['router']->pushMiddlewareToGroup('web', RedirectToHostedAuthentication::class);
+            $this->app->afterResolving(Kernel::class, function (): void {
+                $this->app['router']->pushMiddlewareToGroup('web', RedirectToHostedAuthentication::class);
+            });
 
             if (! $this->app->routesAreCached()) {
                 Route::middleware('web')->group(function (): void {
@@ -118,9 +121,11 @@ class KoamishinServiceProvider extends ServiceProvider
                         return null;
                     }
 
-                    return SessionTokenVerifier::isSessionToken($token)
-                        ? $auth->userForSessionToken($token)
-                        : $auth->userForToken($token);
+                    if (SessionTokenVerifier::isSessionToken($token)) {
+                        return $auth->userForSessionToken($token);
+                    }
+
+                    return $auth->userForToken($token);
                 }
 
                 return $request->hasSession() ? $auth->user() : null;

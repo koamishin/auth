@@ -7,6 +7,7 @@ namespace App\Http\Middleware;
 use App\Http\Controllers\Auth\HostedAuthenticationController;
 use App\Models\TenantApplicationEnvironment;
 use App\Models\User;
+use App\Services\Auth\ApplicationAccessPolicy;
 use App\Services\OAuth\ApplicationAccess;
 use App\Services\OAuth\ApplicationAuthentication;
 use App\Settings\ApplicationFeaturesSettings;
@@ -154,8 +155,8 @@ class EnsureOAuthApplicationAccess
     private function authorize(Request $request, Closure $next): Response
     {
         $requestedClient = $request->query('client_id');
-        if (is_string($requestedClient) && $requestedClient !== '') {
-            $requestedEnvironment = $this->access->environmentForClient($requestedClient);
+        if (is_string($requestedClient) && str_starts_with($requestedClient, 'pk_')) {
+            $requestedEnvironment = $this->access->environmentForPublishableKey($requestedClient);
             if ($requestedEnvironment?->oauthClient && ! $requestedEnvironment->oauthClient->confidential()) {
                 if ($request->query('code_challenge_method') !== 'S256') {
                     return $this->authorizationError('pkce');
@@ -357,7 +358,13 @@ class EnsureOAuthApplicationAccess
 
         $this->authentication->ensureSingleSignOnStillAllowed($request, $environment, $user);
         abort_if($environment->requiresEmailVerification() && ! $user->hasVerifiedEmail(), 403, 'Verify your email address before authorizing this application.');
-        abort_if($environment->requiresMultiFactorAuthentication() && ! $this->multiFactorSatisfied($request, $environment, $user), 403, 'Complete multi-factor authentication before authorizing this application.');
+        abort_if(
+            $environment->requiresMultiFactorAuthentication()
+                && ! $this->authentication->multiFactorSatisfied($request, $environment, $user),
+            403,
+            'Multi-factor authentication is required before authorizing this application.',
+        );
+        abort_unless(app(ApplicationAccessPolicy::class)->allows($environment, $user->email), 403);
 
         if ($this->access->allows($environment, $user)) {
             return $next($request);
