@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Koamishin\Auth;
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use InvalidArgumentException;
 use RuntimeException;
@@ -172,15 +173,26 @@ class KoamishinManagementClient
         }
 
         if ($this->portalUrl !== '' && $clientId !== '' && $clientSecret !== '') {
-            $tokenResponse = Http::connectTimeout(3)->timeout(10)->asForm()->post("{$this->portalUrl}/oauth/token", [
-                'grant_type' => 'client_credentials',
-                'client_id' => $clientId,
-                'client_secret' => $clientSecret,
-                'scope' => $scope,
-            ]);
-            $token = $tokenResponse->json('access_token');
-            if (! $tokenResponse->successful() || ! is_string($token) || $token === '') {
-                throw new RuntimeException('Management API token request failed.');
+            $cacheKey = 'koamishin.management_token.'.sha1($this->portalUrl.'|'.$clientId.'|'.$scope);
+            $cached = Cache::get($cacheKey);
+            if (is_string($cached) && $cached !== '') {
+                $token = $cached;
+            } else {
+                $tokenResponse = Http::connectTimeout(3)->timeout(10)->withoutRedirecting()->asForm()->post("{$this->portalUrl}/oauth/token", [
+                    'grant_type' => 'client_credentials',
+                    'client_id' => $clientId,
+                    'client_secret' => $clientSecret,
+                    'scope' => $scope,
+                ]);
+                $token = $tokenResponse->json('access_token');
+                if (! $tokenResponse->successful() || ! is_string($token) || $token === '') {
+                    throw new RuntimeException('Management API token request failed.');
+                }
+
+                $expiresIn = (int) ($tokenResponse->json('expires_in') ?? 300);
+                if ($expiresIn > 60) {
+                    Cache::put($cacheKey, $token, $expiresIn - 30);
+                }
             }
         } elseif ($this->portalUrl !== '' && $secretKey !== '') {
             if (preg_match('/\Ask_(test|live)_[A-Za-z0-9_-]+\z/', $secretKey) !== 1) {
@@ -192,7 +204,7 @@ class KoamishinManagementClient
             throw new RuntimeException('Management API credentials are not configured.');
         }
 
-        $client = Http::connectTimeout(3)->timeout(10)->acceptJson()->withToken($token);
+        $client = Http::connectTimeout(3)->timeout(10)->withoutRedirecting()->acceptJson()->withToken($token);
         $response = match ($method) {
             'GET' => $client->get($this->portalUrl.$path, $payload),
             'PATCH' => $client->patch($this->portalUrl.$path, $payload),

@@ -44,13 +44,17 @@ class OpenIdConnectController extends Controller
      */
     public function jwks(): JsonResponse
     {
+        $configured = config('passport.public_key');
         $keyPath = storage_path('oauth-public.key');
 
-        if (! file_exists($keyPath)) {
+        $publicKey = is_string($configured) && $configured !== ''
+            ? str_replace('\\n', "\n", $configured)
+            : (file_exists($keyPath) ? file_get_contents($keyPath) : false);
+
+        if (! is_string($publicKey) || $publicKey === '') {
             return response()->json(['keys' => []], 500);
         }
 
-        $publicKey = file_get_contents($keyPath);
         $res = openssl_pkey_get_public($publicKey);
 
         if ($res === false) {

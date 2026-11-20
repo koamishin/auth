@@ -140,10 +140,12 @@ final class OwnedAuthorizationServerFactory
     public function assertCompatibleVersions(): void
     {
         $laravelVersion = ltrim((string) InstalledVersions::getPrettyVersion('laravel/framework'), 'v');
+        $passportVersion = ltrim((string) InstalledVersions::getPrettyVersion('laravel/passport'), 'v');
+        $oauthServerVersion = ltrim((string) InstalledVersions::getPrettyVersion('league/oauth2-server'), 'v');
 
-        if (! in_array($laravelVersion, ['13.38.0', '13.39.0'], true)
-            || InstalledVersions::getPrettyVersion('laravel/passport') !== 'v13.10.0'
-            || InstalledVersions::getPrettyVersion('league/oauth2-server') !== '9.4.1') {
+        if (! str_starts_with($laravelVersion, '13.')
+            || ! str_starts_with($passportVersion, '13.')
+            || ! str_starts_with($oauthServerVersion, '9.')) {
             throw new LogicException('The owned OAuth server requires review for this Laravel, Passport or OAuth server version.');
         }
     }
