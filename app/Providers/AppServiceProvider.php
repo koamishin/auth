@@ -18,6 +18,7 @@ use Carbon\CarbonImmutable;
 use Filament\Panel;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -28,6 +29,7 @@ use Inertia\Inertia;
 use Laravel\Passkeys\Actions\GenerateRegistrationOptions;
 use Laravel\Passkeys\Actions\GenerateVerificationOptions;
 use Laravel\Passkeys\Actions\StorePasskey;
+use Laravel\Passkeys\Passkeys;
 use Laravel\Passport\Passport;
 use Laravel\Pennant\FeatureManager;
 use Nwidart\Modules\Facades\Module;
@@ -86,6 +88,10 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(Logout::class, ForgetMultiSessionAccount::class);
 
         Gate::before(fn ($user, $ability): ?true => method_exists($user, 'hasRole') && $user->hasRole('super_admin') ? true : null);
+
+        Passkeys::authorizeLoginUsing(
+            fn (Request $request, $user): bool => ! ($user instanceof User && $user->isBanned()),
+        );
 
         User::observe(UserObserver::class);
     }

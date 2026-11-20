@@ -10,7 +10,7 @@ class ImpersonateController extends Controller
 {
     public function takeRedirect(): RedirectResponse
     {
-        if (($user = Auth::user()) instanceof User && $user->hasRole('admin')) {
+        if (($user = Auth::user()) instanceof User && $user->isSystemAdmin()) {
             return redirect()->to('/admin');
         }
 
@@ -19,7 +19,7 @@ class ImpersonateController extends Controller
 
     public function leaveRedirect(): RedirectResponse
     {
-        if (($user = Auth::user()) instanceof User && $user->hasRole('admin')) {
+        if (($user = Auth::user()) instanceof User && $user->isSystemAdmin()) {
             return redirect()->to('/admin');
         }
 

@@ -9,6 +9,7 @@ use App\Models\EmailVerificationCode;
 use App\Models\TenantApplicationEnvironment;
 use App\Models\User;
 use App\Notifications\EmailVerificationCodeNotification;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
@@ -83,34 +84,29 @@ class EmailCodeService
      */
     public function verify(User $user, string $code, EmailCodePurpose $purpose): void
     {
-        $record = $this->liveCode($user, $purpose);
+        DB::transaction(function () use ($user, $code, $purpose): void {
+            $record = EmailVerificationCode::query()
+                ->where('user_id', $user->getKey())
+                ->where('purpose', $purpose->value)
+                ->whereNull('consumed_at')
+                ->latest('id')
+                ->lockForUpdate()
+                ->first();
 
-        if (! $record instanceof EmailVerificationCode) {
-            throw ValidationException::withMessages([
-                'code' => __('Request a new code to continue.'),
-            ]);
-        }
+            if (! $record instanceof EmailVerificationCode) {
+                throw ValidationException::withMessages([
+                    'code' => __('Request a new code to continue.'),
+                ]);
+            }
 
-        if ($record->hasExpired()) {
-            $record->update(['consumed_at' => now()]);
+            if ($record->hasExpired()) {
+                $record->update(['consumed_at' => now()]);
 
-            throw ValidationException::withMessages([
-                'code' => __('This code has expired. Request a new one.'),
-            ]);
-        }
+                throw ValidationException::withMessages([
+                    'code' => __('This code has expired. Request a new one.'),
+                ]);
+            }
 
-        if ($record->attempts >= self::MAX_ATTEMPTS) {
-            $record->update(['consumed_at' => now()]);
-
-            throw ValidationException::withMessages([
-                'code' => __('Too many incorrect attempts. Request a new code.'),
-            ]);
-        }
-
-        if (! Hash::check($code, $record->code_hash)) {
-            $record->increment('attempts');
-
-            // Burn the code as soon as the final allowed attempt is used up.
             if ($record->attempts >= self::MAX_ATTEMPTS) {
                 $record->update(['consumed_at' => now()]);
 
@@ -119,12 +115,25 @@ class EmailCodeService
                 ]);
             }
 
-            throw ValidationException::withMessages([
-                'code' => __('That code is not correct.'),
-            ]);
-        }
+            if (! Hash::check($code, $record->code_hash)) {
+                $record->increment('attempts');
 
-        $record->update(['consumed_at' => now()]);
+                // Burn the code as soon as the final allowed attempt is used up.
+                if ($record->attempts >= self::MAX_ATTEMPTS) {
+                    $record->update(['consumed_at' => now()]);
+
+                    throw ValidationException::withMessages([
+                        'code' => __('Too many incorrect attempts. Request a new code.'),
+                    ]);
+                }
+
+                throw ValidationException::withMessages([
+                    'code' => __('That code is not correct.'),
+                ]);
+            }
+
+            $record->update(['consumed_at' => now()]);
+        });
     }
 
     /**

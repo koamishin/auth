@@ -83,6 +83,12 @@ class ApplicationInvitationController extends Controller
             ]);
         }
 
+        if (($user->identity_namespace ?? User::PORTAL_IDENTITY_NAMESPACE) !== $invitation->environment->identityNamespace()) {
+            throw ValidationException::withMessages([
+                'invitation' => 'This account belongs to a different application environment.',
+            ]);
+        }
+
         $this->redeem($invitation, $user);
 
         return redirect()->intended(route('dashboard', absolute: false));

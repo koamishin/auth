@@ -39,6 +39,18 @@ class SocialLoginSettings extends Settings
     }
 
     /**
+     * @return list<string>
+     */
+    public static function encrypted(): array
+    {
+        return [
+            'github_client_secret',
+            'google_client_secret',
+            'facebook_client_secret',
+        ];
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public static function defaults(): array

@@ -374,7 +374,7 @@ class ApplicationAuthentication
      */
     public function multiFactorSatisfied(Request $request, TenantApplicationEnvironment $environment, User $user): bool
     {
-        if ($user->hasEnrolledSecondFactor()) {
+        if ($user->two_factor_confirmed_at !== null) {
             return true;
         }
 
@@ -465,7 +465,7 @@ class ApplicationAuthentication
 
             $tenant = $current->application->tenant;
             $tenant->users()->syncWithoutDetaching([$user->getKey()]);
-            if ($user->tenant_application_environment_id === null) {
+            if ($user->tenant_application_environment_id === null && ! $user->isSystemAdmin()) {
                 $user->forceFill([
                     'tenant_application_environment_id' => $current->getKey(),
                     'identity_namespace' => $current->identityNamespace(),

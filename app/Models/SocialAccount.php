@@ -40,6 +40,11 @@ class SocialAccount extends Model
         'expires_at',
     ];
 
+    protected $hidden = [
+        'access_token',
+        'refresh_token',
+    ];
+
     /**
      * @return array<string, string>
      */
@@ -47,6 +52,8 @@ class SocialAccount extends Model
     protected function casts(): array
     {
         return [
+            'access_token' => 'encrypted',
+            'refresh_token' => 'encrypted',
             'expires_at' => 'datetime',
         ];
     }

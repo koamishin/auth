@@ -21,6 +21,7 @@ use App\Models\Tenant;
 use App\Models\TenantApplication;
 use App\Models\User;
 use App\Settings\ApplicationFeaturesSettings;
+use App\Support\OutboundUrlValidator;
 use Filament\Facades\Filament;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -174,7 +175,7 @@ Route::middleware(['web', 'auth'])->post('admin/{tenant:slug}/toggle-env/{applic
         'tenant' => $tenant,
     ]);
 
-    if (! is_string($redirect) || $redirect === '' || ! str_starts_with($redirect, url('/'))) {
+    if (! is_string($redirect) || ! OutboundUrlValidator::isSameOrigin($redirect, url('/'))) {
         $redirect = $fallback;
     }
 

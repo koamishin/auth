@@ -9,6 +9,7 @@ use App\Http\Requests\Settings\TwoFactorAuthenticationRequest;
 use App\Models\Session;
 use App\Models\SocialAccount;
 use App\Models\User;
+use App\Services\Auth\MultiSession;
 use App\Settings\ApplicationFeaturesSettings;
 use App\Support\PasswordPolicy;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
@@ -119,6 +120,8 @@ class SecurityController extends Controller
             'password' => $passwordUpdateRequest->password,
         ]);
 
+        app(MultiSession::class)->revokeAllFor($user->getKey());
+
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Password updated.')]);
 
         return back();
@@ -133,6 +136,7 @@ class SecurityController extends Controller
         $user = $request->user();
         $record = Session::query()->where('user_id', $user->getKey())->findOrFail($session);
         $record->delete();
+        app(MultiSession::class)->revokeAllFor($user->getKey());
 
         if ($session === $request->session()->getId()) {
             Auth::logout();
@@ -158,6 +162,7 @@ class SecurityController extends Controller
             ->where('user_id', $user->getKey())
             ->where('id', '!=', $request->session()->getId())
             ->delete();
+        app(MultiSession::class)->revokeAllFor($user->getKey());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Other devices signed out.')]);
 

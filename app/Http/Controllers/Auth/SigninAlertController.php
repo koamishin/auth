@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\Session;
+use App\Services\Auth\MultiSession;
 use App\Services\OAuth\ApplicationAuthentication;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -22,6 +23,7 @@ class SigninAlertController extends Controller
     public function revoke(Request $request, string $user, string $session): Response
     {
         Session::query()->whereKey($session)->where('user_id', $user)->delete();
+        app(MultiSession::class)->revokeAllFor($user);
 
         return Inertia::render('auth/UnauthorizedSignIn', [
             'revoked' => true,

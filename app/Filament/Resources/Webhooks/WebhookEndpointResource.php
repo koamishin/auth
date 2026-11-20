@@ -10,6 +10,7 @@ use App\Filament\Resources\Webhooks\Pages\ListWebhookEndpoints;
 use App\Jobs\DispatchWebhookJob;
 use App\Models\TenantApplicationEnvironment;
 use App\Models\WebhookEndpoint;
+use App\Support\OutboundUrlValidator;
 use BackedEnum;
 use Closure;
 use Filament\Actions\Action;
@@ -78,10 +79,23 @@ class WebhookEndpointResource extends Resource
 
                         TextInput::make('url')
                             ->label('Endpoint URL')
-                            ->placeholder('https://crm.company.internal/api/webhooks/auth')
+                            ->placeholder('https://api.example.com/webhooks/auth')
                             ->url()
                             ->required()
-                            ->maxLength(500),
+                            ->maxLength(500)
+                            ->rule(function (): Closure {
+                                return function (string $attribute, mixed $value, Closure $fail): void {
+                                    if (! is_string($value) || $value === '') {
+                                        return;
+                                    }
+
+                                    try {
+                                        OutboundUrlValidator::validateWebhookUrl($value);
+                                    } catch (\InvalidArgumentException $e) {
+                                        $fail($e->getMessage());
+                                    }
+                                };
+                            }),
 
                         Select::make('signature_format')
                             ->label('Signature Format')
@@ -210,10 +224,10 @@ class WebhookEndpointResource extends Resource
                                 ->body('Test payload sent to '.$record->url)
                                 ->success()
                                 ->send();
-                        } catch (\Throwable $e) {
+                        } catch (\Throwable) {
                             Notification::make()
                                 ->title('Delivery Failed')
-                                ->body('Could not reach endpoint: '.$e->getMessage())
+                                ->body('Could not reach the configured webhook endpoint.')
                                 ->danger()
                                 ->send();
                         }

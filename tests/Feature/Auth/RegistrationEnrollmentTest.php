@@ -1441,9 +1441,9 @@ test('registration allows identical emails across portal and application environ
     ])->assertSessionHasErrors(['email']);
 });
 
-test('the impersonation setting controls whether an administrator may impersonate users', function (): void {
+test('the impersonation setting controls whether a system administrator may impersonate users', function (): void {
     $user = User::factory()->create();
-    $user->assignRole(Role::query()->firstOrCreate(['name' => 'admin', 'guard_name' => 'web']));
+    $user->assignRole(Role::query()->firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']));
     applicationFeatureSettings(['user_impersonation_enabled' => true]);
     expect($user->canImpersonate())->toBeTrue();
 
