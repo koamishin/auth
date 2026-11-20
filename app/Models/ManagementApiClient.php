@@ -21,7 +21,7 @@ class ManagementApiClient extends Model
     /** @use HasFactory<ManagementApiClientFactory> */
     use HasFactory;
 
-    public const SCOPES = ['users:read', 'metadata:read', 'metadata:write', 'sessions:read', 'sessions:revoke', 'memberships:write', 'organization:read'];
+    public const SCOPES = ['users:read', 'users:write', 'metadata:read', 'metadata:write', 'sessions:read', 'sessions:revoke', 'memberships:write', 'organization:read'];
 
     protected $fillable = [
         'tenant_application_environment_id',

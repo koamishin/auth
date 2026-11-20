@@ -46,13 +46,22 @@ class KoamishinManagementClient
     }
 
     /**
+     * @param  array{email?: string, search?: string, banned?: bool}  $filters
      * @return array{data: list<KoamishinUser>, links: array<string, mixed>, meta: array<string, mixed>}
      */
-    public function listUsers(int $page = 1, int $perPage = 15): array
+    public function listUsers(int $page = 1, int $perPage = 15, array $filters = []): array
     {
         $this->validatePagination($page, $perPage);
 
-        $data = $this->request('GET', '/api/v1/users', 'users:read', ['page' => $page, 'per_page' => $perPage]);
+        $query = array_filter([
+            'page' => $page,
+            'per_page' => $perPage,
+            'email' => $filters['email'] ?? null,
+            'search' => $filters['search'] ?? null,
+            'banned' => array_key_exists('banned', $filters) ? (int) (bool) $filters['banned'] : null,
+        ], fn (mixed $value): bool => $value !== null && $value !== '');
+
+        $data = $this->request('GET', '/api/v1/users', 'users:read', $query);
         if (! is_array($data['data'] ?? null) || ! is_array($data['links'] ?? null) || ! is_array($data['meta'] ?? null)) {
             throw new RuntimeException('Portal returned an invalid user list.');
         }
@@ -67,6 +76,58 @@ class KoamishinManagementClient
     public function getUser(string $id): KoamishinUser
     {
         $data = $this->request('GET', '/api/v1/users/'.$this->encodedId($id), 'users:read');
+        if (! is_array($data['data'] ?? null)) {
+            throw new RuntimeException('Portal returned an invalid user.');
+        }
+
+        return KoamishinUser::fromArray($data['data']);
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    public function createUser(array $attributes): KoamishinUser
+    {
+        $data = $this->request('POST', '/api/v1/users', 'users:write', $attributes);
+        if (! is_array($data['data'] ?? null)) {
+            throw new RuntimeException('Portal returned an invalid user.');
+        }
+
+        return KoamishinUser::fromArray($data['data']);
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    public function updateUser(string $id, array $attributes): KoamishinUser
+    {
+        $data = $this->request('PATCH', '/api/v1/users/'.$this->encodedId($id), 'users:write', $attributes);
+        if (! is_array($data['data'] ?? null)) {
+            throw new RuntimeException('Portal returned an invalid user.');
+        }
+
+        return KoamishinUser::fromArray($data['data']);
+    }
+
+    public function deleteUser(string $id): void
+    {
+        $this->request('DELETE', '/api/v1/users/'.$this->encodedId($id), 'users:write');
+    }
+
+    public function banUser(string $id, ?string $reason = null): KoamishinUser
+    {
+        $payload = $reason !== null ? ['reason' => $reason] : [];
+        $data = $this->request('POST', '/api/v1/users/'.$this->encodedId($id).'/ban', 'users:write', $payload);
+        if (! is_array($data['data'] ?? null)) {
+            throw new RuntimeException('Portal returned an invalid user.');
+        }
+
+        return KoamishinUser::fromArray($data['data']);
+    }
+
+    public function unbanUser(string $id): KoamishinUser
+    {
+        $data = $this->request('POST', '/api/v1/users/'.$this->encodedId($id).'/unban', 'users:write');
         if (! is_array($data['data'] ?? null)) {
             throw new RuntimeException('Portal returned an invalid user.');
         }
@@ -207,6 +268,7 @@ class KoamishinManagementClient
         $client = Http::connectTimeout(3)->timeout(10)->withoutRedirecting()->acceptJson()->withToken($token);
         $response = match ($method) {
             'GET' => $client->get($this->portalUrl.$path, $payload),
+            'POST' => $client->post($this->portalUrl.$path, $payload),
             'PATCH' => $client->patch($this->portalUrl.$path, $payload),
             'PUT' => $client->send('PUT', $this->portalUrl.$path),
             'DELETE' => $client->delete($this->portalUrl.$path),

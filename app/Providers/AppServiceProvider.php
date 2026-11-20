@@ -18,11 +18,13 @@ use Carbon\CarbonImmutable;
 use Filament\Panel;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
@@ -124,6 +126,15 @@ class AppServiceProvider extends ServiceProvider
                 ->uncompromised()
             : null
         );
+
+        RateLimiter::for('management-api', function (Request $request): Limit {
+            $bearer = $request->bearerToken();
+            if (is_string($bearer) && $bearer !== '') {
+                return Limit::perMinute(300)->by('mgmt:'.hash('sha256', $bearer));
+            }
+
+            return Limit::perMinute(60)->by('mgmt-ip:'.$request->ip());
+        });
     }
 
     protected function configureFeatures(): void
@@ -153,6 +164,7 @@ class AppServiceProvider extends ServiceProvider
             'wallet' => 'User wallet information',
             'metadata:public' => 'Read application-scoped public metadata',
             'users:read' => 'Read users in the application environment',
+            'users:write' => 'Create, update, ban, and delete users in the application environment',
             'metadata:read' => 'Read application-scoped user metadata',
             'metadata:write' => 'Replace application-scoped user metadata',
             'sessions:read' => 'Read application-scoped OAuth grants',

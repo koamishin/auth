@@ -231,6 +231,9 @@ class KoamishinAuth
             'application_id' => $applicationId,
             'environment' => $environment,
             'organization_id' => is_string($organization['id'] ?? null) ? $organization['id'] : null,
+            'organization_slug' => is_string($organization['slg'] ?? null) ? $organization['slg'] : null,
+            'organization_role' => is_string($organization['rol'] ?? null) ? $organization['rol'] : null,
+            'session_id' => is_string($claims['sid'] ?? null) ? $claims['sid'] : null,
             'roles' => is_string($organization['rol'] ?? null) ? [$organization['rol']] : [],
         ]);
     }

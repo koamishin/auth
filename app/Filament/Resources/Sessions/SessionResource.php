@@ -7,15 +7,19 @@ namespace App\Filament\Resources\Sessions;
 use App\Filament\Resources\Sessions\Pages\ListSessions;
 use App\Filament\Resources\Users\UserResource;
 use App\Models\Session;
+use App\Models\Tenant;
+use App\Models\TenantApplicationEnvironment;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
+use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class SessionResource extends Resource
 {
@@ -34,6 +38,30 @@ class SessionResource extends Resource
     protected static ?int $navigationSort = 2;
 
     protected static bool $isScopedToTenant = false;
+
+    #[\Override]
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+        $tenant = Filament::getTenant();
+
+        if ($tenant instanceof Tenant) {
+            $envIds = TenantApplicationEnvironment::query()
+                ->whereHas('application', fn ($q) => $q->where('tenant_id', $tenant->getKey()))
+                ->pluck('id')
+                ->all();
+            $namespaces = array_map(fn ($id): string => 'environment:'.$id, $envIds);
+
+            $query->whereHas('user', function ($userQuery) use ($tenant, $namespaces): void {
+                $userQuery->whereHas('tenants', fn ($t) => $t->whereKey($tenant->getKey()));
+                if ($namespaces !== []) {
+                    $userQuery->orWhereIn('identity_namespace', $namespaces);
+                }
+            });
+        }
+
+        return $query;
+    }
 
     #[\Override]
     public static function canCreate(): bool

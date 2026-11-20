@@ -8,9 +8,12 @@ use App\Filament\Resources\SocialAccounts\Pages\ListSocialAccounts;
 use App\Filament\Resources\SocialAccounts\Pages\ViewSocialAccount;
 use App\Filament\Resources\Users\UserResource;
 use App\Models\SocialAccount;
+use App\Models\Tenant;
+use App\Models\TenantApplicationEnvironment;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
+use Filament\Facades\Filament;
 use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
@@ -20,6 +23,7 @@ use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class SocialAccountResource extends Resource
 {
@@ -38,6 +42,30 @@ class SocialAccountResource extends Resource
     protected static ?int $navigationSort = 3;
 
     protected static bool $isScopedToTenant = false;
+
+    #[\Override]
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+        $tenant = Filament::getTenant();
+
+        if ($tenant instanceof Tenant) {
+            $envIds = TenantApplicationEnvironment::query()
+                ->whereHas('application', fn ($q) => $q->where('tenant_id', $tenant->getKey()))
+                ->pluck('id')
+                ->all();
+            $namespaces = array_map(fn ($id): string => 'environment:'.$id, $envIds);
+
+            $query->whereHas('user', function ($userQuery) use ($tenant, $namespaces): void {
+                $userQuery->whereHas('tenants', fn ($t) => $t->whereKey($tenant->getKey()));
+                if ($namespaces !== []) {
+                    $userQuery->orWhereIn('identity_namespace', $namespaces);
+                }
+            });
+        }
+
+        return $query;
+    }
 
     #[\Override]
     public static function canCreate(): bool

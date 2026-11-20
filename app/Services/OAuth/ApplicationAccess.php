@@ -96,6 +96,7 @@ class ApplicationAccess
         $environment = $environments->first();
         if (! $environment instanceof TenantApplicationEnvironment
             || $environment->environment !== $expectedEnvironment
+            || ($environment->oauthClient !== null && $environment->oauthClient->getAttribute('revoked'))
             || ! $environment->verifySecretKey($secretKey)) {
             return null;
         }

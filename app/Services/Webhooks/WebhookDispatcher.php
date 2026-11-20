@@ -51,6 +51,20 @@ class WebhookDispatcher
     }
 
     /**
+     * Capture the eligible recipients for a single environment before removing membership.
+     *
+     * @return list<array{endpoint: WebhookEndpoint, event: string, payload: array<string, mixed>}>
+     */
+    public static function pendingDeletionForEnvironment(TenantApplicationEnvironment $environment, User $user): array
+    {
+        if (! self::isMember($environment, $user)) {
+            return [];
+        }
+
+        return self::deliveriesForEnvironment($environment, 'user.deleted', $user);
+    }
+
+    /**
      * @param  list<array{endpoint: WebhookEndpoint, event: string, payload: array<string, mixed>}>  $deliveries
      */
     public static function dispatchPending(array $deliveries): void

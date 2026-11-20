@@ -35,6 +35,30 @@ class FamilyRefreshTokenGrant extends RefreshTokenGrant
             throw OAuthServerException::invalidRefreshToken();
         }
 
+        $refreshTokenId = is_array($payload) ? ($payload['refresh_token_id'] ?? null) : null;
+        if (is_string($refreshTokenId) && $refreshTokenId !== '') {
+            $replayed = $this->families->connection()->transaction(function () use ($oldAccessId, $refreshTokenId): bool {
+                $family = $this->families->lockForToken($oldAccessId);
+                $tokenRow = $this->families->connection()
+                    ->table('oauth_refresh_tokens')
+                    ->where('id', $refreshTokenId)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($tokenRow !== null && (bool) $tokenRow->revoked) {
+                    $this->families->revokeLockedFamily($family->id);
+
+                    return true;
+                }
+
+                return false;
+            });
+
+            if ($replayed) {
+                throw OAuthServerException::invalidRefreshToken();
+            }
+        }
+
         return $this->families->connection()->transaction(function () use ($request, $responseType, $accessTokenTTL, $oldAccessId): ResponseTypeInterface {
             $family = $this->families->lockForToken($oldAccessId);
             $captured = new CapturedTokenResponse($responseType);

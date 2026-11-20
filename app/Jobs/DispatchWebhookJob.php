@@ -133,7 +133,10 @@ class DispatchWebhookJob implements ShouldQueue
                 'attempts' => $this->attempts(),
             ]);
 
-            if ($response->failed()) {
+            $status = $response->status();
+            $retryable = $status === 408 || $status === 429 || $status >= 500;
+
+            if ($retryable && $this->attempts() < $this->tries) {
                 $this->release($this->backoff[$this->attempts() - 1] ?? 60);
             }
         } catch (\Throwable $e) {

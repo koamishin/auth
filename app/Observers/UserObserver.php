@@ -16,6 +16,21 @@ class UserObserver
 
     public function updated(User $user): void
     {
+        if (! $user->wasChanged([
+            'name',
+            'first_name',
+            'last_name',
+            'email',
+            'username',
+            'phone_number',
+            'email_verified_at',
+            'phone_verified_at',
+            'banned_at',
+            'ban_reason',
+        ])) {
+            return;
+        }
+
         WebhookDispatcher::dispatchForUser('user.updated', $user);
     }
 

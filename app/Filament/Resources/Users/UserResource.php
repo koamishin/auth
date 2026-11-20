@@ -8,6 +8,7 @@ use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Filament\Resources\Users\Pages\ViewUser;
 use App\Models\Tenant;
+use App\Models\TenantApplicationEnvironment;
 use App\Models\User;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -18,6 +19,7 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
@@ -64,9 +66,27 @@ class UserResource extends Resource
     #[\Override]
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
+        $query = parent::getEloquentQuery()
             ->where('users.identity_namespace', '!=', User::PORTAL_IDENTITY_NAMESPACE)
             ->whereDoesntHave('roles', fn (Builder $q) => $q->whereIn('name', ['super_admin', 'admin']));
+
+        $tenant = Filament::getTenant();
+        if ($tenant instanceof Tenant) {
+            $envIds = TenantApplicationEnvironment::query()
+                ->whereHas('application', fn (Builder $q) => $q->where('tenant_id', $tenant->getKey()))
+                ->pluck('id')
+                ->all();
+            $namespaces = array_map(fn ($id): string => 'environment:'.$id, $envIds);
+
+            $query->where(function (Builder $scoped) use ($tenant, $namespaces): void {
+                $scoped->whereHas('tenants', fn (Builder $t) => $t->whereKey($tenant->getKey()));
+                if ($namespaces !== []) {
+                    $scoped->orWhereIn('users.identity_namespace', $namespaces);
+                }
+            });
+        }
+
+        return $query;
     }
 
     #[\Override]

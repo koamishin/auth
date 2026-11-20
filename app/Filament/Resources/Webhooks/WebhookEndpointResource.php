@@ -8,6 +8,7 @@ use App\Filament\Resources\Webhooks\Pages\CreateWebhookEndpoint;
 use App\Filament\Resources\Webhooks\Pages\EditWebhookEndpoint;
 use App\Filament\Resources\Webhooks\Pages\ListWebhookEndpoints;
 use App\Jobs\DispatchWebhookJob;
+use App\Models\Tenant;
 use App\Models\TenantApplicationEnvironment;
 use App\Models\WebhookEndpoint;
 use App\Support\OutboundUrlValidator;
@@ -18,6 +19,7 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -32,6 +34,7 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class WebhookEndpointResource extends Resource
 {
@@ -50,6 +53,19 @@ class WebhookEndpointResource extends Resource
     protected static ?int $navigationSort = 3;
 
     protected static bool $isScopedToTenant = false;
+
+    #[\Override]
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+        $tenant = Filament::getTenant();
+
+        if ($tenant instanceof Tenant) {
+            $query->whereHas('environment.application', fn ($q) => $q->where('tenant_id', $tenant->getKey()));
+        }
+
+        return $query;
+    }
 
     #[\Override]
     public static function form(Schema $schema): Schema

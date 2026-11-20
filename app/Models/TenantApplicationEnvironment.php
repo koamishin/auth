@@ -157,13 +157,11 @@ class TenantApplicationEnvironment extends Model
             return false;
         }
 
-        if (! is_string($this->secret_key_lookup) || $this->secret_key_lookup === ''
-            || ! is_string($this->secret_key_hash) || $this->secret_key_hash === '') {
+        if (! is_string($this->secret_key_lookup) || $this->secret_key_lookup === '') {
             return false;
         }
 
-        return hash_equals($this->secret_key_lookup, hash('sha256', $plainSecret))
-            && Hash::check($plainSecret, $this->secret_key_hash);
+        return hash_equals($this->secret_key_lookup, hash('sha256', $plainSecret));
     }
 
     public function isConnected(): bool
