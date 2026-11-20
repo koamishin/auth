@@ -13,7 +13,7 @@ class FamilyBearerTokenResponse extends BearerTokenResponse
 
     protected function getExtraParams(AccessTokenEntityInterface $accessToken): array
     {
-        if ($accessToken->getUserIdentifier() === null || $this->access->environmentForClient($accessToken->getClient()->getIdentifier()) === null) {
+        if ($accessToken->getUserIdentifier() === null || !$this->access->environmentForClient($accessToken->getClient()->getIdentifier()) instanceof \App\Models\TenantApplicationEnvironment) {
             return [];
         }
         $credential = $this->families->issueCredential($accessToken->getIdentifier());

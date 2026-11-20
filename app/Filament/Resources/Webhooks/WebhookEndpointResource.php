@@ -99,18 +99,16 @@ class WebhookEndpointResource extends Resource
                             ->url()
                             ->required()
                             ->maxLength(500)
-                            ->rule(function (): Closure {
-                                return function (string $attribute, mixed $value, Closure $fail): void {
-                                    if (! is_string($value) || $value === '') {
-                                        return;
-                                    }
+                            ->rule(fn(): Closure => function (string $attribute, mixed $value, Closure $fail): void {
+                                if (! is_string($value) || $value === '') {
+                                    return;
+                                }
 
-                                    try {
-                                        OutboundUrlValidator::validateWebhookUrl($value);
-                                    } catch (\InvalidArgumentException $e) {
-                                        $fail($e->getMessage());
-                                    }
-                                };
+                                try {
+                                    OutboundUrlValidator::validateWebhookUrl($value);
+                                } catch (\InvalidArgumentException $e) {
+                                    $fail($e->getMessage());
+                                }
                             }),
 
                         Select::make('signature_format')

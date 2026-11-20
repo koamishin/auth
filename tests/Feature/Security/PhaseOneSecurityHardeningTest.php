@@ -164,13 +164,13 @@ test('signin alert revocation revokes multi-session switch tokens', function ():
 });
 
 test('outbound url validator blocks ssrf targets and open redirects', function (): void {
-    expect(fn () => OutboundUrlValidator::validateWebhookUrl('https://127.0.0.1/hook'))
+    expect(fn (): array => OutboundUrlValidator::validateWebhookUrl('https://127.0.0.1/hook'))
         ->toThrow(InvalidArgumentException::class)
-        ->and(fn () => OutboundUrlValidator::validateWebhookUrl('http://169.254.169.254/latest/meta-data/'))
+        ->and(fn (): array => OutboundUrlValidator::validateWebhookUrl('http://169.254.169.254/latest/meta-data/'))
         ->toThrow(InvalidArgumentException::class)
-        ->and(fn () => OutboundUrlValidator::validateWebhookUrl('https://10.0.0.5/hook'))
+        ->and(fn (): array => OutboundUrlValidator::validateWebhookUrl('https://10.0.0.5/hook'))
         ->toThrow(InvalidArgumentException::class)
-        ->and(fn () => OutboundUrlValidator::validateWebhookUrl('https://localhost/hook'))
+        ->and(fn (): array => OutboundUrlValidator::validateWebhookUrl('https://localhost/hook'))
         ->toThrow(InvalidArgumentException::class);
 
     expect(OutboundUrlValidator::isSameOrigin('https://portal.example.com/admin', 'https://portal.example.com'))->toBeTrue()

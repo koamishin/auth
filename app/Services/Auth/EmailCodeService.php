@@ -174,19 +174,6 @@ class EmailCodeService
         }
     }
 
-    private function liveCode(User $user, EmailCodePurpose $purpose): ?EmailVerificationCode
-    {
-        /** @var EmailVerificationCode|null $record */
-        $record = EmailVerificationCode::query()
-            ->where('user_id', $user->getKey())
-            ->where('purpose', $purpose)
-            ->live()
-            ->latest('id')
-            ->first();
-
-        return $record;
-    }
-
     private function generateCode(): string
     {
         return str_pad((string) random_int(0, (10 ** self::CODE_LENGTH) - 1), self::CODE_LENGTH, '0', STR_PAD_LEFT);

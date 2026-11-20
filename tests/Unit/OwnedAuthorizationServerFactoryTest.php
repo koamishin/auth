@@ -107,7 +107,7 @@ test('custom access or refresh repositories are rejected', function (string $rep
 
 test('each refresh repository from a factory is checked', function (): void {
     $resolutions = 0;
-    $this->app->bind(RefreshTokenRepository::class, function ($app) use (&$resolutions): RefreshTokenRepository {
+    $this->app->bind(RefreshTokenRepository::class, function (array $app) use (&$resolutions): RefreshTokenRepository {
         $resolutions++;
 
         return $resolutions === 1
@@ -225,7 +225,7 @@ test('the Passport token route accepts its normal owned controller', function ()
 test('the Passport token route rejects a controller factory holding an unowned server', function (): void {
     $server = Mockery::mock(AuthorizationServer::class);
     $server->shouldNotReceive('respondToAccessTokenRequest');
-    $this->app->bind(AccessTokenController::class, fn () => new AccessTokenController($server));
+    $this->app->bind(AccessTokenController::class, fn (): \Laravel\Passport\Http\Controllers\AccessTokenController => new AccessTokenController($server));
 
     $this->postJson('/oauth/token', ['grant_type' => 'authorization_code'])
         ->assertInternalServerError();
@@ -255,7 +255,7 @@ test('a contextual personal access factory must be owned', function (): void {
     $server = Mockery::mock(AuthorizationServer::class);
     $this->app->when(OAuthPersonalTokenConsumer::class)
         ->needs(PersonalAccessTokenFactory::class)
-        ->give(fn () => new PersonalAccessTokenFactory($server));
+        ->give(fn (): \Laravel\Passport\PersonalAccessTokenFactory => new PersonalAccessTokenFactory($server));
     $this->expectException(LogicException::class);
 
     $this->app->make(OAuthPersonalTokenConsumer::class);
@@ -343,7 +343,7 @@ test('assertCompatibleVersions permits 13.38.0 and 13.39.0 with or without v pre
 
     try {
         $vendors = $originalVendors;
-        foreach ($vendors as $dir => &$data) {
+        foreach ($vendors as &$data) {
             if (isset($data['versions']['laravel/framework'])) {
                 $data['versions']['laravel/framework']['pretty_version'] = $version;
             }
@@ -379,7 +379,7 @@ test('calling assertCompatibleVersions when versions are incompatible throws Log
 
     try {
         $vendors = $originalVendors;
-        foreach ($vendors as $dir => &$data) {
+        foreach ($vendors as &$data) {
             if (isset($data['versions'][$package])) {
                 $data['versions'][$package]['pretty_version'] = $version;
             }

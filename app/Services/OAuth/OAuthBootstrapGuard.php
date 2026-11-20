@@ -30,9 +30,9 @@ final class OAuthBootstrapGuard
         $factory = new OwnedAuthorizationServerFactory($app);
         $factory->assertCompatibleVersions();
         $app->instance(OwnedAuthorizationServerFactory::class, $factory);
-        $app->singleton(AuthorizationServer::class, fn () => $factory->make());
-        $app->singleton(ResourceServer::class, fn () => $factory->makeResourceServer());
-        $app->bind(PersonalAccessTokenFactory::class, fn () => $factory->makePersonalAccessTokenFactory());
+        $app->singleton(AuthorizationServer::class, fn (): \App\Services\OAuth\OwnedAuthorizationServer => $factory->make());
+        $app->singleton(ResourceServer::class, fn (): \App\Services\OAuth\OwnedResourceServer => $factory->makeResourceServer());
+        $app->bind(PersonalAccessTokenFactory::class, fn (): \Laravel\Passport\PersonalAccessTokenFactory => $factory->makePersonalAccessTokenFactory());
         foreach ([AuthorizationServer::class, ResourceServer::class, PersonalAccessTokenFactory::class] as $abstract) {
             $checking = false;
             $verify = function (object $instance) use ($factory, $abstract): void {
@@ -43,7 +43,7 @@ final class OAuthBootstrapGuard
             // Laravel caches a singleton before after-resolving callbacks run. Recheck
             // cached instances so a failed ownership check cannot be bypassed on retry.
             $app->beforeResolving($abstract, function () use ($app, $abstract, $verify, &$checking): void {
-                if ($checking || ! $app->resolved($abstract)) {
+                if (! $app->resolved($abstract)) {
                     return;
                 }
 

@@ -260,7 +260,7 @@ class SessionTokenService
             ? InMemory::plainText(str_replace('\\n', "\n", $configuredPrivate))
             : (file_exists($privateKeyPath) ? InMemory::file($privateKeyPath) : null);
 
-        abort_if($privateKey === null, 503, 'Session tokens are not configured.');
+        abort_if(!$privateKey instanceof \Lcobucci\JWT\Signer\Key\InMemory, 503, 'Session tokens are not configured.');
 
         $publicKeyContents = is_string($configuredPublic) && $configuredPublic !== ''
             ? str_replace('\\n', "\n", $configuredPublic)

@@ -92,7 +92,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::before(fn ($user, $ability): ?true => method_exists($user, 'hasRole') && $user->hasRole('super_admin') ? true : null);
 
         Passkeys::authorizeLoginUsing(
-            fn (Request $request, $user): bool => ! ($user instanceof User && $user->isBanned()),
+            fn (Request $request, $user): bool => !$user instanceof User || !$user->isBanned(),
         );
 
         User::observe(UserObserver::class);

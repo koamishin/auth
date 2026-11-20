@@ -63,7 +63,7 @@ class FamilyRefreshTokenGrant extends RefreshTokenGrant
             $family = $this->families->lockForToken($oldAccessId);
             $captured = new CapturedTokenResponse($responseType);
             $response = parent::respondToAccessTokenRequest($request, $captured, $accessTokenTTL);
-            if ($captured->accessToken === null) {
+            if (!$captured->accessToken instanceof \League\OAuth2\Server\Entities\AccessTokenEntityInterface) {
                 throw OAuthServerException::serverError('No access token was issued.');
             }
             $this->families->attach($family->id, $captured->accessToken->getIdentifier());

@@ -122,7 +122,7 @@ final class OwnedAuthorizationServerFactory
     /** @param array<array{GrantTypeInterface, DateInterval}> $grants */
     private function server(ResponseTypeInterface $response, array $grants): OwnedAuthorizationServer
     {
-        $server = new OwnedAuthorizationServer(
+        return new OwnedAuthorizationServer(
             $this->repository(ClientRepository::class, PassportBridgeClientRepository::class),
             $this->repository(AccessTokenRepository::class),
             $this->scopeRepository(),
@@ -133,8 +133,6 @@ final class OwnedAuthorizationServerFactory
             Passport::$defaultScope,
             $grants,
         );
-
-        return $server;
     }
 
     public function assertCompatibleVersions(): void
